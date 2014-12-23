@@ -22,7 +22,7 @@ object Entities {
   }
 
     sealed class GameQuestion
-    case class Question(question:String, sub_question: Option[String], image_url: Option[String])
+    case class Question(question:String, sub_question: Option[String], image_url: Option[String] = None)
 
     case class MultipleChoiceQuestion( id: String,
                                        user_id: String,
@@ -33,8 +33,8 @@ object Entities {
       require(answer >= 0)
     }
 
-    case class Possibility(text: Option[String], image_url: Option[String])
-    case class TimelineQuestion(id: String, user_id: String, question: Question, answer: DateTime, min_date: Int, max_date: Int, range: Int) extends GameQuestion
+    case class Possibility(text: Option[String], image_url: Option[String] = None)
+    case class TimelineQuestion(id: String, user_id: String, question: Question, min_date: DateTime, max_date: DateTime, range: Int, answer: DateTime) extends GameQuestion
     case class Geolocation(id: String, user_id: String, question: Question, answer: Location) extends GameQuestion
     case class Location(longitude: Double, latitude: Double)
 

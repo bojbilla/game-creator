@@ -7,15 +7,24 @@ import reactivemongo.bson.{BSONHandler, BSONDateTime, Macros, BSONObjectID}
 object GraphResponses {
   implicit val formats = DefaultFormats
   abstract class BaseResponse()
-  case class Root[T](data:Option[T], paging: Option[Paging])
-
+  case class Root[T](data:Option[T], paging: Option[Paging], summary: Option[Summary] = None)
   case class Paging(previous:Option[String], next:Option[String])
   case class Post(id: String,
                   from: Option[From],
                   message: Option[String],
-                  likes: Root[List[Like]],
-                  `type`: Option[String])
+                  story: Option[String],
+                  likes: Option[Root[List[Like]]],
+                  `type`: Option[String],
+                  created_time: Option[String],
+                  attachments: Option[Root[List[Attachment]]],
+                  comments: Option[Root[List[Comment]]]
+                   )
+
+
   case class From(id: String, name:String)
+  case class Attachment(description: Option[String] = None, media: Option[Media] = None, `type`: Option[String] = None)
+  case class Media(image: Option[AttachmentImage])
+  case class AttachmentImage(height: Int, width: Int, src: String)
   case class UnloggedFaceBookUser(id: String, first_name:String, gender: String,
                                   last_name:String, link:String, locale: String,
                                   name: String, updated_time: String)
@@ -33,23 +42,15 @@ object GraphResponses {
                      name: Option[String],
                      tags: Option[List[Tag]])
 
-//
-//  implicit object BSONDateTimeHandler extends BSONHandler[BSONDateTime, DateTime] {
-//    def read(time: BSONDateTime) = new DateTime(time.value)
-//    def write(jdtime: DateTime) = BSONDateTime(jdtime.getMillis)
-//  }
-
-
   case class Tag(id: Option[String], name: Option[String], created_time: Option[DateTime], x: Option[Double], y: Option[Double])
-
-
   case class Image(height: Int, width: Int, source: String)
   case class Friend(id:String, name:String, picture: Option[Root[Avatar]])
   case class Like(id: String, name: String)
-  case class Comment(id: String, from:From, like_count: Int, message: String)
-  case class Photo(id: String, source: Option[String], created_time: Option[DateTime], tags: Option[Root[List[Tag]]])
-  case class Page(id: Option[String], name: Option[String], photos: Option[Root[Photo]])
-  case class Place(id: Option[String],user_id: Option[String], name: Option[String], place: Option[Location], created_time: Option[String])
+  case class Summary(total_count: Int)
+  case class Comment(id: String, from:From, like_count: Int, message: String, attachments: Option[Attachment])
+  case class Photo(id: String, source: Option[String], created_time: Option[String], tags: Option[Root[List[Tag]]])
+  case class Page(id: String, name: Option[String], photos: Option[Root[Photo]])
+  case class Place(id: Option[String], name: Option[String], place: Option[Location], created_time: Option[String])
   case class Location(city: Option[String],
                       country: Option[String],
                       latitude: Option[Double],

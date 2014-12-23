@@ -24,8 +24,11 @@ object GameGenerator {
   def props(database: DefaultDB): Props =
     Props(new GameGenerator(database))
 
+  case class CreateQuestion(user_id: String) extends RestMessage
   case class WhichPageDidYouLike(user_id: String) extends RestMessage
   case class CreatedWhichPageDidYouLike(mc: MultipleChoiceQuestion) extends RestMessage
+  case class CreatedWhoLikedYourPost(mc: MultipleChoiceQuestion) extends RestMessage
+  case class FailedToCreateQuestion(message: String)
 }
 
 class GameGenerator(database: DefaultDB) extends Actor with ActorLogging{
@@ -89,19 +92,19 @@ class GameGenerator(database: DefaultDB) extends Actor with ActorLogging{
                          query: BSONDocument,
                          liked: List[String]): Future[List[FBPage]] ={
     val promise = Promise[List[FBPage]]()
-    def recurs(pages: List[FBPage]): Unit ={
+    def recurs(pages: List[FBPage], forbiddenPageIds: List[String]): Unit ={
       getDocument(db, collection, query).map{po => po.map { p =>
         if (pages.length >= 3){
           promise.complete(Success(pages))
         }
-        if (!liked.contains(p.page_id)){
-          recurs(p :: pages)
+        if (!forbiddenPageIds.contains(p.page_id)){
+          recurs(p :: pages, p.page_id :: forbiddenPageIds)
         } else {
-          recurs(pages)
+          recurs(pages, forbiddenPageIds)
         }
       }}
     }
-    recurs(List())
+    recurs(List(), liked)
     promise.future
   }
   def getDocument(db: DefaultDB, collection: BSONCollection, query: BSONDocument): Future[Option[FBPage]] = {

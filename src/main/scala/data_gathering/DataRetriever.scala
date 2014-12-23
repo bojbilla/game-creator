@@ -2,7 +2,7 @@ package data_gathering
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{Actor, ActorContext, ActorLogging, Props}
-import data_gathering.DataRetriever.{RetrieveFBPages, FailedToSendRetrieval, SentRetrieval, RetrieveData}
+import data_gathering.DataRetriever._
 import database.DatabaseService
 import service.GameRequest
 import org.json4s.{DefaultFormats, Formats}
@@ -24,6 +24,7 @@ object DataRetriever {
 
   case class RetrieveData()
   case class RetrieveFBPages(gameRequest: GameRequest)
+  case class RetrieveFBPosts(gameRequest: GameRequest)
   case class SentRetrieval(gameRequest: GameRequest)
   case class FailedToSendRetrieval(gameRequest: GameRequest)
 
@@ -37,7 +38,10 @@ class DataRetriever() extends HttpService with Actor with ActorLogging with Json
 
   def receive = {
       case RetrieveFBPages(gameRequest) =>
-        val pageRetriever = context.actorOf(FBPagesRetriever.props(gameRequest))
+        val pageRetriever = context.actorOf(FBRetriever.props(gameRequest))
+        pageRetriever ! RetrieveData
+      case RetrieveFBPosts(gameRequest) =>
+        val pageRetriever = context.actorOf(FBRetriever.props(gameRequest))
         pageRetriever ! RetrieveData
       case _ => log.error("DataRetriever received unecpected message")
     }

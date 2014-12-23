@@ -19,13 +19,13 @@ class TimelineMock {
   private val date1 = DateTime.lastMonth - random.nextInt(10).days
   private val min1 = random.nextInt(20)
   private val max1 = 20 - min1
-  val timeline1 = TimelineQuestion("43253634", user_id, question1, answer = date1, - min1, max1, range)
+  val timeline1 = TimelineQuestion("43253634", user_id, question1, date1 - min1.days, date1 + max1, range, date1)
 
   private val question2 = Question("When is your friends birthday?", Some("10153179507419968"), None)
   private val date2 = new DateTime().withDate(1982, 5, 4)
   private val min2 = random.nextInt(20)
   private val max2 = 20 - min2
-  val timeline2 = TimelineQuestion("98766512", user_id, question2, answer = date2, - min2, max2, range)
+  val timeline2 = TimelineQuestion("98766512", user_id, question2, date2 - min2.days, date2 + max2, range, date2)
 
   private val image1 = "http://daddu.net/wp-content/uploads/2011/10/3072689116_146665230f_z.jpg"
   private val image2 = "https://31.media.tumblr.com/421761f8ae36c7949f3978162a6e1b6e/tumblr_" +
@@ -39,7 +39,7 @@ class TimelineMock {
   private val date3 = DateTime.lastMonth - random.nextInt(20).days
   private val min3 = random.nextInt(20)
   private val max3 = 20 - min2
-  val timeline3 = TimelineQuestion("23239482938", user_id, question3, answer = date3, - min3, max3, range)
+  val timeline3 = TimelineQuestion("23239482938", user_id, question3, date3 - min3.days, date3 + max3, range, date3)
 
 
 
