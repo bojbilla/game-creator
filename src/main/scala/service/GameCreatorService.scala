@@ -24,13 +24,8 @@ import spray.routing._
 import server.Server
 import spray.http.StatusCode
 import spray.http.StatusCodes._
-//import spray.routing.RejectionHandler.Default
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import akka.event.Logging._
-import spray.util.LoggingContext
-import spray.http._
-import akka.event.LoggingAdapter
 
 import scala.concurrent.Future
 
@@ -137,32 +132,13 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
         }
       }
 
-    } ~ path("tile") {
+    } ~ path("gameboard") {
         parameters('user_id.as[String]) { user_id: String =>
           createBoard{
             CreateBoard(user_id)
           }
         }
       }
-//    } ~ path("who_liked_post") {
-//      parameters('user_id.as[String]) { user_id: String =>
-//        whoLikedPost{
-//          CreateQuestion(user_id)
-//        }
-//      }
-//    } ~ path("who_made_this_comment_on_your_post"){
-//      parameters('user_id.as[String]) { user_id: String =>
-//        whoMadeThisCommentOnYourPost{
-//          CreateQuestion(user_id)
-//        }
-//      }
-//    } ~ path("when_did_you_share_this_post") {
-//      parameters('user_id.as[String]) { user_id: String =>
-//        whenDidYouShareThisPost{
-//          CreateQuestion(user_id)
-//        }
-//      }
-//    }
   }
 
   def whenDidYouShareThisPost(message: RestMessage): Route = {

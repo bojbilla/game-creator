@@ -52,8 +52,7 @@ class GameGenerator(database: DefaultDB) extends Actor with ActorLogging{
   def awaitTiles(client: ActorRef, workers: IndexedSeq[ActorRef]): Receive = {
     case FinishedTileCreation(user_id, tile) =>
       tiles = tile :: tiles
-//      sender() ! PoisonPill
-      log.info(s"Created ${tiles.length} questions")
+      sender() ! PoisonPill
       if (tiles.length == 9){
         val board = Board(user_id, tiles)
         client ! board

@@ -31,13 +31,10 @@ object TileGenerator {
 class TileGenerator(db: DefaultDB) extends QuestionGenerator{
   var questions = List[GameQuestion]()
   var questionPossibilities: List[SpecificQuestionType] = List()
-  var workers: List[ActorRef] = List()
-  var testWorker: Set[ActorRef] = Set()
   def receive = {
     case CreateMultipleChoiceTile(user_id) =>
       val client = sender()
-//      questionPossibilities = Random.shuffle(List(MCWhichPageDidYouLike, MCWhoLikedYourPost, MCWhoMadeThisCommentOnYourPost))
-      questionPossibilities = Random.shuffle(List(MCWhoLikedYourPost, MCWhoMadeThisCommentOnYourPost))
+      questionPossibilities = Random.shuffle(List(MCWhichPageDidYouLike, MCWhoLikedYourPost, MCWhoMadeThisCommentOnYourPost))
       val actors =
         createQuestionGenerators(questionPossibilities.head) ::
         createQuestionGenerators(questionPossibilities.head) ::
@@ -46,7 +43,6 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
       actors foreach { a =>
         a ! CreateQuestion(user_id)
       }
-      workers = actors
       context.become(awaitingQuestions(client, user_id, MultipleChoice))
 
     case CreateTimelineTile(user_id) =>
@@ -60,7 +56,6 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
       actors foreach { a =>
         a ! CreateQuestion(user_id)
       }
-      workers = actors
       context.become(awaitingQuestions(client, user_id, Timeline))
 
 
@@ -84,7 +79,6 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
   def awaitingQuestions(client: ActorRef, user_id: String, questionType: QuestionType): Receive = {
     case FinishedQuestionCreation(q) =>
       questions = q :: questions
-      workers = workers.filter(w => w != sender())
       sender() ! PoisonPill
       if (questions.length >= 3) {
         val tile = Tile(questionType, questions(0), questions(1), questions(2))
@@ -94,15 +88,11 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
       }
     case FailedToCreateQuestion(message, specificType) =>
       log.error(s"Question generation for tile failed $message")
-      workers = workers.filter(w => w != sender())
       sender() ! PoisonPill
       questionPossibilities = questionPossibilities.filter(p => p != specificType)
       questionPossibilities match {
         case x :: xs =>
           val actor = createQuestionGenerators(x)
-          workers = actor :: workers
-//          log.info("we have possibilities " + questionPossibilities + "\nand chosen " + x + "\nand have answers " + questions.length +
-//            "\nand it failed " + specificType + " workers left " + workers.length)
           actor ! CreateQuestion(user_id)
         case Nil =>
           log.error(s"No more possiblities")
