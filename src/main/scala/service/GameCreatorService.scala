@@ -9,14 +9,11 @@ import database.MongoDatabaseService.{SaveFBTaggedPost, SaveFBPost, SaveFBPage}
 import messages.GraphResponses
 import routing.{PerRequest, PerRequestCreator}
 import server.domain.RestMessage
-import service.GameCreatorService.CrawlerTest
 import mongodb.MongoDBEntities.{FBTag, FBPhoto, FBPage}
-import mongodb.{Chicken, Possibility}
 import reactivemongo.api.indexes.{Index, CollectionIndexesManager}
 import reactivemongo.api.{MongoConnection, MongoDriver, DefaultDB}
-import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
-import service.GameGenerator.{CreateQuestion, WhichPageDidYouLike, CreatedWhichPageDidYouLike}
+import service.GameGenerator.{CreateBoard}
+import service.question_generators.QuestionGenerator.CreateQuestion
 import service.question_generators.{WhenDidYouShareThisPost, WhoMadeThisCommentOnYourPost, WhoLikedYourPost}
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
@@ -93,6 +90,18 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
             }
           }
         }
+    } ~ path("fetchData") {
+      get {
+        parameters('user_id.as[String], 'access_token.as[String]) {
+          (user_id: String, access_token: String) =>
+          complete{
+            retrieveFBPages(user_id, access_token)
+            retrieveFBTaggedPosts(user_id, access_token)
+            retrieveFBPosts(user_id, access_token)
+            OK
+          }
+        }
+      }
     } ~ path("liked_pages" / Segment) { user_id =>
       post {
         {
@@ -120,7 +129,7 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
 
     } ~ path("posts" / Segment) { user_id =>
       entity(as[List[GraphResponses.Post]]) { posts =>
-        complete{
+        complete {
           log.info(s"Received posts from crawler for $user_id")
           val mongoSaver = context.actorOf(MongoDatabaseService.props(user_id, db))
           mongoSaver ! SaveFBPost(posts)
@@ -128,32 +137,32 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
         }
       }
 
-    } ~ path("which_page_did_you_like") {
-      parameters('user_id.as[String]) { user_id: String =>
-        tryToCreateBoard{
-          WhichPageDidYouLike(user_id)
-        }
-
-      }
-    } ~ path("who_liked_post") {
-      parameters('user_id.as[String]) { user_id: String =>
-        whoLikedPost{
-          CreateQuestion(user_id)
+    } ~ path("tile") {
+        parameters('user_id.as[String]) { user_id: String =>
+          createBoard{
+            CreateBoard(user_id)
+          }
         }
       }
-    } ~ path("who_made_this_comment_on_your_post"){
-      parameters('user_id.as[String]) { user_id: String =>
-        whoMadeThisCommentOnYourPost{
-          CreateQuestion(user_id)
-        }
-      }
-    } ~ path("when_did_you_share_this_post") {
-      parameters('user_id.as[String]) { user_id: String =>
-        whenDidYouShareThisPost{
-          CreateQuestion(user_id)
-        }
-      }
-    }
+//    } ~ path("who_liked_post") {
+//      parameters('user_id.as[String]) { user_id: String =>
+//        whoLikedPost{
+//          CreateQuestion(user_id)
+//        }
+//      }
+//    } ~ path("who_made_this_comment_on_your_post"){
+//      parameters('user_id.as[String]) { user_id: String =>
+//        whoMadeThisCommentOnYourPost{
+//          CreateQuestion(user_id)
+//        }
+//      }
+//    } ~ path("when_did_you_share_this_post") {
+//      parameters('user_id.as[String]) { user_id: String =>
+//        whenDidYouShareThisPost{
+//          CreateQuestion(user_id)
+//        }
+//      }
+//    }
   }
 
   def whenDidYouShareThisPost(message: RestMessage): Route = {
@@ -196,6 +205,12 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
     val crawlerAddress = s"$crawlerHost/posts?user_id=$user_id&access_token=$access_token&return_address=$returnAddress"
     val gameRequest = GameRequest(user_id, access_token, returnAddress, crawlerAddress, Some(GameRequest.fbPostType))
     dataRetriever ! RetrieveFBPosts(gameRequest)
+  }
+
+  def createBoard(message: RestMessage): Route = {
+    log.info("Creating game board")
+    val generator = context.actorOf(GameGenerator.props(db))
+    ctx => perRequest(ctx, generator, message)
   }
 
 }

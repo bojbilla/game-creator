@@ -1,16 +1,15 @@
 package service
 
+import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
-import database.MongoDatabaseService
-import entities.Entities.{Possibility, Question, MultipleChoiceQuestion}
+import entities.Entities._
 import mongodb.MongoDBEntities.{FBPageLike, FBPage}
 import reactivemongo.api.{QueryOpts, DefaultDB}
-import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
-import reactivemongo.core.commands.Count
 import server.domain.RestMessage
-import service.GameGenerator.{CreatedWhichPageDidYouLike, WhichPageDidYouLike}
+import service.GameGenerator.{CreateBoard}
 import service.RandomDocumentGetter.{GetDocument, RetrievedDocument}
+import service.tile_generator.TileGenerator
+import service.tile_generator.TileGenerator.{CreateTimelineTile, FailedTileCreation, FinishedTileCreation, CreateMultipleChoiceTile}
 
 import scala.concurrent.{ExecutionContext, Promise, Future, ExecutionContextExecutor}
 import scala.util.{Failure, Success, Random}
@@ -24,97 +23,45 @@ object GameGenerator {
   def props(database: DefaultDB): Props =
     Props(new GameGenerator(database))
 
-  case class CreateQuestion(user_id: String) extends RestMessage
-  case class WhichPageDidYouLike(user_id: String) extends RestMessage
-  case class CreatedWhichPageDidYouLike(mc: MultipleChoiceQuestion) extends RestMessage
-  case class CreatedWhoLikedYourPost(mc: MultipleChoiceQuestion) extends RestMessage
-  case class FailedToCreateQuestion(message: String)
+  case class CreateBoard(user_id: String) extends RestMessage
+  case class FinishedBoardCreation(board: Board)
 }
 
 class GameGenerator(database: DefaultDB) extends Actor with ActorLogging{
   implicit def dispatcher: ExecutionContextExecutor =  context.dispatcher
 
   implicit def actorRefFactory: ActorContext = context
-  var unlikedPages: List[FBPage] = List()
 
+  var tiles: List[Tile] = List()
 
   def receive = {
-    case WhichPageDidYouLike(user_id) =>
-      log.info("we do stuff")
+    case CreateBoard(user_id) =>
       val client = sender()
-      val pagesCollection = database[BSONCollection](MongoDatabaseService.fbPagesCollection)
-      val likesCollection = database[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
-      val query = BSONDocument(
-        "user_id" -> user_id
-      )
-      val likedPageIds = likesCollection.find(query).cursor[FBPageLike].collect[List]().map{
-        likes =>
-          likes.map {
-          like =>
-            like.page_id
+      val tileActors = (0 to 8).map( _ => context.actorOf(TileGenerator.props(database)))
+      tileActors.foreach{ a =>
+        Random.nextInt(4) match {
+          case 0 => a ! CreateTimelineTile(user_id)
+          case 1 | 2 | 3 => a ! CreateMultipleChoiceTile(user_id)
+
         }
       }
-      likedPageIds.map { pIds =>
-        createUnlikedPages(database, pagesCollection, BSONDocument(), pIds).map{
-          pages =>
-            val likedPageId = Random.shuffle(pIds).head
-            val likedPage = pagesCollection.find(BSONDocument{
-              "page_id" -> likedPageId
-            }).one[FBPage]
-            likedPage.map{
-              answerO => answerO.map { answer =>
-                val question = Question("Which page did you like?", Some("Pick the right one"), None)
-                val possibilities = (answer :: pages).map { c =>
-                            val source = c.photos match {
-                              case Some(p) => p.source
-                              case None => None
-                            }
-                            Possibility(c.name, source)
-                          }.toVector
-                val answerPossibility = possibilities(0)
-                val randomPossibilities = Random.shuffle(possibilities)
-              val mc = MultipleChoiceQuestion("somerandomstring",
-                user_id, question, randomPossibilities,
-                randomPossibilities.indexOf(answerPossibility))
-                log.info("we send stuff")
-                client ! CreatedWhichPageDidYouLike(mc)
-              }
+      context.become(awaitTiles(client, tileActors))
+    case x => log.error("GameGenerator received unexpected Message " + x)
+  }
 
-            }
-        }
+  def awaitTiles(client: ActorRef, workers: IndexedSeq[ActorRef]): Receive = {
+    case FinishedTileCreation(user_id, tile) =>
+      tiles = tile :: tiles
+//      sender() ! PoisonPill
+      log.info(s"Created ${tiles.length} questions")
+      if (tiles.length == 9){
+        val board = Board(user_id, tiles)
+        client ! board
       }
-
-    case _ => log.error(s"GameGenerator received a unexpected message")
-  }
-
-  def createUnlikedPages(db: DefaultDB,
-                         collection: BSONCollection,
-                         query: BSONDocument,
-                         liked: List[String]): Future[List[FBPage]] ={
-    val promise = Promise[List[FBPage]]()
-    def recurs(pages: List[FBPage], forbiddenPageIds: List[String]): Unit ={
-      getDocument(db, collection, query).map{po => po.map { p =>
-        if (pages.length >= 3){
-          promise.complete(Success(pages))
-        }
-        if (!forbiddenPageIds.contains(p.page_id)){
-          recurs(p :: pages, p.page_id :: forbiddenPageIds)
-        } else {
-          recurs(pages, forbiddenPageIds)
-        }
-      }}
-    }
-    recurs(List(), liked)
-    promise.future
-  }
-  def getDocument(db: DefaultDB, collection: BSONCollection, query: BSONDocument): Future[Option[FBPage]] = {
-  val futureCount = db.command(Count(collection.name, Some(query)))
-    futureCount.flatMap { count =>
-      val skip = Random.nextInt(count)
-      collection.find(query).
-        options(QueryOpts(skipN = skip)).one[FBPage]
-
-    }
+    case FailedTileCreation(message) =>
+      log.error(s"Failed board creation: $message")
+      workers.foreach(w => w ! PoisonPill)
+      client ! server.domain.Domain.Error(message)
   }
 
 }

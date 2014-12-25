@@ -7,19 +7,19 @@ import entities.Entities.{Possibility, Question, MultipleChoiceQuestion}
  */
 class MultipleChoiceMock {
   private val user_id = "1234513"
-  private val question1 = Question("Who is one of your friends?", Some("Pick the right one"), None)
+  private val question1 = Question("Who is one of your friends?", Some(List("Pick the right one")), None)
   private val possiblities1 = Vector(Possibility(Some("100007638947117"), None),
     Possibility(Some("259477210905723"), None),
     Possibility(Some("100006296746302"), None),
     Possibility(Some("100004988686271"), None))
 
-  private val question2 = Question("Who tagged you in this post?", Some("Great time in München"), None)
+  private val question2 = Question("Who tagged you in this post?", Some(List("Great time in München")), None)
   private val possibilities2 = Vector(Possibility(Some("100007638947117"), None),
     Possibility(Some("259477210905723"), None),
     Possibility(Some("100006296746302"), None),
     Possibility(Some("100004988686271"), None))
 
-  private val question3 = Question("Which page did you like?", Some("Pick the right one"), None)
+  private val question3 = Question("Which page did you like?", Some(List("Pick the right one")), None)
   private val possiblities3 = Vector(
   Possibility(Some("Coca-Cola"), Some(
     """https://scontent-b-ams.xx.fbcdn.net/hphotos

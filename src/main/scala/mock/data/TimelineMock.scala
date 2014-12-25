@@ -12,7 +12,7 @@ class TimelineMock {
   private val random = new Random()
   private val range = 4
   private val user_id = "1234513"
-  private val question1 = Question("When did you share this post", Some("finally graduated!"),
+  private val question1 = Question("When did you share this post", Some(List("finally graduated!")),
   Some("https://fbcdn-sphotos-c-a.akamaihd.net/hphotos-ak-xfp1/v/t1.0-9/10320518_633371713422" +
     "361_8865470906024206323_n.jpg?oh=c6592cf487855b03339ea57d4a0b1e0a&oe=54EC7EBE&__gda__=14" +
     "27920695_cdbd7d718a148b20785c2a35670714ba"))
@@ -21,7 +21,7 @@ class TimelineMock {
   private val max1 = 20 - min1
   val timeline1 = TimelineQuestion("43253634", user_id, question1, date1 - min1.days, date1 + max1, range, date1)
 
-  private val question2 = Question("When is your friends birthday?", Some("10153179507419968"), None)
+  private val question2 = Question("When is your friends birthday?", Some(List("10153179507419968")), None)
   private val date2 = new DateTime().withDate(1982, 5, 4)
   private val min2 = random.nextInt(20)
   private val max2 = 20 - min2
@@ -33,7 +33,7 @@ class TimelineMock {
   private val image: String = if (random.nextBoolean()) image1 else image2
 
 
-  private val question3 = Question("When did you share this post", Some("Look at that cute cat!"),
+  private val question3 = Question("When did you share this post", Some(List("Look at that cute cat!")),
     Some(image))
 
   private val date3 = DateTime.lastMonth - random.nextInt(20).days
