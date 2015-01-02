@@ -58,7 +58,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator{
                 val possibilities = (answer :: pages).map { c =>
                   val source = c.photos match {
                     case Some(p) => p.source
-                    case None => None
+                    case None => Some("")
                   }
                   Possibility(c.name, source)
                 }.toVector

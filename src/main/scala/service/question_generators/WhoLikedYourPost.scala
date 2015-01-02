@@ -50,8 +50,8 @@ class WhoLikedYourPost(database: DefaultDB) extends Actor with ActorLogging{
               case Some(likers) => getLikesFromOtherPosts(post, likers.toSet).onComplete {
                 case Success(others) =>
                   val question = Question("WhoLikedThisPost", Some(List(post.message.getOrElse(""))))
-                  val possibilities = Possibility(Some(Random.shuffle(likers).head.user_name), None, Some(Random.shuffle(likers).head.user_id)) +: others.slice(0, 3).map { other =>
-                    Possibility(Some(other.user_name), None, Some(other.user_id))
+                  val possibilities = Possibility(Some(Random.shuffle(likers).head.user_name), Some(""), Some(Random.shuffle(likers).head.user_id)) +: others.slice(0, 3).map { other =>
+                    Possibility(Some(other.user_name), Some(""), Some(other.user_id))
                   }.toVector
                   val answerPossibility = possibilities(0)
                   val randomPossibilities = Random.shuffle(possibilities)
@@ -60,7 +60,7 @@ class WhoLikedYourPost(database: DefaultDB) extends Actor with ActorLogging{
                     randomPossibilities.indexOf(answerPossibility))
                   client ! FinishedQuestionCreation(mc)
                 case Failure(e) =>
-                  client ! FailedToCreateQuestion(e.getMessage, MCWhoLikedYourPost)
+                  client ! FailedToCreateQuestion(e.getMessage + " -> No people who liked post found", MCWhoLikedYourPost)
               }
               case None =>
                 client ! FailedToCreateQuestion(s"Not enough posts with likes > 5 for user: $user_id", MCWhoLikedYourPost)
@@ -102,6 +102,8 @@ class WhoLikedYourPost(database: DefaultDB) extends Actor with ActorLogging{
               case None =>
                 recurs(likers, nonLikers, counter + 1)
             }
+          case Success(None) =>
+            promise.failure(new Exception("No posts found"))
 
           case Failure(t) =>
             promise.failure(t)

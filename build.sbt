@@ -40,4 +40,6 @@ resolvers ++= Seq("Sonatype Snapshots" at "https://oss.sonatype.org/content/repo
 resolvers += "Typesafe Simple Repository" at
   "http://repo.typesafe.com/typesafe/simple/maven-releases/"
 
+assemblyJarName in assembly := "game-creator.jar"
+
 Revolver.settings

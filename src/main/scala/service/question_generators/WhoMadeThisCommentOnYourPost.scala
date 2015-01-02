@@ -79,7 +79,7 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends PostQuestionGenerator(
           promise.failure(new Exception("Something went wrong"))
         case Failure(t) =>
           log.error("could not open document for WhoMadeThisCommentOnYourPost ")
-          promise.failure(new Exception("I don't get it"))
+          promise.failure(t)
 
       }
       }

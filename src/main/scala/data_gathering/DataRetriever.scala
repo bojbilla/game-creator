@@ -43,7 +43,9 @@ class DataRetriever() extends HttpService with Actor with ActorLogging with Json
       case RetrieveFBPosts(gameRequest) =>
         val pageRetriever = context.actorOf(FBRetriever.props(gameRequest))
         pageRetriever ! RetrieveData
-      case _ => log.error("DataRetriever received unecpected message")
+      case SentRetrieval(gameRequest) =>
+        log.info(s"Retrieval sent for request ${gameRequest.retrieveType.getOrElse("???")} for user ${gameRequest.user_id}")
+      case x => log.error("DataRetriever received unexpected message " + x)
     }
 
   def awaitConfirmation: Receive = {

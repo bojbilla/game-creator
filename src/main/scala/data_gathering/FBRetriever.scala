@@ -2,9 +2,7 @@ package data_gathering
 
 import akka.actor.{Props, ActorContext, ActorLogging, Actor}
 import data_gathering.DataRetriever._
-import database.DatabaseService
 import org.json4s.{DefaultFormats, Formats}
-import server.Server
 import service.GameRequest
 import spray.client.pipelining._
 import spray.http.{HttpResponse, HttpRequest}
@@ -41,14 +39,14 @@ class FBRetriever(gameRequest: GameRequest) extends HttpService with Actor with 
           r match {
             case Success(response) =>
               if (response.status == OK) {
-                client ! SentRetrieval
+                client ! SentRetrieval(gameRequest)
               } else {
                 log.error(s"Unable to retrieve pages for $user_id")
-                client ! FailedToSendRetrieval
+                client ! FailedToSendRetrieval(gameRequest)
               }
             case Failure(e) =>
               log.error(s"Unable to retrieve pages for $user_id")
-              client ! FailedToSendRetrieval
+              client ! FailedToSendRetrieval(gameRequest)
           }
       }
 

@@ -83,11 +83,9 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
       if (questions.length >= 3) {
         val tile = Tile(questionType, questions(0), questions(1), questions(2))
         client ! FinishedTileCreation(user_id, tile)
-      } else if (workers.length == 0){
-        client ! FailedTileCreation("Something is really weird")
       }
     case FailedToCreateQuestion(message, specificType) =>
-      log.error(s"Question generation for tile failed $message")
+      log.error(s"Question generation for tile failed $message for type $specificType" )
       sender() ! PoisonPill
       questionPossibilities = questionPossibilities.filter(p => p != specificType)
       questionPossibilities match {

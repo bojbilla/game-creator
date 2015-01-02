@@ -39,8 +39,8 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends PostQuestionGenerator(db) {
             val lower = range - Random.nextInt(range)
             val upper = range - lower
             val actualDate = formatter.parseDateTime(dateString)
-            val minDate = actualDate - lower.days
-            val maxDate = actualDate + upper.days
+            val minDate = lower
+            val maxDate = upper
             TimelineQuestion("someId", user_id, q, minDate, maxDate, 10, actualDate)
         }
       }

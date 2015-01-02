@@ -7,7 +7,6 @@ import mongodb.MongoDBEntities.{FBPageLike, FBPage}
 import reactivemongo.api.{QueryOpts, DefaultDB}
 import server.domain.RestMessage
 import service.GameGenerator.{CreateBoard}
-import service.RandomDocumentGetter.{GetDocument, RetrievedDocument}
 import service.tile_generator.TileGenerator
 import service.tile_generator.TileGenerator.{CreateTimelineTile, FailedTileCreation, FinishedTileCreation, CreateMultipleChoiceTile}
 
