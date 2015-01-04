@@ -21,7 +21,7 @@ inside the sbt console:
 
 	run
 	
-to run the application. It will show the ports where it binded to. The default port used it `9900` but can be modified by using the environement varibale:
+to run the application. It will show the ports where it binded to. The default port used it `9900` but can be modified by using the environement variable:
 
 	GAME_CREATOR_PORT
 
