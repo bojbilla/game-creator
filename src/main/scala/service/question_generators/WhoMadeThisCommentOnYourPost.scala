@@ -33,11 +33,11 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends PostQuestionGenerator(
                     val commentSelection = Random.shuffle(post.comments.get).slice(0, 4)
                     val possibilities = commentSelection.map {
                       c =>
-                        Possibility(Some(c.from.user_id), Some(c.from.user_name))
+                        Possibility(Some(c.from.user_name), Some(""), Some(c.from.user_id))
                     }
                     val answer = possibilities.head
 
-                    val answerComment = commentSelection.filter(c => c.from.user_id == answer.text.get).head
+                    val answerComment = commentSelection.filter(c => c.from.user_id == answer.fb_id.get).head
 
                     val randomPossibilities = Random.shuffle(possibilities).toVector
 

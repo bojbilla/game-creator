@@ -4,7 +4,7 @@ import akka.actor.Props
 import entities.Entities.{Question, TimelineQuestion, MultipleChoiceQuestion}
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import reactivemongo.api.DefaultDB
-import reactivemongo.bson.BSONDocument
+import reactivemongo.bson.{BSONArray, BSONDocument}
 import com.github.nscala_time.time.Imports._
 import service.question_generators.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation, CreateQuestion}
 import scala.util.Random
@@ -25,7 +25,8 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends PostQuestionGenerator(db) {
       val client = sender()
       val query = BSONDocument(
         "user_id" -> user_id,
-        "message" -> BSONDocument("$exists" -> "true")
+        "message" -> BSONDocument("$exists" -> "true"),
+       "type" -> BSONDocument("$nin" -> BSONArray("photo", "video"))
       )
       val question = getDocument(db, collection, query).map{
         postO => postO.map{
