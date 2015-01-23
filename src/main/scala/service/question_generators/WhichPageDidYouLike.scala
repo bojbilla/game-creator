@@ -64,13 +64,13 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator{
                 }.toVector
                 val answerPossibility = possibilities(0)
                 val randomPossibilities = Random.shuffle(possibilities)
-                val mc = MultipleChoiceQuestion("somerandomstring",
+                val mc = MultipleChoiceQuestion(answerPossibility.text.get,
                   user_id, question, randomPossibilities,
                   randomPossibilities.indexOf(answerPossibility))
                 client ! FinishedQuestionCreation(mc)
+              case x =>
+                client ! FailedToCreateQuestion("WhichPagedidYouLike failed", MCWhichPageDidYouLike)
               }
-          case _ =>
-            client ! FailedToCreateQuestion("WhichPagedidYouLike failed", MCWhichPageDidYouLike)
           case Failure(t) =>
             client ! FailedToCreateQuestion("WhichPagedidYouLike failed " + t.getMessage, MCWhichPageDidYouLike)
         }

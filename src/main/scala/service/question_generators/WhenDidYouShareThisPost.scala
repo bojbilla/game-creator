@@ -37,12 +37,12 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends PostQuestionGenerator(db) {
             val dateString = post.created_time.get.substring(0, index)
             val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
             val range = 60
-            val lower = range - Random.nextInt(range)
+            val lower = Random.nextInt(range)
             val upper = range - lower
             val actualDate = formatter.parseDateTime(dateString)
             val minDate = lower
             val maxDate = upper
-            TimelineQuestion("someId", user_id, q, minDate, maxDate, 10, actualDate)
+            TimelineQuestion(post.post_id, user_id, q, minDate, maxDate, 10, actualDate)
         }
       }
       question.map{

@@ -43,7 +43,7 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends PostQuestionGenerator(
 
                     val question = Question("WhoMadeThisCommentOnThePost", Some(List(post.message.get, answerComment.message)))
 
-                    val mc = MultipleChoiceQuestion("somerandomstring",
+                    val mc = MultipleChoiceQuestion(answerComment.id,
                       user_id, question, randomPossibilities,
                       randomPossibilities.indexOf(answer))
                     client ! FinishedQuestionCreation(mc)

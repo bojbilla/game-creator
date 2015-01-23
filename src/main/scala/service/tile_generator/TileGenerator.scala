@@ -6,6 +6,7 @@ import entities.Entities.QuestionType._
 import entities.Entities.QuestionType.QuestionType
 import entities.Entities.SpecificQuestionType._
 import entities.Entities._
+import entities.Entities.GameQuestion
 import reactivemongo.api.DefaultDB
 import service.question_generators.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation, CreateQuestion}
 import service.question_generators._
@@ -31,6 +32,9 @@ object TileGenerator {
 class TileGenerator(db: DefaultDB) extends QuestionGenerator{
   var questions = List[GameQuestion]()
   var questionPossibilities: List[SpecificQuestionType] = List()
+  var counter = 0
+  val limit = 10
+
   def receive = {
     case CreateMultipleChoiceTile(user_id) =>
       val client = sender()
@@ -39,7 +43,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
         createQuestionGenerators(questionPossibilities.head) ::
         createQuestionGenerators(questionPossibilities.head) ::
         createQuestionGenerators(questionPossibilities.head) :: Nil
-      questionPossibilities = questionPossibilities.tail
+      questionPossibilities = questionPossibilities
       actors foreach { a =>
         a ! CreateQuestion(user_id)
       }
@@ -52,7 +56,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
         createQuestionGenerators(questionPossibilities.head) ::
           createQuestionGenerators(questionPossibilities.head) ::
           createQuestionGenerators(questionPossibilities.head) :: Nil
-      questionPossibilities = questionPossibilities.tail
+      questionPossibilities = questionPossibilities
       actors foreach { a =>
         a ! CreateQuestion(user_id)
       }
@@ -78,12 +82,30 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
 
   def awaitingQuestions(client: ActorRef, user_id: String, questionType: QuestionType): Receive = {
     case FinishedQuestionCreation(q) =>
-      questions = q :: questions
-      sender() ! PoisonPill
-      if (questions.length >= 3) {
-        val tile = Tile(questionType, questions(0), questions(1), questions(2))
-        client ! FinishedTileCreation(user_id, tile)
+      if (questions.filter(p => p.id == q.id).isEmpty) {
+        questions = q :: questions
+        sender() ! PoisonPill
+        if (questions.length >= 3) {
+          val tile = Tile(questionType, questions(0), questions(1), questions(2))
+          client ! FinishedTileCreation(user_id, tile)
+        }
+      } else {
+        sender() ! PoisonPill
+        counter = counter + 1
+        if (counter >= limit){
+          questionPossibilities = questionPossibilities.tail
+        }
+        questionPossibilities match {
+          case x :: xs =>
+            val actor = createQuestionGenerators(x)
+            actor ! CreateQuestion(user_id)
+          case Nil =>
+            log.error(s"No more possiblities")
+            client ! FailedTileCreation("Not enough content (questions too similar)")
+        }
+
       }
+
     case FailedToCreateQuestion(message, specificType) =>
       log.error(s"Question generation for tile failed $message for type $specificType" )
       sender() ! PoisonPill

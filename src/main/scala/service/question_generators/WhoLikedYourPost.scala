@@ -55,7 +55,7 @@ class WhoLikedYourPost(database: DefaultDB) extends Actor with ActorLogging{
                   }.toVector
                   val answerPossibility = possibilities(0)
                   val randomPossibilities = Random.shuffle(possibilities)
-                  val mc = MultipleChoiceQuestion("somerandomstring",
+                  val mc = MultipleChoiceQuestion(post.post_id,
                     user_id, question, randomPossibilities,
                     randomPossibilities.indexOf(answerPossibility))
                   client ! FinishedQuestionCreation(mc)
