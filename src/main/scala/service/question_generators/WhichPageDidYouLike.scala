@@ -60,7 +60,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator{
                     case Some(p) => p.source
                     case None => Some("")
                   }
-                  Possibility(c.name, source)
+                  Possibility(c.name, source, Some(c.page_id))
                 }.toVector
                 val answerPossibility = possibilities(0)
                 val randomPossibilities = Random.shuffle(possibilities)
