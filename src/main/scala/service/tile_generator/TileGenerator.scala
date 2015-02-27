@@ -68,14 +68,19 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
   def createQuestionGenerators(questionType:  SpecificQuestionType): ActorRef = {
      questionType match {
       case MCWhichPageDidYouLike =>
+        log.info(s"Trying to create question WhichPageDidYouLike")
         context.actorOf(WhichPageDidYouLike.props(db))
       case MCWhoLikedYourPost =>
+        log.info(s"Trying to create question WhoLikedYourPost")
         context.actorOf(WhoLikedYourPost.props(db))
       case MCWhoMadeThisCommentOnYourPost =>
+        log.info(s"Trying to create question WhoMadeThisCommentOnYourPost")
         context.actorOf(WhoMadeThisCommentOnYourPost.props(db))
       case TLWhenDidYouShareThisPost =>
-         context.actorOf(WhenDidYouShareThisPost.props(db))
+        log.info(s"Trying to create question WhenDidYouShareThisPost")
+        context.actorOf(WhenDidYouShareThisPost.props(db))
       case _ => log.error("Unknown Question Type")
+        log.error(s"Trying to create question Unknown Question Type")
         context.actorOf(WhichPageDidYouLike.props(db))
      }
   }
@@ -100,7 +105,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
             val actor = createQuestionGenerators(x)
             actor ! CreateQuestion(user_id)
           case Nil =>
-            log.error(s"No more possiblities")
+            log.error(s"No more possiblities for user $user_id")
             client ! FailedTileCreation("Not enough content (questions too similar)")
         }
 
@@ -115,7 +120,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
           val actor = createQuestionGenerators(x)
           actor ! CreateQuestion(user_id)
         case Nil =>
-          log.error(s"No more possiblities")
+          log.error(s"No more possiblities for user $user_id")
           client ! FailedTileCreation(message)
       }
 
