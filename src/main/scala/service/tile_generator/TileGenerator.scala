@@ -87,10 +87,13 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
 
   def awaitingQuestions(client: ActorRef, user_id: String, questionType: QuestionType): Receive = {
     case FinishedQuestionCreation(q) =>
+      log.info(s"Created question of type $questionType for user $user_id")
       if (questions.filter(p => p.id == q.id).isEmpty) {
         questions = q :: questions
+        log.info(s"Added question: $questionType for user $user_id having now ${questions.length}")
         sender() ! PoisonPill
         if (questions.length >= 3) {
+          log.info(s"Creating Tile: $questionType for user $user_id")
           val tile = Tile(questionType, questions(0), questions(1), questions(2))
           client ! FinishedTileCreation(user_id, tile)
         }
@@ -98,6 +101,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
         sender() ! PoisonPill
         counter = counter + 1
         if (counter >= limit){
+          log.info(s"Trying another questiontype for user: $user_id")
           questionPossibilities = questionPossibilities.tail
         }
         questionPossibilities match {
