@@ -36,6 +36,7 @@ trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCre
   def receive = {
     case res: RestMessage => complete(OK, res)
     case error: Domain.Error => complete(NotFound, error)
+    case tooMany: Domain.TooManyRequests => complete(TooManyRequests, tooMany)
     case v: Domain.Validation    => complete(BadRequest, v)
     case ReceiveTimeout   => complete(GatewayTimeout, Domain.Error("Request timeout"))
     case x => log.info("Per request received strange message " + x)

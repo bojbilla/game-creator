@@ -2,13 +2,14 @@ package database
 
 import akka.actor.Props
 import database.MongoDatabaseService.{SaveFBTaggedPost, SaveFBPost, SaveFBPage}
-import messages.GraphResponses
 import mongodb.MongoDBEntities._
 import reactivemongo.api.{DefaultDB, MongoConnection}
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONObjectID, BSONDocument}
+import reactivemongo.core.commands.{Count, FindAndModify}
 import service.GameRequest
 import com.github.nscala_time.time.Imports._
+import crawler.common.GraphResponses._
 
 
 /**
@@ -24,9 +25,9 @@ object MongoDatabaseService{
   def props(user_id: String, db: DefaultDB): Props =
     Props(new MongoDatabaseService(user_id, db))
 
-  case class SaveFBPage(pages: List[GraphResponses.Page])
-  case class SaveFBPost(posts: List[GraphResponses.Post])
-  case class SaveFBTaggedPost(posts: List[GraphResponses.Post])
+  case class SaveFBPage(pages: List[Page])
+  case class SaveFBPost(posts: List[Post])
+  case class SaveFBTaggedPost(posts: List[Post])
 }
 
 class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseService{
@@ -41,7 +42,7 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
     case _ => log.error(s"MongoDB Service received unexpected message")
   }
 
-  def saveFBPagesToDB(pages: List[GraphResponses.Page]): Unit ={
+  def saveFBPagesToDB(pages: List[Page]): Unit ={
     import reactivemongo.api._
     import scala.concurrent.ExecutionContext.Implicits.global
     import mongodb.MongoDBEntities._
@@ -60,15 +61,26 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
         FBPhoto(photo.id, photo.source, photo.created_time, tags)
       }
 
-        fbPageCollection.insert(FBPage(None, p.id, p.name, fbPhoto))
-        fbPageLikeCollection.insert(FBPageLike(None, user_id, p.id))
+      val query = BSONDocument("page_id" -> p.id)
+      val futureCount = db.command(Count(fbPageCollection.name, Some(query)))
+      futureCount.map{ count =>
+        if (count < 1){
+          fbPageCollection.insert(FBPage(None, p.id, p.name, fbPhoto))
+        }
+      }
 
-
+      val query2 = BSONDocument( "user_id" -> user_id, "page_id" -> p.id)
+      val futureRelationCount = db.command(Count(fbPageLikeCollection.name, Some(query2)))
+      futureRelationCount.map{ count =>
+        if (count < 1){
+          fbPageLikeCollection.insert(FBPageLike(None, user_id, p.id))
+        }
+      }
     }
   }
 
 
-  def saveFBPostToDB(posts: List[GraphResponses.Post], collection: BSONCollection): Unit = {
+  def saveFBPostToDB(posts: List[Post], collection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     import mongodb.MongoDBEntities._
     val fbPosts = posts.foreach{ p =>

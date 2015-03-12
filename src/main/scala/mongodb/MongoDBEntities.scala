@@ -1,7 +1,7 @@
 package mongodb
 
 import com.github.nscala_time.time.Imports._
-import messages.GraphResponses.{From, Like, Root, Photo}
+import crawler.common.GraphResponses.{From, Like, Root, Photo}
 import org.joda.time.DateTime
 import reactivemongo.bson.Macros.Options.{\/, UnionType, AllImplementations}
 import reactivemongo.bson._

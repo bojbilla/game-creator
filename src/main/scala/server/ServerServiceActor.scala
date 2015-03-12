@@ -1,7 +1,8 @@
 package server
 
 import akka.actor.{ActorRef, ActorLogging}
-import data_gathering.DataRetriever
+import crawler.CrawlerService
+import crawler.retrievedata.RetrieverService
 import mock.MockServiceActor
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 import service.GameCreatorServiceActor
@@ -24,6 +25,6 @@ class ServerServiceActor extends MockServiceActor with GameCreatorServiceActor w
 
   override implicit def json4sFormats: Formats = DefaultFormats
 
-  override val dataRetriever: ActorRef = context.actorOf(DataRetriever.props())
+  override val dataRetriever: ActorRef = context.actorOf(CrawlerService.props(db))
 
 }

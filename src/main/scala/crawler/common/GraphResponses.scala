@@ -1,9 +1,12 @@
-package messages
+package crawler.common
 
-import org.json4s._
 import com.github.nscala_time.time.Imports._
-import reactivemongo.bson.{BSONHandler, BSONDateTime, Macros, BSONObjectID}
+import org.json4s.DefaultFormats
+import server.domain.RestMessage
 
+/**
+ * Created by roger on 05/03/15.
+ */
 object GraphResponses {
   implicit val formats = DefaultFormats
   abstract class BaseResponse()
@@ -19,7 +22,7 @@ object GraphResponses {
                   attachments: Option[Root[List[Attachment]]],
                   comments: Option[Root[List[Comment]]]
                    )
-
+  case class PostsList(posts: List[Post]) extends RestMessage
 
   case class From(id: String, name:String)
   case class Attachment(description: Option[String] = None, media: Option[Media] = None, `type`: Option[String] = None)

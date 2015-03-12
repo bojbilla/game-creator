@@ -2,11 +2,11 @@ package service
 
 import akka.actor._
 import akka.event.Logging
-import data_gathering.DataRetriever
-import data_gathering.DataRetriever.{RetrieveFBPosts, RetrieveFBPages}
+import crawler.CrawlerService.FetchData
+import crawler.common.GraphResponses
+import crawler.common.GraphResponses.{Post, Page}
 import database.MongoDatabaseService
 import database.MongoDatabaseService.{SaveFBTaggedPost, SaveFBPost, SaveFBPage}
-import messages.GraphResponses
 import routing.{PerRequest, PerRequestCreator}
 import server.domain.RestMessage
 import mongodb.MongoDBEntities.{FBTag, FBPhoto, FBPage}
@@ -57,37 +57,19 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
     )
   val gameCreatorRoutes = {
 
-    pathEndOrSingleSlash {
-      get {
-        complete {
-          val token = "CAAJMWTZBZC0vQBAMVVHQWJGDFEZANCMJRZBuY5VDSwG4Ctu1fVZB93CP72ZAHCzMtQg0qriUHDjtDRdtSI0agHDD84YVzlkSu004gUq75c10CvwlWRBFZAsURLHyUbnyU5WPPra6cMw03sQB3DblYEZABegqGr06EyZB1xWBTmDfwZB8QtbeJXhPAp76OrcmXLeYkZD"
-          val user_id = "21341"
-          val return_address = s"http://${Server.hostName}:${Server.port}/liked_pages/$user_id"
-          val crawler = s"http://localhost:9000/liked_pages?user_id=$user_id&access_token=$token&return_address=$return_address"
-
-          val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
-          val responseF = pipeline(Get(crawler))
-          responseF.onComplete(r => log.info("we received " + r.get.status))
-
-          "we are starting i think"
-        }
-      }
-    } ~ path("fetchData") {
+    path("fetchData") {
       get {
         parameters('user_id.as[String], 'access_token.as[String]) {
           (user_id: String, access_token: String) =>
-            complete{
-              retrieveFBPages(user_id, access_token)
-              retrieveFBTaggedPosts(user_id, access_token)
-              retrieveFBPosts(user_id, access_token)
-              OK
-            }
+              fetchData{
+                FetchData(user_id, access_token)
+              }
         }
       }
     } ~ path("liked_pages" / Segment) { user_id =>
       post {
         {
-          entity(as[List[GraphResponses.Page]]) { pages =>
+          entity(as[List[Page]]) { pages =>
             complete{
               log.info(s"Received liked_pages from crawler for $user_id")
               val mongoSaver = context.actorOf(MongoDatabaseService.props(user_id, db))
@@ -99,7 +81,7 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
       }
     } ~ path("tagged_posts" / Segment) { user_id =>
       post {
-        entity(as[List[GraphResponses.Post]]) { posts =>
+        entity(as[List[Post]]) { posts =>
           complete{
             log.info(s"Received tagged_posts from crawler for $user_id")
             val mongoSaver = context.actorOf(MongoDatabaseService.props(user_id, db))
@@ -111,7 +93,7 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
 
     } ~ path("posts" / Segment) { user_id =>
       post {
-        entity(as[List[GraphResponses.Post]]) { posts =>
+        entity(as[List[Post]]) { posts =>
           complete {
             log.info(s"Received posts from crawler for $user_id")
             val mongoSaver = context.actorOf(MongoDatabaseService.props(user_id, db))
@@ -153,7 +135,7 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
     val returnAddress = s"http://${Server.hostName}:${Server.port}/liked_pages/$user_id"
     val crawlerAddress = s"${Server.fullCrawlerHost}/liked_pages?user_id=$user_id&access_token=$access_token&return_address=$returnAddress"
     val gameRequest = GameRequest(user_id, access_token, returnAddress, crawlerAddress, Some(GameRequest.fbPageType))
-    dataRetriever ! RetrieveFBPages(gameRequest)
+//    dataRetriever ! RetrieveFBPages(gameRequest)
   }
 
   def retrieveFBTaggedPosts(user_id: String, access_token: String): Unit = {
@@ -161,7 +143,7 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
     val returnAddress = s"http://${Server.hostName}:${Server.port}/tagged_posts/$user_id"
     val crawlerAddress = s"${Server.fullCrawlerHost}/tagged_posts?user_id=$user_id&access_token=$access_token&return_address=$returnAddress"
     val gameRequest = GameRequest(user_id, access_token, returnAddress, crawlerAddress, Some(GameRequest.fbPostType))
-    dataRetriever ! RetrieveFBPosts(gameRequest)
+//    dataRetriever ! RetrieveFBPosts(gameRequest)
   }
 
   def retrieveFBPosts(user_id: String, access_token: String): Unit = {
@@ -169,13 +151,17 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
     val returnAddress = s"http://${Server.hostName}:${Server.port}/posts/$user_id"
     val crawlerAddress = s"${Server.fullCrawlerHost}/posts?user_id=$user_id&access_token=$access_token&return_address=$returnAddress"
     val gameRequest = GameRequest(user_id, access_token, returnAddress, crawlerAddress, Some(GameRequest.fbPostType))
-    dataRetriever ! RetrieveFBPosts(gameRequest)
+//    dataRetriever ! RetrieveFBPosts(gameRequest)
   }
 
   def createBoard(message: RestMessage): Route = {
     log.info("Creating game board")
     val generator = context.actorOf(GameGenerator.props(db))
     ctx => perRequest(ctx, generator, message)
+  }
+
+  def fetchData(message: RestMessage): Route = {
+    ctx => perRequest(ctx, dataRetriever, message)
   }
 
 }

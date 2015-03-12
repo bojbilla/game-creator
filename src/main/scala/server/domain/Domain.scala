@@ -18,6 +18,8 @@ object Domain {
 
   case class Error(message: String)
 
+  case class TooManyRequests(message: String) extends RestMessage
+
   case class Validation(message: String)
 
   // Exceptions
