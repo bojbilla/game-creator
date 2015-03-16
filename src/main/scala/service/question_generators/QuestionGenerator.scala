@@ -4,6 +4,7 @@ import akka.actor.{ActorContext, ActorLogging, Actor}
 import entities.Entities.GameQuestion
 import entities.Entities.QuestionType._
 import entities.Entities.SpecificQuestionType.SpecificQuestionType
+import server.domain.RestMessage
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -13,7 +14,7 @@ import scala.concurrent.ExecutionContextExecutor
 
 object QuestionGenerator {
 
-  case class CreateQuestion(user_id: String)
+  case class CreateQuestion(user_id: String) extends RestMessage
   case class FinishedQuestionCreation(question: GameQuestion)
   case class FailedToCreateQuestion(message: String, questionType: SpecificQuestionType)
 

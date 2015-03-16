@@ -11,6 +11,7 @@ import org.json4s.jackson
 import routing.PerRequest.{WithProps, WithActorRef}
 import server.domain.{Domain, RestMessage}
 import server.json_serializer.GameCreatorFormatter
+import service.question_generators.QuestionGenerator.FinishedQuestionCreation
 import spray.http.StatusCode
 import spray.http.StatusCode
 import spray.http.StatusCodes._
@@ -35,6 +36,7 @@ trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCre
 
   def receive = {
     case res: RestMessage => complete(OK, res)
+    case FinishedQuestionCreation(q) => complete(OK, q)
     case error: Domain.Error => complete(NotFound, error)
     case tooMany: Domain.TooManyRequests => complete(TooManyRequests, tooMany)
     case v: Domain.Validation    => complete(BadRequest, v)

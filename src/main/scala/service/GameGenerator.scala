@@ -23,6 +23,7 @@ object GameGenerator {
     Props(new GameGenerator(database))
 
   case class CreateBoard(user_id: String) extends RestMessage
+
   case class FinishedBoardCreation(board: Board)
 }
 
@@ -47,6 +48,7 @@ class GameGenerator(database: DefaultDB) extends Actor with ActorLogging{
       context.become(awaitTiles(client, tileActors))
     case x => log.error("GameGenerator received unexpected Message " + x)
   }
+
 
   def awaitTiles(client: ActorRef, workers: IndexedSeq[ActorRef]): Receive = {
     case FinishedTileCreation(user_id, tile) =>
