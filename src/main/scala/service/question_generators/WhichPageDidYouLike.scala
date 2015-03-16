@@ -50,28 +50,33 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator{
           "page_id" -> BSONDocument("$nin" -> pIds)
         )
         pagesCollection.find(queryUnliked).cursor[FBPage].collect[List](3).flatMap{ unlikedPages =>
-          val likedPageId = Random.shuffle(pIds).head
-          val likedPage = pagesCollection.find(BSONDocument {
-            "page_id" -> likedPageId
-          }).one[FBPage]
-          likedPage.map{ _.map { answer =>
-            val question = Question("WhichPageDidYouLike")
+          if (unlikedPages.length < 3){
+            Future.failed(new Exception("Not enough unliked pages"))
+          } else {
+            val likedPageId = Random.shuffle(pIds).head
+            val likedPage = pagesCollection.find(BSONDocument {
+              "page_id" -> likedPageId
+            }).one[FBPage]
+            likedPage.map{ _.map { answer =>
+              val question = Question("WhichPageDidYouLike")
 
-            val possibilities = (answer :: unlikedPages).map { c =>
-              val source = c.photos match {
-                case Some(p) => p.source
-                case None => Some("")
-              }
-              Possibility(c.name, source, Some(c.page_id))
-            }.toVector
+              val possibilities = (answer :: unlikedPages).map { c =>
+                val source = c.photos match {
+                  case Some(p) => p.source
+                  case None => Some("")
+                }
+                Possibility(c.name, source, Some(c.page_id))
+              }.toVector
 
-            val answerPossibility = possibilities(0)
-            val randomPossibilities = Random.shuffle(possibilities)
+              val answerPossibility = possibilities(0)
+              val randomPossibilities = Random.shuffle(possibilities)
 
-            MultipleChoiceQuestion(answerPossibility.text.get,
-              user_id, question, randomPossibilities,
-              randomPossibilities.indexOf(answerPossibility))
+              MultipleChoiceQuestion(answerPossibility.text.get,
+                user_id, question, randomPossibilities,
+                randomPossibilities.indexOf(answerPossibility))
+            }
           }
+
           }
         }
 
