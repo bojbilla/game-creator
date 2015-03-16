@@ -9,9 +9,10 @@ import akka.actor.{OneForOneStrategy, _}
 import org.json4s.DefaultFormats
 import org.json4s.jackson
 import routing.PerRequest.{WithProps, WithActorRef}
+import server.domain.Domain.NoContentFound
 import server.domain.{Domain, RestMessage}
 import server.json_serializer.GameCreatorFormatter
-import service.question_generators.QuestionGenerator.FinishedQuestionCreation
+import service.question_generators.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation}
 import spray.http.StatusCode
 import spray.http.StatusCode
 import spray.http.StatusCodes._
@@ -35,12 +36,13 @@ trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCre
   target ! message
 
   def receive = {
-    case res: RestMessage => complete(OK, res)
     case FinishedQuestionCreation(q) => complete(OK, q)
+    case FailedToCreateQuestion(m, t) => complete(PreconditionFailed, m)
     case error: Domain.Error => complete(NotFound, error)
     case tooMany: Domain.TooManyRequests => complete(TooManyRequests, tooMany)
     case v: Domain.Validation    => complete(BadRequest, v)
     case ReceiveTimeout   => complete(GatewayTimeout, Domain.Error("Request timeout"))
+    case res: RestMessage => complete(OK, res)
     case x => log.info("Per request received strange message " + x)
   }
 

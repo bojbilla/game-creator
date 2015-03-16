@@ -16,7 +16,7 @@ object QuestionGenerator {
 
   case class CreateQuestion(user_id: String) extends RestMessage
   case class FinishedQuestionCreation(question: GameQuestion)
-  case class FailedToCreateQuestion(message: String, questionType: SpecificQuestionType)
+  case class FailedToCreateQuestion(message: String, questionType: SpecificQuestionType) extends RestMessage
 
 }
 

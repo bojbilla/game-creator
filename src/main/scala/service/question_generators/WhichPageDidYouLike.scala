@@ -44,71 +44,51 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator{
               like.page_id
           }
       }
-      likedPageIds.onComplete {
-        case Success(pIds) =>
-        createUnlikedPages(db, pagesCollection, BSONDocument(), pIds)onComplete {
-          case Success(pages) =>
-            val likedPageId = Random.shuffle(pIds).head
-            val likedPage = pagesCollection.find(BSONDocument {
-              "page_id" -> likedPageId
-            }).one[FBPage]
-            likedPage.onComplete {
-              case Success(Some(answer)) =>
-                val question = Question("WhichPageDidYouLike")
-                val possibilities = (answer :: pages).map { c =>
-                  val source = c.photos match {
-                    case Some(p) => p.source
-                    case None => Some("")
-                  }
-                  Possibility(c.name, source, Some(c.page_id))
-                }.toVector
-                val answerPossibility = possibilities(0)
-                val randomPossibilities = Random.shuffle(possibilities)
-                val mc = MultipleChoiceQuestion(answerPossibility.text.get,
-                  user_id, question, randomPossibilities,
-                  randomPossibilities.indexOf(answerPossibility))
-                client ! FinishedQuestionCreation(mc)
-              case x =>
-                client ! FailedToCreateQuestion("WhichPagedidYouLike failed", MCWhichPageDidYouLike)
+
+      val result = likedPageIds.flatMap{ pIds =>
+        val queryUnliked = BSONDocument(
+          "page_id" -> BSONDocument("$nin" -> pIds)
+        )
+        pagesCollection.find(queryUnliked).cursor[FBPage].collect[List](3).flatMap{ unlikedPages =>
+          val likedPageId = Random.shuffle(pIds).head
+          val likedPage = pagesCollection.find(BSONDocument {
+            "page_id" -> likedPageId
+          }).one[FBPage]
+          likedPage.map{ _.map { answer =>
+            val question = Question("WhichPageDidYouLike")
+
+            val possibilities = (answer :: unlikedPages).map { c =>
+              val source = c.photos match {
+                case Some(p) => p.source
+                case None => Some("")
               }
-          case Failure(t) =>
-            client ! FailedToCreateQuestion("WhichPagedidYouLike failed " + t.getMessage, MCWhichPageDidYouLike)
+              Possibility(c.name, source, Some(c.page_id))
+            }.toVector
+
+            val answerPossibility = possibilities(0)
+            val randomPossibilities = Random.shuffle(possibilities)
+
+            MultipleChoiceQuestion(answerPossibility.text.get,
+              user_id, question, randomPossibilities,
+              randomPossibilities.indexOf(answerPossibility))
+          }
+          }
         }
 
-        case Failure(t) =>
-          client ! FailedToCreateQuestion("WhichPagedidYouLike failed " + t.getMessage, MCWhichPageDidYouLike)
+      }
+
+      result.onComplete{
+        case Success(Some(question)) => client ! FinishedQuestionCreation(question)
+        case Failure(e) =>
+          log.error("Failed to created WhichPageDidYouLike as this user likes EVERYTHING " + e)
+          client ! FailedToCreateQuestion("Unable to create question WhichPageDidYouLike", MCWhichPageDidYouLike)
+        case _ =>
+          log.error("Failed to created WhichPageDidYouLike as this user likes EVERYTHING ")
+          client ! FailedToCreateQuestion("Unable to create question WhichPageDidYouLike", MCWhichPageDidYouLike)
+
       }
 
     case x => log.error(s"WhichPageDidYouLike received a unexpected message " + x)
   }
 
-  def createUnlikedPages(db: DefaultDB,
-                         collection: BSONCollection,
-                         query: BSONDocument,
-                         liked: List[String]): Future[List[FBPage]] ={
-    val promise = Promise[List[FBPage]]()
-    def recurs(pages: List[FBPage], forbiddenPageIds: List[String]): Unit ={
-      getDocument(db, collection, query).map{po => po.map { p =>
-        if (pages.length >= 3){
-          promise.complete(Success(pages))
-        }
-        if (!forbiddenPageIds.contains(p.page_id)){
-          recurs(p :: pages, p.page_id :: forbiddenPageIds)
-        } else {
-          recurs(pages, forbiddenPageIds)
-        }
-      }}
-    }
-    recurs(List(), liked)
-    promise.future
-  }
-  def getDocument(db: DefaultDB, collection: BSONCollection, query: BSONDocument): Future[Option[FBPage]] = {
-    val futureCount = db.command(Count(collection.name, Some(query)))
-    futureCount.flatMap { count =>
-      val skip = Random.nextInt(count)
-      collection.find(query).
-        options(QueryOpts(skipN = skip)).one[FBPage]
-
-    }
-  }
 }

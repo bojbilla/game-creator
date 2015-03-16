@@ -12,15 +12,15 @@ object Domain {
 
   case class Done(message: String) extends RestMessage
 
-  //  case class MultipleChoiceQuestion(id: String, kind: String) extends RestMessage
 
-  case class SliderQuestion(id: String, kind: String) extends RestMessage
 
   case class Error(message: String)
 
   case class TooManyRequests(message: String) extends RestMessage
 
   case class Validation(message: String)
+
+  case class NoContentFound(message: String) extends RestMessage
 
   // Exceptions
 
