@@ -1,16 +1,20 @@
 package crawler
 
 
-import akka.actor.{PoisonPill, ActorLogging, Actor, Props}
+import java.util.Calendar
+
+import akka.actor._
 import crawler.CrawlerService.{FinishedCrawling, FetchData}
 import crawler.common.{GraphResponses, FBSimpleParameters}
 import crawler.common.GraphResponses.Page
 import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, RetrieveEntities}
 import crawler.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts}
 import database.MongoDatabaseService
-import database.MongoDatabaseService.{SaveFBPage, SaveFBTaggedPost}
+import database.MongoDatabaseService.{SaveLastCrawledTime, SaveFBPage, SaveFBTaggedPost}
 import reactivemongo.api.DefaultDB
-import server.domain.Domain.{TooManyRequests, Error, Done}
+import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.BSONDocument
+import server.domain.Domain._
 import server.domain.RestMessage
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
@@ -18,6 +22,8 @@ import spray.http.MediaTypes._
 import spray.http.{HttpResponse, HttpRequest}
 import scala.reflect.runtime.universe._
 import reflect.ClassTag
+import mongodb.MongoDBEntities.LastCrawled
+import scala.util.{Failure, Success}
 
 import scala.concurrent.Future
 
@@ -38,22 +44,53 @@ class CrawlerService(database: DefaultDB) extends Actor with ActorLogging{
 
   def receive() = {
     case FetchData(userId, accessToken) =>
+      val client = sender()
       if (!currentlyCrawling.contains(userId)){
-        val crawler = context.actorOf(CrawlerWorker.props(database))
-        crawler ! FetchData(userId, accessToken)
-        currentlyCrawling = currentlyCrawling + userId
-        sender() ! Done("Fetching Data for " + userId)
+        import scala.concurrent.ExecutionContext.Implicits.global
+        val lastCrawled = database[BSONCollection](MongoDatabaseService.lastCrawledCollection)
+        val query = BSONDocument(
+          "user_id" -> userId
+        )
+        val curTime = Calendar.getInstance.getTimeInMillis
+        lastCrawled.find(query).cursor[LastCrawled].collect[List]().map {
+          list => list.map(elm => elm.date).head
+        }.onComplete {
+          case Success(time) => conditionalCrawl(curTime, time, userId, accessToken, client)
+          case Failure(e) => {
+            log.error(s"$e")
+            conditionalCrawl(curTime, -99990, userId, accessToken, client)
+          }
+          case _ => conditionalCrawl(curTime, -8880, userId, accessToken, client)
+        }
+
       } else {
         sender ! TooManyRequests("Already crawling for user " + userId)
       }
 
     case FinishedCrawling(userId) =>
       log.info(s"Finished Crawling for user: $userId")
+      val mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
+      mongoSaver ! SaveLastCrawledTime
       sender ! PoisonPill
       currentlyCrawling = currentlyCrawling - userId
 
     case _ =>
       log.info("Crawler service Received unexpected message")
 
+  }
+
+  def hasToCrawl(curTime : Long, time : Long): Boolean = {
+    curTime - time > 10000
+  }
+
+  def conditionalCrawl(curTime : Long, time : Long, userId : String, accessToken : String, client: ActorRef) = {
+    if (hasToCrawl(curTime, time)) {
+      val crawler = context.actorOf(CrawlerWorker.props(database))
+      crawler ! FetchData(userId, accessToken)
+      currentlyCrawling = currentlyCrawling + userId
+      client ! Done("Fetching Data for " + userId)
+    } else {
+      client ! AlreadyFresh(s"Data for user $userId is fresh.")
+    }
   }
 }

@@ -1,15 +1,18 @@
 package database
 
+import java.util.Calendar
+
 import akka.actor.Props
-import database.MongoDatabaseService.{SaveFBTaggedPost, SaveFBPost, SaveFBPage}
+import database.MongoDatabaseService.{SaveLastCrawledTime, SaveFBTaggedPost, SaveFBPost, SaveFBPage}
 import mongodb.MongoDBEntities._
 import reactivemongo.api.{DefaultDB, MongoConnection}
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONObjectID, BSONDocument}
-import reactivemongo.core.commands.{Count, FindAndModify}
+import reactivemongo.core.commands.{Update, Count, FindAndModify}
 import service.GameRequest
 import com.github.nscala_time.time.Imports._
 import crawler.common.GraphResponses._
+import scala.util.{ Failure, Success }
 
 
 /**
@@ -21,6 +24,7 @@ object MongoDatabaseService{
   val fbPageLikesCollection = "fb_page_likes"
   val fbTaggedPostsCollection = "fb_tagged_posts"
   val fbPostsCollection = "fb_posts"
+  val lastCrawledCollection = "last_crawled"
 
   def props(user_id: String, db: DefaultDB): Props =
     Props(new MongoDatabaseService(user_id, db))
@@ -28,6 +32,7 @@ object MongoDatabaseService{
   case class SaveFBPage(pages: List[Page])
   case class SaveFBPost(posts: List[Post])
   case class SaveFBTaggedPost(posts: List[Post])
+  case class SaveLastCrawledTime()
 }
 
 class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseService{
@@ -39,6 +44,8 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
       saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbPostsCollection))
     case SaveFBTaggedPost(posts) =>
       saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbTaggedPostsCollection))
+    case SaveLastCrawledTime =>
+      saveLastCrawlTime
     case _ => log.error(s"MongoDB Service received unexpected message")
   }
 
@@ -100,4 +107,23 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
       collection.insert(fbPost)
     }
   }
+
+  def saveLastCrawlTime: Unit = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    val lastCrawled = db[BSONCollection](MongoDatabaseService.lastCrawledCollection)
+    val time = Calendar.getInstance.getTimeInMillis
+    val selector = BSONDocument("user_id" -> user_id)
+
+    val modifier = BSONDocument(
+      "$set" -> BSONDocument("date" -> time))
+
+    val command = FindAndModify(lastCrawled.name, selector, Update(modifier, fetchNewObject = false), upsert = true)
+    db.command(command).onComplete {
+      case Failure(error) => log.error(s"An error occurred while saving last crawled time for user $user_id.")
+      case Success(maybeDocument) => log.info(s"Last crawled time saved for user : $user_id.")
+    }
+  }
+
+
 }

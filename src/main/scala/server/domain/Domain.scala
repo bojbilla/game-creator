@@ -18,6 +18,8 @@ object Domain {
 
   case class TooManyRequests(message: String) extends RestMessage
 
+  case class AlreadyFresh(message : String) extends RestMessage
+
   case class Validation(message: String)
 
   case class NoContentFound(message: String) extends RestMessage

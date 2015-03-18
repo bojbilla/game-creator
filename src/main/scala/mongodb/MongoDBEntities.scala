@@ -61,6 +61,11 @@ object MongoDBEntities {
     implicit val fbCommentFormat = Macros.handler[FBComment]
   }
 
+  case class LastCrawled(id: Option[BSONObjectID], user_id: String, date:Long)
+  object LastCrawled{
+    implicit val lastCrawledFormat = Macros.handler[LastCrawled]
+  }
+
   case class FBPost(id: Option[BSONObjectID] = None,
                     user_id: String,
                     post_id: String,
