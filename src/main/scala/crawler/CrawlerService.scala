@@ -56,11 +56,8 @@ class CrawlerService(database: DefaultDB) extends Actor with ActorLogging{
           list => list.map(elm => elm.date).head
         }.onComplete {
           case Success(time) => conditionalCrawl(curTime, time, userId, accessToken, client)
-          case Failure(e) => {
-            log.error(s"$e")
-            conditionalCrawl(curTime, -99990, userId, accessToken, client)
-          }
-          case _ => conditionalCrawl(curTime, -8880, userId, accessToken, client)
+          case Failure(e) => conditionalCrawl(curTime, 0, userId, accessToken, client)
+          case _ => conditionalCrawl(curTime, 0, userId, accessToken, client)
         }
 
       } else {
