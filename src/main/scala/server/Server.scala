@@ -2,6 +2,7 @@ package server
 
 import akka.actor.{Props, ActorSystem}
 import akka.io.IO
+import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory
 import spray.can.Http
 
@@ -27,6 +28,9 @@ object Server extends App {
   val fullCrawlerHost = s"$protocol$crawlerHost:$crawlerPort"
   // create and start our service actor
   val service = system.actorOf(Props[ServerServiceActor], "server-service")
+
+  // sets the default timezone to UTC
+  DateTimeZone.setDefault(DateTimeZone.forID("UTC"))
 
   //  implicit val timeout = Timeout(5.seconds)
   // start a new HTTP server on port 8080 with our service actor as the handler
