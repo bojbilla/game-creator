@@ -112,7 +112,7 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val lastCrawled = db[BSONCollection](MongoDatabaseService.lastCrawledCollection)
-    val time = Calendar.getInstance.getTimeInMillis
+    val time = DateTime.now
     val selector = BSONDocument("user_id" -> user_id)
 
     val modifier = BSONDocument(

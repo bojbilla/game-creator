@@ -6,6 +6,7 @@ import java.util.Calendar
 import akka.actor._
 import crawler.CrawlerService.{FinishedCrawling, FetchData}
 import crawler.common.{GraphResponses, FBSimpleParameters}
+import com.github.nscala_time.time.Imports._
 import crawler.common.GraphResponses.Page
 import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, RetrieveEntities}
 import crawler.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts}
@@ -51,13 +52,13 @@ class CrawlerService(database: DefaultDB) extends Actor with ActorLogging{
         val query = BSONDocument(
           "user_id" -> userId
         )
-        val curTime = Calendar.getInstance.getTimeInMillis
+        val curTime = DateTime.now
         lastCrawled.find(query).cursor[LastCrawled].collect[List]().map {
           list => list.map(elm => elm.date).head
         }.onComplete {
           case Success(time) => conditionalCrawl(curTime, time, userId, accessToken, client)
-          case Failure(e) => conditionalCrawl(curTime, 0, userId, accessToken, client)
-          case _ => conditionalCrawl(curTime, 0, userId, accessToken, client)
+          case Failure(e) => conditionalCrawl(curTime, new DateTime(0), userId, accessToken, client)
+          case _ => conditionalCrawl(curTime, new DateTime(0), userId, accessToken, client)
         }
 
       } else {
@@ -76,11 +77,11 @@ class CrawlerService(database: DefaultDB) extends Actor with ActorLogging{
 
   }
 
-  def hasToCrawl(curTime : Long, time : Long): Boolean = {
-    curTime - time > 10000
+  def hasToCrawl(curTime : DateTime, time : DateTime): Boolean = {
+    curTime - 10.seconds > time
   }
 
-  def conditionalCrawl(curTime : Long, time : Long, userId : String, accessToken : String, client: ActorRef) = {
+  def conditionalCrawl(curTime : DateTime, time : DateTime, userId : String, accessToken : String, client: ActorRef) = {
     if (hasToCrawl(curTime, time)) {
       val crawler = context.actorOf(CrawlerWorker.props(database))
       crawler ! FetchData(userId, accessToken)

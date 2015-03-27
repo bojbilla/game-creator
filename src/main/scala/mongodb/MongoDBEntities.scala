@@ -2,7 +2,6 @@ package mongodb
 
 import com.github.nscala_time.time.Imports._
 import crawler.common.GraphResponses.{From, Like, Root, Photo}
-import org.joda.time.DateTime
 import reactivemongo.bson.Macros.Options.{\/, UnionType, AllImplementations}
 import reactivemongo.bson._
 /**
@@ -14,7 +13,7 @@ object MongoDBEntities {
   implicit object BSONDateTimeHandler extends BSONHandler[BSONDateTime, DateTime] {
     def read(time: BSONDateTime) = new DateTime(time.value)
 
-    def write(jdtime: DateTime) = BSONDateTime(jdtime.getMillis)
+    def write(gdtime: DateTime) = BSONDateTime(gdtime.getMillis)
   }
 
   case class FBTag(id: Option[String], name: Option[String], created_time: Option[DateTime], x: Option[Double], y: Option[Double])
@@ -61,7 +60,7 @@ object MongoDBEntities {
     implicit val fbCommentFormat = Macros.handler[FBComment]
   }
 
-  case class LastCrawled(id: Option[BSONObjectID], user_id: String, date:Long)
+  case class LastCrawled(id: Option[BSONObjectID], user_id: String, date:DateTime)
   object LastCrawled{
     implicit val lastCrawledFormat = Macros.handler[LastCrawled]
   }
