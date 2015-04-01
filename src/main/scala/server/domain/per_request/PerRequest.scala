@@ -42,6 +42,8 @@ trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCre
     case tooMany: Domain.TooManyRequests => complete(TooManyRequests, tooMany)
     case v: Domain.Validation    => complete(BadRequest, v)
     case ReceiveTimeout   => complete(GatewayTimeout, Domain.Error("Request timeout"))
+    case graphUnreachable: Domain.GraphAPIUnreachable => complete(GatewayTimeout, graphUnreachable)
+    case graphInvalidToken: Domain.GraphAPIInvalidToken => complete(Unauthorized, graphInvalidToken)
     case res: RestMessage => complete(OK, res)
     case x => log.info("Per request received strange message " + x)
   }

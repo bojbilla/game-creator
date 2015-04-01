@@ -12,7 +12,9 @@ object Domain {
 
   case class Done(message: String) extends RestMessage
 
+  case class GraphAPIUnreachable(message: String) extends RestMessage
 
+  case class GraphAPIInvalidToken(message: String) extends RestMessage
 
   case class Error(message: String)
 

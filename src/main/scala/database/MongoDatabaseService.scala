@@ -50,12 +50,11 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
   }
 
   def saveFBPagesToDB(pages: List[Page]): Unit ={
-    import reactivemongo.api._
     import scala.concurrent.ExecutionContext.Implicits.global
     import mongodb.MongoDBEntities._
     val fbPageCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
-    val fbPages = pages.map { p =>
+    pages.map { p =>
       val photo = p.photos.flatMap(photoRoot => photoRoot.data.map(photo => photo))
       val fbPhoto = photo.map{photo =>
         val tags = photo.tags.flatMap(tagRoot => tagRoot.data).map {
@@ -90,9 +89,9 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
   def saveFBPostToDB(posts: List[Post], collection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     import mongodb.MongoDBEntities._
-    val fbPosts = posts.foreach{ p =>
-      val likes = p.likes.map(root => root.data.map(likes => likes.map(l=> FBLike(l.id, l.name)))).flatten
-      val like_count = p.likes.map(root => root.summary.map(s => s.total_count)).flatten
+    posts.foreach{ p =>
+      val likes = p.likes.flatMap(root => root.data.map(likes => likes.map(l=> FBLike(l.id, l.name))))
+      val like_count = p.likes.flatMap(root => root.summary.map(s => s.total_count))
       val fbFrom = p.from.map(f => FBFrom(f.id, f.name))
       val fbComments = p.comments.flatMap(root => root.data.map(comments => comments.map{c =>
         FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
