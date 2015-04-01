@@ -11,11 +11,11 @@ import spray.http.{HttpRequest, HttpResponse}
 
 import scala.concurrent.Future
 
-/**
+/**d
  * Created by roger on 05/03/15.
  */
 
-abstract class RetrieverBase extends Actor with ActorLogging{
+abstract class FBCommunicationManager extends Actor with ActorLogging{
   implicit def dispatcher =  context.dispatcher
   implicit def actorRefFactory = context
   implicit val formats = DefaultFormats

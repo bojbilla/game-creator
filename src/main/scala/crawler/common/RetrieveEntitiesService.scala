@@ -47,7 +47,7 @@ object RetrieveEntitiesService{
 
 }
 
-class RetrieveEntitiesService[T](filter:(Vector[T]) => Vector[T])(implicit mf: Manifest[T]) extends RetrieverBase{
+class RetrieveEntitiesService[T](filter:(Vector[T]) => Vector[T])(implicit mf: Manifest[T]) extends FBCommunicationManager{
   def receive = {
     case RetrieveEntities(params) =>
       val originalSender = sender()

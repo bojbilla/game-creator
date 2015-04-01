@@ -4,6 +4,7 @@ import akka.actor._
 import com.github.nscala_time.time.Imports._
 import crawler.CrawlerService.{FetchData, FinishedCrawling}
 import crawler.FacebookConfig.FacebookServiceConfig
+import crawler.common.FBCommunicationManager
 import database.MongoDatabaseService
 import database.MongoDatabaseService.SaveLastCrawledTime
 import mongodb.MongoDBEntities.LastCrawled
@@ -29,14 +30,13 @@ object CrawlerService {
   def props(database: DefaultDB): Props =
     Props(new CrawlerService(database))
 }
-class CrawlerService(database: DefaultDB) extends Actor with ActorLogging{
+class CrawlerService(database: DefaultDB) extends FBCommunicationManager{
   var currentlyCrawling: Set[String] = Set()
 
   def receive() = {
     case FetchData(userId, accessToken) =>
       val client = sender()
       if (!currentlyCrawling.contains(userId)){
-        import scala.concurrent.ExecutionContext.Implicits.global
         val lastCrawled = database[BSONCollection](MongoDatabaseService.lastCrawledCollection)
         val query = BSONDocument(
           "user_id" -> userId
@@ -72,10 +72,8 @@ class CrawlerService(database: DefaultDB) extends Actor with ActorLogging{
 
   def conditionalCrawl(curTime : DateTime, time : DateTime, userId : String, accessToken : String, client: ActorRef) = {
     if (hasToCrawl(curTime, time)) {
-      val graphAPIPath = FacebookServiceConfig.facebookHostAddress
-      val checkPath = s"$graphAPIPath/v2.2/$userId?access_token=$accessToken"
-      implicit def dispatcher = context.dispatcher
-      val validityCheck = Get(checkPath) ~> sendReceive
+      val checkPath = s"$facebookPath/v2.2/$userId?access_token=$accessToken"
+      val validityCheck = pipelineRawJson(Get(checkPath))
       validityCheck.onComplete {
         case Success(response) =>
           response.status match {
