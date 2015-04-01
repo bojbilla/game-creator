@@ -1,6 +1,6 @@
 package database
 
-import akka.actor.{ActorContext, ActorLogging, Actor}
+import akka.actor.{Actor, ActorContext, ActorLogging}
 
 /**
  * Created by roger on 17/11/14.

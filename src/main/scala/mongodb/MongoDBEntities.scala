@@ -1,8 +1,6 @@
 package mongodb
 
 import com.github.nscala_time.time.Imports._
-import crawler.common.GraphResponses.{From, Like, Root, Photo}
-import reactivemongo.bson.Macros.Options.{\/, UnionType, AllImplementations}
 import reactivemongo.bson._
 /**
  * Created by roger on 15/11/14.

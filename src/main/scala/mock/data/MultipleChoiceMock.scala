@@ -1,6 +1,6 @@
 package mock.data
 
-import entities.Entities.{Possibility, Question, MultipleChoiceQuestion}
+import entities.Entities.{MultipleChoiceQuestion, Possibility, Question}
 
 /**
  * Created by roger on 09/11/14.

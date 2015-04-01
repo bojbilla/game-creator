@@ -1,8 +1,7 @@
 package service.question_generators
 
-import akka.actor.{ActorContext, ActorLogging, Actor}
+import akka.actor.{Actor, ActorContext, ActorLogging}
 import entities.Entities.GameQuestion
-import entities.Entities.QuestionType._
 import entities.Entities.SpecificQuestionType.SpecificQuestionType
 import server.domain.RestMessage
 

@@ -1,14 +1,14 @@
 package service.question_generators
 
 import akka.actor.Props
-import entities.Entities.{Question, TimelineQuestion, MultipleChoiceQuestion}
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
+import entities.Entities.SpecificQuestionType._
+import entities.Entities.{Question, TimelineQuestion}
+import org.joda.time.format.DateTimeFormat
 import reactivemongo.api.DefaultDB
 import reactivemongo.bson.{BSONArray, BSONDocument}
-import com.github.nscala_time.time.Imports._
-import service.question_generators.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation, CreateQuestion}
+import service.question_generators.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+
 import scala.util.Random
-import entities.Entities.SpecificQuestionType._
 
 /**
  * Created by roger on 20/11/14.

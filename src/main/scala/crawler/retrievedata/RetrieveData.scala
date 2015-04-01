@@ -1,16 +1,15 @@
 package crawler.retrievedata
 
-import crawler.FacebookConfig
-import akka.actor.{ActorContext, Actor}
-import akka.event.{Logging, LogSource}
+import akka.actor.{Actor, ActorContext}
+import akka.event.LogSource
 import crawler.FacebookConfig.FacebookServiceConfig
 import org.json4s.DefaultFormats
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
 import spray.http.MediaTypes._
-import spray.http.{HttpResponse, HttpRequest}
+import spray.http.{HttpRequest, HttpResponse}
 
-import scala.concurrent.{Future, ExecutionContextExecutor}
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 /**
  * Created by roger on 05/03/15.

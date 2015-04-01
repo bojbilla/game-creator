@@ -1,9 +1,6 @@
 package crawler.common
 
 import com.github.nscala_time.time.Imports._
-import org.json4s.{JValue, Formats, TypeInfo, DefaultFormats}
-import org.json4s.reflect._
-import org.json4s.reflect.Reflector._
 
 
 

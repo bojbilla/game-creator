@@ -2,8 +2,8 @@ package service.question_generators
 
 import database.MongoDatabaseService
 import mongodb.MongoDBEntities.FBPost
-import reactivemongo.api.{QueryOpts, DefaultDB}
 import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.BSONDocument
 import reactivemongo.core.commands.Count
 

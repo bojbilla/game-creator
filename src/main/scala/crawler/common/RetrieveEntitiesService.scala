@@ -1,16 +1,16 @@
 package crawler.common
 
 
-import akka.actor.{Props, ActorRef}
-import crawler.common.GraphResponses.{Root, Paging}
+import akka.actor.{ActorRef, Props}
+import crawler.common.GraphResponses.{Paging, Root}
 import crawler.common.RetrieveEntitiesService._
 import org.json4s.jackson.JsonMethods._
 import server.domain.RestMessage
 import spray.client.pipelining._
 import spray.http.StatusCodes._
-import scala.reflect.runtime.universe._
 
 import scala.reflect.ClassTag
+import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success}
 
 object RetrieveEntitiesService{

@@ -1,12 +1,12 @@
 package server
 
-import akka.actor.{ActorRef, ActorLogging}
+import akka.actor.{ActorLogging, ActorRef}
 import crawler.CrawlerService
-import crawler.retrievedata.RetrieverService
 import mock.MockServiceActor
+import org.json4s.{DefaultFormats, Formats}
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 import service.GameCreatorServiceActor
-import org.json4s.{DefaultFormats, Formats}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Properties._
 

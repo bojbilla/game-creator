@@ -1,24 +1,17 @@
 package crawler.retrievedata
 
 import akka.actor.Props
+import com.github.nscala_time.time.Imports._
 import crawler.common.GraphResponses.Page
 import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, RetrieveEntities}
-import crawler.retrievedata.RetrieverService.{Posts, TaggedPosts, LikedPages}
-import crawler.retrievedata.retrievers.{RetrievePosts, RetrieveTaggedPosts, RetrieveLikedPages}
+import crawler.common.{FBSimpleParameters, GraphResponses}
+import crawler.retrievedata.RetrieverService.{LikedPages, Posts, TaggedPosts}
+import crawler.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
 import org.joda.time.DateTime
-import crawler.common.{GraphResponses, FBSimpleParameters}
-import spray.client.pipelining._
-import spray.http.HttpHeaders.Accept
-import spray.http.MediaTypes._
-import spray.http.{BasicHttpCredentials, HttpResponse, HttpRequest}
-import spray.httpx.encoding.Gzip
-import com.github.nscala_time.time.Imports._
-
-import scala.concurrent.Future
-import scala.reflect.runtime.universe._
-import spray.httpx.Json4sSupport
 import org.json4s.DefaultFormats
-import org.json4s._
+import spray.httpx.Json4sSupport
+
+import scala.reflect.runtime.universe._
 
 
 /**

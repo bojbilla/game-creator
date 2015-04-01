@@ -1,6 +1,6 @@
 package server
 
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory

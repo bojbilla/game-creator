@@ -1,14 +1,11 @@
 package service.tile_generator
 
-import akka.actor.SupervisorStrategy.Stop
-import akka.actor.{PoisonPill, ActorRef, Props}
-import entities.Entities.QuestionType._
-import entities.Entities.QuestionType.QuestionType
+import akka.actor.{ActorRef, PoisonPill, Props}
+import entities.Entities.QuestionType.{QuestionType, _}
 import entities.Entities.SpecificQuestionType._
-import entities.Entities._
-import entities.Entities.GameQuestion
+import entities.Entities.{GameQuestion, _}
 import reactivemongo.api.DefaultDB
-import service.question_generators.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation, CreateQuestion}
+import service.question_generators.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import service.question_generators._
 import service.tile_generator.TileGenerator._
 

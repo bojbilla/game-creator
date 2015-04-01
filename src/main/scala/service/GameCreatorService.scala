@@ -1,32 +1,21 @@
 package service
 
 import akka.actor._
-import akka.event.Logging
 import crawler.CrawlerService.FetchData
-import crawler.common.GraphResponses
-import crawler.common.GraphResponses.{Post, Page}
-import database.MongoDatabaseService
-import database.MongoDatabaseService.{SaveFBTaggedPost, SaveFBPost, SaveFBPage}
-import routing.{PerRequest, PerRequestCreator}
+import reactivemongo.api.DefaultDB
+import routing.PerRequestCreator
 import server.domain.RestMessage
-import mongodb.MongoDBEntities.{FBTag, FBPhoto, FBPage}
-import reactivemongo.api.indexes.{Index, CollectionIndexesManager}
-import reactivemongo.api.{MongoConnection, MongoDriver, DefaultDB}
-import service.GameGenerator.{CreateBoard}
+import service.GameGenerator.CreateBoard
 import service.question_generators.QuestionGenerator.CreateQuestion
-import service.question_generators.{WhichPageDidYouLike, WhenDidYouShareThisPost, WhoMadeThisCommentOnYourPost, WhoLikedYourPost}
+import service.question_generators.{WhenDidYouShareThisPost, WhichPageDidYouLike, WhoLikedYourPost, WhoMadeThisCommentOnYourPost}
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
 import spray.http.MediaTypes._
-import spray.http.{HttpResponse, HttpRequest}
+import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.Json4sSupport
 import spray.routing._
-import server.Server
-import spray.http.StatusCode
-import spray.http.StatusCodes._
+
 import scala.concurrent.ExecutionContext.Implicits.global
-
-
 import scala.concurrent.Future
 
 /**

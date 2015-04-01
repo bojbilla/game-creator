@@ -1,10 +1,9 @@
 package crawler.FacebookConfig
 
 import akka.util.Timeout
-
 import org.json4s.DefaultFormats
+
 import scala.concurrent.duration._
-import scala.util.Properties._
 
 /**
  * Created by roger on 05/03/15.

@@ -1,19 +1,17 @@
 package service.question_generators
 
-import akka.actor.{ActorLogging, Actor, Props}
+import akka.actor.Props
 import database.MongoDatabaseService
-import entities.Entities.{Possibility, Question, MultipleChoiceQuestion}
+import entities.Entities.SpecificQuestionType._
+import entities.Entities.{MultipleChoiceQuestion, Possibility, Question}
 import mongodb.MongoDBEntities.{FBPage, FBPageLike}
-import reactivemongo.api.{QueryOpts, DefaultDB}
+import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
-import reactivemongo.core.commands.Count
-import service.question_generators.QuestionGenerator.{FailedToCreateQuestion, CreateQuestion, FinishedQuestionCreation}
+import service.question_generators.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 
-
-import scala.concurrent.{Promise, Future}
-import scala.util.{Failure, Success, Random}
-import entities.Entities.SpecificQuestionType._
+import scala.concurrent.Future
+import scala.util.{Failure, Random, Success}
 
 
 /**

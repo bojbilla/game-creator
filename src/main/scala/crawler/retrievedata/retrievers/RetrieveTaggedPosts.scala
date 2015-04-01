@@ -4,7 +4,7 @@ package crawler.retrievedata.retrievers
 import akka.actor.{ActorRef, Props}
 import crawler.common.GraphResponses.Post
 import crawler.common.RetrieveEntitiesService
-import crawler.common.RetrieveEntitiesService.{NotEnoughFound, FinishedRetrievingEntities, RetrieveEntities}
+import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, RetrieveEntities}
 import crawler.retrievedata.RetrieveData
 import crawler.retrievedata.retrievers.RetrieveTaggedPosts.FinishedRetrievingTaggedPosts
 

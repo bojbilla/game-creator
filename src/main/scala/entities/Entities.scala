@@ -2,7 +2,6 @@ package entities
 
 import entities.Entities.QuestionType.QuestionType
 import org.joda.time.DateTime
-import reactivemongo.bson.{BSONObjectID, BSONDocumentReader, BSONDocument, BSONDocumentWriter}
 import server.domain.RestMessage
 
 

@@ -1,15 +1,12 @@
 package crawler
 
 import akka.actor._
-import crawler.CrawlerService.{FinishedCrawling, FetchData}
-import crawler.FacebookConfig.FacebookServiceConfig
-import crawler.common.{GraphResponses, FBSimpleParameters}
 import com.github.nscala_time.time.Imports._
-import crawler.common.GraphResponses.Page
-import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, RetrieveEntities}
-import crawler.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts}
+import crawler.CrawlerService.{FetchData, FinishedCrawling}
+import crawler.FacebookConfig.FacebookServiceConfig
 import database.MongoDatabaseService
-import database.MongoDatabaseService.{SaveLastCrawledTime, SaveFBPage, SaveFBTaggedPost}
+import database.MongoDatabaseService.SaveLastCrawledTime
+import mongodb.MongoDBEntities.LastCrawled
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -17,15 +14,8 @@ import server.domain.Domain._
 import server.domain.{Domain, RestMessage}
 import spray.client.pipelining._
 import spray.http.StatusCodes._
-import spray.http.HttpHeaders.Accept
-import spray.http.MediaTypes._
-import spray.http.{HttpResponse, HttpRequest}
-import scala.reflect.runtime.universe._
-import reflect.ClassTag
-import mongodb.MongoDBEntities.LastCrawled
-import scala.util.{Failure, Success}
 
-import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 /**
  * Created by roger on 05/03/15.

@@ -1,18 +1,16 @@
 package database
 
-import java.util.Calendar
-
 import akka.actor.Props
-import database.MongoDatabaseService.{SaveLastCrawledTime, SaveFBTaggedPost, SaveFBPost, SaveFBPage}
-import mongodb.MongoDBEntities._
-import reactivemongo.api.{DefaultDB, MongoConnection}
-import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.{BSONObjectID, BSONDocument}
-import reactivemongo.core.commands.{Update, Count, FindAndModify}
-import service.GameRequest
 import com.github.nscala_time.time.Imports._
 import crawler.common.GraphResponses._
-import scala.util.{ Failure, Success }
+import database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SaveFBTaggedPost, SaveLastCrawledTime}
+import mongodb.MongoDBEntities._
+import reactivemongo.api.DefaultDB
+import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.BSONDocument
+import reactivemongo.core.commands.{Count, FindAndModify, Update}
+
+import scala.util.{Failure, Success}
 
 
 /**
@@ -50,8 +48,9 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
   }
 
   def saveFBPagesToDB(pages: List[Page]): Unit ={
-    import scala.concurrent.ExecutionContext.Implicits.global
     import mongodb.MongoDBEntities._
+
+    import scala.concurrent.ExecutionContext.Implicits.global
     val fbPageCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     pages.map { p =>
@@ -87,8 +86,9 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
 
 
   def saveFBPostToDB(posts: List[Post], collection: BSONCollection): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     import mongodb.MongoDBEntities._
+
+    import scala.concurrent.ExecutionContext.Implicits.global
     posts.foreach{ p =>
       val likes = p.likes.flatMap(root => root.data.map(likes => likes.map(l=> FBLike(l.id, l.name))))
       val like_count = p.likes.flatMap(root => root.summary.map(s => s.total_count))

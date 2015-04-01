@@ -1,7 +1,7 @@
 package mock.data
 
-import entities.Entities.{TimelineQuestion, Possibility, Question}
 import com.github.nscala_time.time.Imports._
+import entities.Entities.{Question, TimelineQuestion}
 
 import scala.util.Random
 

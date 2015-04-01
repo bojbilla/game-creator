@@ -1,19 +1,16 @@
 package crawler
 
 import akka.actor._
-import crawler.CrawlerService.{FinishedCrawling, FetchData}
-import crawler.common.{GraphResponses, FBSimpleParameters}
-import crawler.common.GraphResponses.Page
-import crawler.common.RetrieveEntitiesService.{NotEnoughFound, FinishedRetrievingEntities, RetrieveEntities}
+import crawler.CrawlerService.{FetchData, FinishedCrawling}
+import crawler.common.FBSimpleParameters
+import crawler.common.RetrieveEntitiesService.RetrieveEntities
+import crawler.retrievedata.retrievers.RetrieveLikedPages.FinishedRetrievingLikedPages
 import crawler.retrievedata.retrievers.RetrievePosts.FinishedRetrievingPosts
 import crawler.retrievedata.retrievers.RetrieveTaggedPosts.FinishedRetrievingTaggedPosts
-import crawler.retrievedata.retrievers.{RetrieveTaggedPosts, RetrievePosts, RetrieveLikedPages}
-import crawler.retrievedata.retrievers.RetrieveLikedPages.FinishedRetrievingLikedPages
+import crawler.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
 import database.MongoDatabaseService
-import database.MongoDatabaseService.{SaveFBPost, SaveFBPage}
+import database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
 import reactivemongo.api.DefaultDB
-import scala.reflect.runtime.universe._
-import reflect.ClassTag
 
 
 /**

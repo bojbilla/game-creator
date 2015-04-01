@@ -1,6 +1,5 @@
 package mongodb
 
-import reactivemongo.bson.Macros.Options.{\/, UnionType, AllImplementations}
 import reactivemongo.bson._
 
 

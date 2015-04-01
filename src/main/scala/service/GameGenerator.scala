@@ -1,17 +1,15 @@
 package service
 
-import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import entities.Entities._
-import mongodb.MongoDBEntities.{FBPageLike, FBPage}
-import reactivemongo.api.{QueryOpts, DefaultDB}
+import reactivemongo.api.DefaultDB
 import server.domain.RestMessage
-import service.GameGenerator.{CreateBoard}
+import service.GameGenerator.CreateBoard
 import service.tile_generator.TileGenerator
-import service.tile_generator.TileGenerator.{CreateTimelineTile, FailedTileCreation, FinishedTileCreation, CreateMultipleChoiceTile}
+import service.tile_generator.TileGenerator.{CreateMultipleChoiceTile, CreateTimelineTile, FailedTileCreation, FinishedTileCreation}
 
-import scala.concurrent.{ExecutionContext, Promise, Future, ExecutionContextExecutor}
-import scala.util.{Failure, Success, Random}
+import scala.concurrent.ExecutionContextExecutor
+import scala.util.Random
 
 /**
  * Created by roger on 17/11/14.

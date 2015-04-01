@@ -6,21 +6,15 @@ package routing
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{OneForOneStrategy, _}
-import org.json4s.DefaultFormats
-import org.json4s.jackson
-import routing.PerRequest.{WithProps, WithActorRef}
-import server.domain.Domain.NoContentFound
+import routing.PerRequest.{WithActorRef, WithProps}
 import server.domain.{Domain, RestMessage}
 import server.json_serializer.GameCreatorFormatter
 import service.question_generators.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation}
 import spray.http.StatusCode
-import spray.http.StatusCode
-import spray.http.StatusCodes._
 import spray.http.StatusCodes._
 import spray.httpx.Json4sSupport
-import spray.httpx.Json4sSupport
 import spray.routing.RequestContext
-import spray.routing.RequestContext
+
 import scala.concurrent.duration._
 
 
