@@ -46,6 +46,8 @@ class WhoLikedYourPost(database: DefaultDB) extends Actor with ActorLogging{
         case Success(s) => s match {
           case Some(post) =>
             post.likes match {
+              case Some(Nil) =>
+                client ! FailedToCreateQuestion(s"Not enough posts with likes > 5 for user: $user_id", MCWhoLikedYourPost)
               case Some(likers) => getLikesFromOtherPosts(post, likers.toSet).onComplete {
                 case Success(others) =>
                   val question = Question("WhoLikedThisPost", Some(List(post.message.getOrElse(""))))
