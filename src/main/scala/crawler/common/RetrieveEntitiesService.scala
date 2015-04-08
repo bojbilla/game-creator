@@ -69,13 +69,12 @@ class RetrieveEntitiesService[T](filter:(Vector[T]) => Vector[T])(implicit mf: M
 
   def retrieveEntities(): Receive = {
     case GetEntities(client, path, minimum, entities: Vector[T])=>
-      log.info(s"Retriever path: $path")
+      log.debug(s"Retriever path: $path")
       val responseF = pipelineRawJson(Get(path))
       responseF.onComplete {
         case Success(r) =>
           r.status match {
             case OK =>
-              val body = r.entity.asString
               val json = parse(r.entity.asString)
               val root = json.extract[Root[List[T]]] match {
                 case Root(None, _, _) =>

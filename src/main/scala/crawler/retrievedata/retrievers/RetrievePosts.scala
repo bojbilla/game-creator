@@ -21,7 +21,7 @@ class RetrievePosts extends RetrieveData{
       val client = sender()
       val params1 = params.copy(query = Some(s"${params.userId.getOrElse("me")}/" +
         s"posts?fields=likes.limit(1000).summary(true),message,type,story,source,full_picture,attachments{id,description,media{image},type},comments.limit(1000).summary(true){created_time,from,message,attachment,like_count}"))
-      log.info(s"params$params1")
+      log.debug(s"params$params1")
       val retriever = context.actorOf(RetrieveEntitiesService.props[Post](defaultFilter[Post]))
       retriever ! RetrieveEntities(params1)
       context.become(awaitResponse(client))
