@@ -33,8 +33,10 @@ class RetrieveLikedPages extends RetrieveData{
 
   def awaitResponse(client: ActorRef): Receive = {
     case FinishedRetrievingEntities(entities) =>
+      log.info(s"Received ${entities.length} liked pages.")
       client ! FinishedRetrievingLikedPages(entities.asInstanceOf[Vector[Page]])
     case NotEnoughFound(entities) =>
+      log.info(s"Received not enough (${entities.length}) liked pages.")
       client ! FinishedRetrievingLikedPages(entities.asInstanceOf[Vector[Page]])
 
   }
