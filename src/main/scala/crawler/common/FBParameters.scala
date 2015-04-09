@@ -35,8 +35,8 @@ case class FBSimpleParameters(userId: Option[String] = None,
                               access_token: Option[String] = None,
                               query: Option[String] = None,
                               minimalEntities:Int = 0,
-                              since: DateTime = DateTime.now,
-                              until: DateTime = DateTime.now - 1.year){
+                              since: DateTime = DateTime.now - 1.year,
+                              until: DateTime = DateTime.now){
   def getSince = {
     (since.getMillis / 1000).toString
   }
