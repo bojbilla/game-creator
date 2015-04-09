@@ -2,7 +2,7 @@ package crawler
 
 import akka.actor._
 import com.github.nscala_time.time.Imports._
-import crawler.CrawlerService.{FetchData, FinishedCrawling}
+import crawler.CrawlerService.{FetchDataSince, FetchData, FinishedCrawling}
 import crawler.FacebookConfig.FacebookServiceConfig
 import crawler.common.FBCommunicationManager
 import database.MongoDatabaseService
@@ -25,6 +25,7 @@ import scala.util.{Failure, Success}
 object CrawlerService {
 
   case class FetchData(user_id: String, access_token: String) extends RestMessage
+  case class FetchDataSince(user_id: String, access_token: String, since: DateTime) extends RestMessage
   case class FinishedCrawling(user_id: String)
 
   def props(database: DefaultDB): Props =
@@ -41,13 +42,13 @@ class CrawlerService(database: DefaultDB) extends FBCommunicationManager{
         val query = BSONDocument(
           "user_id" -> userId
         )
-        val curTime = DateTime.now
+        val currentTime = DateTime.now
         lastCrawled.find(query).cursor[LastCrawled].collect[List]().map {
           list => list.map(elm => elm.date).head
         }.onComplete {
-          case Success(time) => conditionalCrawl(curTime, time, userId, accessToken, client)
-          case Failure(e) => conditionalCrawl(curTime, new DateTime(0), userId, accessToken, client)
-          case _ => conditionalCrawl(curTime, new DateTime(0), userId, accessToken, client)
+          case Success(time) => conditionalCrawl(currentTime, time, userId, accessToken, client)
+          case Failure(e) => conditionalCrawl(currentTime, new DateTime(1000), userId, accessToken, client)
+          case _ => conditionalCrawl(currentTime, new DateTime(1000), userId, accessToken, client)
         }
 
       } else {
@@ -66,23 +67,23 @@ class CrawlerService(database: DefaultDB) extends FBCommunicationManager{
 
   }
 
-  def hasToCrawl(curTime : DateTime, time : DateTime): Boolean = {
-    curTime - 10.seconds > time
+  def hasToCrawl(currentTime : DateTime, lastCrawled : DateTime): Boolean = {
+    currentTime - 10.seconds > lastCrawled
   }
 
-  def conditionalCrawl(curTime : DateTime, time : DateTime, userId : String, accessToken : String, client: ActorRef) = {
-    if (hasToCrawl(curTime, time)) {
-      val checkPath = s"$facebookPath/v2.2/$userId?access_token=$accessToken"
+  def conditionalCrawl(currentTime : DateTime, lastCrawled : DateTime, userId : String, accessToken : String,
+                       client: ActorRef) = {
+    if (hasToCrawl(currentTime, lastCrawled)) {
+      val checkPath = s"$facebookPath/$userId?access_token=$accessToken"
       val validityCheck = pipelineRawJson(Get(checkPath))
       validityCheck.onComplete {
         case Success(response) =>
           response.status match {
             case OK =>
               val crawler = context.actorOf(CrawlerWorker.props(database))
-              crawler ! FetchData(userId, accessToken)
+              crawler ! FetchDataSince(userId, accessToken, lastCrawled)
               currentlyCrawling = currentlyCrawling + userId
               client ! Done(s"Fetching Data for $userId")
-
             case _ =>
               log.error(s"Received a fetch request with an invalid token.")
               client ! GraphAPIInvalidToken(s"The specified token is invalid.")

@@ -1,7 +1,7 @@
 package crawler
 
 import akka.actor._
-import crawler.CrawlerService.{FetchData, FinishedCrawling}
+import crawler.CrawlerService.{FetchDataSince, FetchData, FinishedCrawling}
 import crawler.common.FBSimpleParameters
 import crawler.common.RetrieveEntitiesService.RetrieveEntities
 import crawler.retrievedata.retrievers.RetrieveLikedPages.FinishedRetrievingLikedPages
@@ -25,9 +25,9 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
   var retrievers: Set[ActorRef] = Set()
 
   def receive() = {
-    case FetchData(userId, accessToken) =>
+    case FetchDataSince(userId, accessToken, lastCrawled) =>
       val client = sender()
-      val simpleParameters = FBSimpleParameters(Some(userId), Some(accessToken))
+      val simpleParameters = FBSimpleParameters(Some(userId), Some(accessToken), since = lastCrawled)
       log.info("Fetching data for " + userId)
 
       val pageRetriever = context.actorOf(RetrieveLikedPages.props())
@@ -44,6 +44,7 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
 
       context.become(awaitResults(client, userId))
     case _ =>
+      log.error("Crawler worker received an unexpected message.")
   }
 
   def awaitResults(client: ActorRef, userId: String): Receive = {
