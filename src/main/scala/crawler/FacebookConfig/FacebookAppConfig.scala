@@ -16,6 +16,7 @@ object FacebookServiceConfig {
   implicit val formats = DefaultFormats
   val facebookStorageFolder = "facebookStorage"
   val facebookHostAddress = "https://graph.facebook.com"
+  val apiVersion = "v2.2"
   val maxOffset = 10
   implicit val timeout = Timeout(10 seconds)
 }

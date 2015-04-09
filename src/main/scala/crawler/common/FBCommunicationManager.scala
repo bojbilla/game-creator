@@ -25,7 +25,7 @@ abstract class FBCommunicationManager extends Actor with ActorLogging{
     } yield e
   }
 
-  def facebookPath = s"${FacebookServiceConfig.facebookHostAddress}"
+  def facebookPath = s"${FacebookServiceConfig.facebookHostAddress}/${FacebookServiceConfig.apiVersion}"
   implicit val pipelineRawJson: HttpRequest => Future[HttpResponse] = (
     addHeader(Accept(`application/json`))
       ~> sendReceive

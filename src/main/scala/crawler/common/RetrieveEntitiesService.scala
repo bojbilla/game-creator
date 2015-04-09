@@ -51,7 +51,7 @@ class RetrieveEntitiesService[T](filter:(Vector[T]) => Vector[T])(implicit mf: M
   def receive = {
     case RetrieveEntities(params) =>
       val originalSender = sender()
-      val path = s"$facebookPath/v2.2/" + {
+      val path = s"$facebookPath/" + {
         params.query match {
           case Some(q) => q + {
             params.access_token match {
