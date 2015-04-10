@@ -8,14 +8,15 @@ import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEn
 import crawler.retrievedata.RetrieveData
 import crawler.retrievedata.retrievers.RetrievePosts.FinishedRetrievingPosts
 
-object RetrievePosts{
+object RetrievePosts {
   def props(): Props =
     Props(new RetrievePosts())
 
   case class FinishedRetrievingPosts(posts: Vector[Post])
+
 }
 
-class RetrievePosts extends RetrieveData{
+class RetrievePosts extends RetrieveData {
   def receive = {
     case RetrieveEntities(params) =>
       val client = sender()

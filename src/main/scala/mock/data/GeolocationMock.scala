@@ -18,7 +18,7 @@ class GeolocationMock {
   val geolocation2 = CoordinatesQuestion("487982734", user_id, question2, location2)
 
   private val question3 = Question("Where did you take this picture?", None,
-  Some("http://www.wandersite.ch/Vierwaldstaettersee_panoramabahn.jpg"))
+    Some("http://www.wandersite.ch/Vierwaldstaettersee_panoramabahn.jpg"))
   private val location3 = Location(47.05032, 8.311831)
   val geolocation3 = CoordinatesQuestion("986786223", user_id, question3, location3)
 

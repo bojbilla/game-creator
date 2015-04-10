@@ -1,8 +1,8 @@
 package service.tile_generator
 
 import akka.actor.{ActorRef, PoisonPill, Props}
-import entities.Entities.TileQuestionType.{TileQuestionType, _}
 import entities.Entities.SpecificQuestionType._
+import entities.Entities.TileQuestionType.{TileQuestionType, _}
 import entities.Entities.{GameQuestion, _}
 import reactivemongo.api.DefaultDB
 import service.question_generators.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
@@ -19,14 +19,18 @@ object TileGenerator {
     Props(new TileGenerator(database))
 
   case class CreateMultipleChoiceTile(user_id: String)
+
   case class CreateTimelineTile(user_id: String)
+
   case class CreateGeolocationTile(user_id: String)
 
   case class FinishedTileCreation(user_id: String, tile: Tile)
+
   case class FailedTileCreation(message: String)
+
 }
 
-class TileGenerator(db: DefaultDB) extends QuestionGenerator{
+class TileGenerator(db: DefaultDB) extends QuestionGenerator {
   var questions = List[GameQuestion]()
   var questionPossibilities: List[SpecificQuestionType] = List()
   var counter = 0
@@ -44,8 +48,8 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
 
   }
 
-  def createQuestionGenerators(questionType:  SpecificQuestionType): ActorRef = {
-     questionType match {
+  def createQuestionGenerators(questionType: SpecificQuestionType): ActorRef = {
+    questionType match {
       case MCWhichPageDidYouLike =>
         log.info(s"Trying to create question WhichPageDidYouLike")
         context.actorOf(WhichPageDidYouLike.props(db))
@@ -67,7 +71,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
       case _ => log.error("Unknown Question Type")
         log.error(s"Trying to create question Unknown Question Type")
         context.actorOf(WhichPageDidYouLike.props(db))
-     }
+    }
   }
 
   def awaitingQuestions(client: ActorRef, user_id: String, questionType: TileQuestionType): Receive = {
@@ -85,7 +89,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
       } else {
         sender() ! PoisonPill
         counter = counter + 1
-        if (counter >= limit){
+        if (counter >= limit) {
           log.info(s"Trying another questiontype for user: $user_id")
           questionPossibilities = questionPossibilities.tail
         }
@@ -101,7 +105,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
       }
 
     case FailedToCreateQuestion(message, specificType) =>
-      log.error(s"Question generation for tile failed $message for type $specificType" )
+      log.error(s"Question generation for tile failed $message for type $specificType")
       sender() ! PoisonPill
       questionPossibilities = questionPossibilities.filter(p => p != specificType)
       questionPossibilities match {

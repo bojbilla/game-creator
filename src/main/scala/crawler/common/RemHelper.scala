@@ -13,10 +13,10 @@ object RemHelper {
   val redirect = "redirect"
   val fields = "fields"
 
-  implicit def uriWithParams(uri: String, params: Map[String, Any]): String ={
+  implicit def uriWithParams(uri: String, params: Map[String, Any]): String = {
     val start = s"""$uri?${params.head._1}=${params.head._2}"""
-    params.tail.foldLeft(start){
-      case (acc, (k, v)) =>  s"""$acc&$k=${v.toString}"""
+    params.tail.foldLeft(start) {
+      case (acc, (k, v)) => s"""$acc&$k=${v.toString}"""
     }
   }
 

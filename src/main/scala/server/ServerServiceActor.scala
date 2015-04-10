@@ -16,7 +16,9 @@ import scala.util.Properties._
  */
 class ServerServiceActor extends MockServiceActor with GameCreatorServiceActor with ActorLogging {
   override def actorRefFactory = context
+
   override def receive = runRoute(mockRoutes ~ gameCreatorRoutes)
+
   val driver = new MongoDriver
   val mongoHost = envOrElse("MONGODB_HOST", Server.hostName)
   val mongodbName = envOrElse("REMINISCE_MONGO_DB", "mydb")

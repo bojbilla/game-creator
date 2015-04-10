@@ -17,17 +17,22 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 object MyLogger {
   implicit val logSource: LogSource[AnyRef] = new LogSource[AnyRef] {
     def genString(o: AnyRef): String = o.getClass.getName
+
     override def getClazz(o: AnyRef): Class[_] = o.getClass
   }
 }
+
 abstract class RetrieveData extends Actor {
-  implicit def dispatcher: ExecutionContextExecutor =  context.dispatcher
+  implicit def dispatcher: ExecutionContextExecutor = context.dispatcher
+
   implicit def actorRefFactory: ActorContext = context
+
   import MyLogger._
   import akka.event.Logging
 
   val log = Logging(context.system, this)
   implicit val formats = DefaultFormats
+
   def defaultFilter[T](entities: Vector[T]): Vector[T] = {
     for {
       e <- entities
@@ -35,6 +40,7 @@ abstract class RetrieveData extends Actor {
   }
 
   def facebookPath = s"${FacebookServiceConfig.facebookHostAddress}"
+
   implicit val pipelineRawJson: HttpRequest => Future[HttpResponse] = (
     addHeader(Accept(`application/json`))
       ~> sendReceive

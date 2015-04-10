@@ -22,7 +22,8 @@ import scala.concurrent.Future
  * Created by roger on 15/11/14.
  */
 
-object GameCreatorService{
+object GameCreatorService {
+
   case class CrawlerTest(message: String)
 
 }
@@ -50,7 +51,7 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
       get {
         parameters('user_id.as[String], 'access_token.as[String]) {
           (user_id: String, access_token: String) =>
-            fetchData{
+            fetchData {
               FetchData(user_id, access_token)
             }
         }
@@ -59,14 +60,14 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
       get {
         parameters('user_id.as[String]) {
           (user_id: String) =>
-            whichPageDidYouLike{
+            whichPageDidYouLike {
               CreateQuestion(user_id)
             }
         }
       }
     } ~ path("gameboard") {
       parameters('user_id.as[String]) { user_id: String =>
-        createBoard{
+        createBoard {
           CreateBoard(user_id)
         }
       }
@@ -77,6 +78,7 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
     val generator = context.actorOf(WhichPageDidYouLike.props(db))
     ctx => perRequest(ctx, generator, message)
   }
+
   def whenDidYouShareThisPost(message: RestMessage): Route = {
     val generator = context.actorOf(WhenDidYouShareThisPost.props(db))
     ctx => perRequest(ctx, generator, message)
@@ -86,6 +88,7 @@ trait GameCreatorService extends HttpService with PerRequestCreator with Actor w
     val generator = context.actorOf(WhoMadeThisCommentOnYourPost.props(db))
     ctx => perRequest(ctx, generator, message)
   }
+
   def whoLikedPost(message: RestMessage): Route = {
     val generator = context.actorOf(WhoLikedYourPost.props(db))
     ctx => perRequest(ctx, generator, message)

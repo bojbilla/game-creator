@@ -1,7 +1,7 @@
 package crawler
 
 import akka.actor._
-import crawler.CrawlerService.{FetchDataSince, FetchData, FinishedCrawling}
+import crawler.CrawlerService.{FetchDataSince, FinishedCrawling}
 import crawler.common.FBSimpleParameters
 import crawler.common.RetrieveEntitiesService.RetrieveEntities
 import crawler.retrievedata.retrievers.RetrieveLikedPages.FinishedRetrievingLikedPages
@@ -79,7 +79,7 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
   }
 
   def verifyDone(client: ActorRef, userId: String) = {
-    if (retrievers.isEmpty){
+    if (retrievers.isEmpty) {
       client ! FinishedCrawling(userId)
     }
   }

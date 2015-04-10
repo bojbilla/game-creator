@@ -19,15 +19,20 @@ import scala.reflect.runtime.universe._
  */
 
 object RetrieverService {
+
   case class LikedPages()
+
   case class TaggedPosts()
+
   case class UploadedPhotos()
+
   case class Posts()
 
   def props(params: FBSimpleParameters): Props =
     Props(new RetrieverService(params))
 }
-class RetrieverService(params: FBSimpleParameters) extends RetrieveData with Json4sSupport{
+
+class RetrieverService(params: FBSimpleParameters) extends RetrieveData with Json4sSupport {
   val json4sFormats = DefaultFormats
 
   def receive = {
@@ -38,23 +43,23 @@ class RetrieverService(params: FBSimpleParameters) extends RetrieveData with Jso
       context.become(awaitResults())
     case TaggedPosts() =>
       val retriever = context.actorOf(RetrieveTaggedPosts.props())
-      val params1 = params.copy(minimalEntities = 0, since = DateTime.now() - 10.year,until = DateTime.now())
+      val params1 = params.copy(minimalEntities = 0, since = DateTime.now() - 10.year, until = DateTime.now())
       retriever ! RetrieveEntities(params1)
       context.become(awaitResults())
     case Posts() =>
       val retriever = context.actorOf(RetrievePosts.props())
-      val params1 = params.copy(minimalEntities = 0, since = DateTime.now() - 10.year,until = DateTime.now())
+      val params1 = params.copy(minimalEntities = 0, since = DateTime.now() - 10.year, until = DateTime.now())
       retriever ! RetrieveEntities(params1)
       context.become(awaitResults())
     case _ => log.error("RetrieverService received unexpected message")
   }
 
   def awaitResults(): Receive = {
-    case fr @FinishedRetrievingEntities(entities) =>
+    case fr@FinishedRetrievingEntities(entities) =>
       entities match {
-        case pages:Vector[Page @unchecked] if fr.tpe =:= typeOf[Page] =>
+        case pages: Vector[Page@unchecked] if fr.tpe =:= typeOf[Page] =>
           println(pages.map(p => p.id))
-        case posts: Vector[GraphResponses.Post @unchecked] if fr.tpe =:= typeOf[GraphResponses.Post] =>
+        case posts: Vector[GraphResponses.Post@unchecked] if fr.tpe =:= typeOf[GraphResponses.Post] =>
           println("we retrieved tagged posts")
         case _ => log.error("We did not receive any fb thingies")
       }

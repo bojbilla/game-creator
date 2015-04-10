@@ -20,6 +20,7 @@ object WhoMadeThisCommentOnYourPost {
   def props(database: DefaultDB): Props =
     Props(new WhoMadeThisCommentOnYourPost(database))
 }
+
 class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends PostQuestionGenerator(db) {
 
   def receive = {
@@ -27,28 +28,28 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends PostQuestionGenerator(
       val client = sender()
       retrievePostWithEnoughComments(user_id).onComplete {
         case Success(post) =>
-                    val commentSelection = Random.shuffle(post.comments.get).slice(0, 4)
-                    val possibilities = commentSelection.map {
-                      c =>
-                        Possibility(Some(c.from.user_name), Some(""), Some(c.from.user_id))
-                    }
-                    val answer = possibilities.head
+          val commentSelection = Random.shuffle(post.comments.get).slice(0, 4)
+          val possibilities = commentSelection.map {
+            c =>
+              Possibility(Some(c.from.user_name), Some(""), Some(c.from.user_id))
+          }
+          val answer = possibilities.head
 
-                    val answerComment = commentSelection.filter(c => c.from.user_id == answer.fb_id.get).head
+          val answerComment = commentSelection.filter(c => c.from.user_id == answer.fb_id.get).head
 
-                    val randomPossibilities = Random.shuffle(possibilities).toVector
+          val randomPossibilities = Random.shuffle(possibilities).toVector
 
-                    val question = Question("WhoMadeThisCommentOnThePost", Some(List(post.message.get, answerComment.message)))
+          val question = Question("WhoMadeThisCommentOnThePost", Some(List(post.message.get, answerComment.message)))
 
-                    val mc = MultipleChoiceQuestion(answerComment.id,
-                      user_id, question, randomPossibilities,
-                      randomPossibilities.indexOf(answer))
-                    client ! FinishedQuestionCreation(mc)
+          val mc = MultipleChoiceQuestion(answerComment.id,
+            user_id, question, randomPossibilities,
+            randomPossibilities.indexOf(answer))
+          client ! FinishedQuestionCreation(mc)
         case Failure(t) =>
           client ! FailedToCreateQuestion("Could not create question for WhoMadeThisCommentOnYourPost " + t.getMessage, MCWhoMadeThisCommentOnYourPost)
       }
 
-      }
+  }
 
   def retrievePostWithEnoughComments(user_id: String): Future[FBPost] = {
     val promise = Promise[FBPost]()
@@ -63,14 +64,14 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends PostQuestionGenerator(
       val document = getDocument(db, collection, query)
       document.onComplete {
         case Success(Some(post)) =>
-            val distinct = distinctComments(post.comments.get, Set())
-            if (distinct.length >= 4) {
-              promise.success(post.copy(comments = Some(distinct)))
-            } else if (counter > limit) {
-              promise.failure(new Exception("there are not enough comments"))
-            } else {
-              recurse(counter + 1)
-            }
+          val distinct = distinctComments(post.comments.get, Set())
+          if (distinct.length >= 4) {
+            promise.success(post.copy(comments = Some(distinct)))
+          } else if (counter > limit) {
+            promise.failure(new Exception("there are not enough comments"))
+          } else {
+            recurse(counter + 1)
+          }
         case Success(None) =>
           log.error("There where no comments on that post")
           promise.failure(new Exception("Something went wrong"))
@@ -79,18 +80,18 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends PostQuestionGenerator(
           promise.failure(t)
 
       }
-      }
-      def distinctComments(comments: List[FBComment], userSet: Set[String]): List[FBComment] = {
-        comments match {
-          case x :: xs =>
-            if(!userSet.contains(x.from.user_id)){
+    }
+    def distinctComments(comments: List[FBComment], userSet: Set[String]): List[FBComment] = {
+      comments match {
+        case x :: xs =>
+          if (!userSet.contains(x.from.user_id)) {
             x :: distinctComments(xs, userSet + x.from.user_id)
           } else {
-              distinctComments(xs, userSet)
-            }
-          case Nil => Nil
-        }
+            distinctComments(xs, userSet)
+          }
+        case Nil => Nil
       }
+    }
     recurse(0)
     promise.future
   }

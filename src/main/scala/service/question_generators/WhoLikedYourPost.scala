@@ -14,6 +14,7 @@ import service.question_generators.QuestionGenerator.{CreateQuestion, FailedToCr
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.{Failure, Random, Success}
+
 /**
  * Created by roger on 19/11/14.
  */
@@ -24,12 +25,12 @@ object WhoLikedYourPost {
     Props(new WhoLikedYourPost(database))
 
   case class CreatedWhoLikedYourPost(mc: MultipleChoiceQuestion) extends RestMessage
+
 }
 
 
-
-class WhoLikedYourPost(database: DefaultDB) extends Actor with ActorLogging{
-  implicit def dispatcher: ExecutionContextExecutor =  context.dispatcher
+class WhoLikedYourPost(database: DefaultDB) extends Actor with ActorLogging {
+  implicit def dispatcher: ExecutionContextExecutor = context.dispatcher
 
   implicit def actorRefFactory: ActorContext = context
 
@@ -84,17 +85,17 @@ class WhoLikedYourPost(database: DefaultDB) extends Actor with ActorLogging{
     val limit = QuestionParameters.NumberOfTrials
     val query = BSONDocument(
       "user_id" -> post.user_id,
-      "like_count" -> BSONDocument( "$gt" -> 5),
+      "like_count" -> BSONDocument("$gt" -> 5),
       "message" -> BSONDocument("$exists" -> "true"),
       "post_id" -> BSONDocument("$ne" -> post.post_id)
     )
-    def recurs(likers: Set[FBLike], nonLikers: Set[FBLike], counter: Int = 0): Unit ={
-      if (nonLikers.size >= 3){
+    def recurs(likers: Set[FBLike], nonLikers: Set[FBLike], counter: Int = 0): Unit = {
+      if (nonLikers.size >= 3) {
         promise.success(nonLikers)
-      } else if(counter > limit) {
+      } else if (counter > limit) {
         promise.failure(new Exception("Unable to find non likers"))
       } else {
-        getDocument(database, collection, query).onComplete{
+        getDocument(database, collection, query).onComplete {
           case Success(Some(otherPost)) =>
             otherPost.likes match {
               case Some(likes) =>

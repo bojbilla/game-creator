@@ -12,15 +12,16 @@ import crawler.retrievedata.retrievers.RetrieveLikedPages.FinishedRetrievingLike
  * Created by roger on 05/03/15.
  */
 
-object RetrieveLikedPages{
+object RetrieveLikedPages {
   def props(): Props =
     Props(new RetrieveLikedPages())
 
   case class FinishedRetrievingLikedPages(pages: Vector[Page])
+
 }
 
 
-class RetrieveLikedPages extends RetrieveData{
+class RetrieveLikedPages extends RetrieveData {
 
   def receive = {
     case RetrieveEntities(params) =>

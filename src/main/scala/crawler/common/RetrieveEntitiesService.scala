@@ -13,7 +13,7 @@ import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success}
 
-object RetrieveEntitiesService{
+object RetrieveEntitiesService {
 
   //Used for starting to crawl facebook
   //  case class RetrieveEntities(parameters: FBParameters)
@@ -21,16 +21,16 @@ object RetrieveEntitiesService{
 
   //Will be sent if not enough entities were found in the provided time span
   //facebook parameter since <-> until
-  case class NotEnoughFound[A: TypeTag: ClassTag](entities: Vector[A])
+  case class NotEnoughFound[A: TypeTag : ClassTag](entities: Vector[A])
 
   //Will be sent if the required minimum or more entities were found
 
-  case class FinishedRetrievingEntities[A: TypeTag](entities:Vector[A]) {
+  case class FinishedRetrievingEntities[A: TypeTag](entities: Vector[A]) {
     val tpe = typeOf[A]
   }
 
 
-  private case class NotEnoughRetrieved[A](client:ActorRef,
+  private case class NotEnoughRetrieved[A](client: ActorRef,
                                            paging: Option[Paging],
                                            minimum: Int,
                                            entities: Vector[A] = Vector())
@@ -41,13 +41,13 @@ object RetrieveEntitiesService{
                                     entities: Vector[A] = Vector.empty[A])
 
 
-  def props[T](filter:(Vector[T]) => Vector[T])(implicit mf: Manifest[T]): Props =
+  def props[T](filter: (Vector[T]) => Vector[T])(implicit mf: Manifest[T]): Props =
     Props(new RetrieveEntitiesService[T](filter))
 
 
 }
 
-class RetrieveEntitiesService[T](filter:(Vector[T]) => Vector[T])(implicit mf: Manifest[T]) extends FBCommunicationManager{
+class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: Manifest[T]) extends FBCommunicationManager {
   def receive = {
     case RetrieveEntities(params) =>
       val originalSender = sender()
@@ -68,7 +68,7 @@ class RetrieveEntitiesService[T](filter:(Vector[T]) => Vector[T])(implicit mf: M
   }
 
   def retrieveEntities(): Receive = {
-    case GetEntities(client, path, minimum, entities: Vector[T])=>
+    case GetEntities(client, path, minimum, entities: Vector[T]) =>
       log.debug(s"Retriever path: $path")
       val responseF = pipelineRawJson(Get(path))
       responseF.onComplete {
@@ -129,7 +129,7 @@ class RetrieveEntitiesService[T](filter:(Vector[T]) => Vector[T])(implicit mf: M
         case Some(p) => p.next match {
           case Some(next) => self ! GetEntities(client, next, minimum, entities)
           case None =>
-            if (minimum == 0){
+            if (minimum == 0) {
               client ! FinishedRetrievingEntities(entities)
             } else {
               log.info(s"Not enough found end of paging ${entities.length}")
@@ -138,7 +138,7 @@ class RetrieveEntitiesService[T](filter:(Vector[T]) => Vector[T])(implicit mf: M
             context.become(receive)
         }
         case None =>
-          if (minimum == 0){
+          if (minimum == 0) {
             client ! FinishedRetrievingEntities(entities)
           } else {
             log.info(s"Not enough found end of paging${entities.length}")

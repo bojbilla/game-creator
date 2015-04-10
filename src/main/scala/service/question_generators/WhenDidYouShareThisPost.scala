@@ -19,6 +19,7 @@ object WhenDidYouShareThisPost {
   def props(database: DefaultDB): Props =
     Props(new WhenDidYouShareThisPost(database))
 }
+
 class WhenDidYouShareThisPost(db: DefaultDB) extends PostQuestionGenerator(db) {
   def receive = {
     case CreateQuestion(user_id) =>
@@ -26,10 +27,10 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends PostQuestionGenerator(db) {
       val query = BSONDocument(
         "user_id" -> user_id,
         "message" -> BSONDocument("$exists" -> "true"),
-       "type" -> BSONDocument("$nin" -> BSONArray("photo", "video"))
+        "type" -> BSONDocument("$nin" -> BSONArray("photo", "video"))
       )
-      val question = getDocument(db, collection, query).map{
-        postO => postO.map{
+      val question = getDocument(db, collection, query).map {
+        postO => postO.map {
           post =>
             val q = Question("WhenDidYouShareThisPost", Some(List(post.message.getOrElse(""))))
             val index = post.created_time.get.indexOf('T')
@@ -45,7 +46,7 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends PostQuestionGenerator(db) {
             TimelineQuestion(post.post_id, user_id, q, minDate, maxDate, 10, actualDate)
         }
       }
-      question.map{
+      question.map {
         case Some(q) =>
           client ! FinishedQuestionCreation(q)
         case None => client ! FailedToCreateQuestion(s"Something went wrong WhenDidYouShareThisPost user: $user_id", TLWhenDidYouShareThisPost)

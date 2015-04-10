@@ -25,7 +25,7 @@ object WhichPageDidYouLike {
 }
 
 
-class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator{
+class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
     case CreateQuestion(user_id) =>
@@ -43,44 +43,45 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator{
           }
       }
 
-      val result = likedPageIds.flatMap{ pIds =>
+      val result = likedPageIds.flatMap { pIds =>
         val queryUnliked = BSONDocument(
           "page_id" -> BSONDocument("$nin" -> pIds)
         )
-        pagesCollection.find(queryUnliked).cursor[FBPage].collect[List](3).flatMap{ unlikedPages =>
-          if (unlikedPages.length < 3){
+        pagesCollection.find(queryUnliked).cursor[FBPage].collect[List](3).flatMap { unlikedPages =>
+          if (unlikedPages.length < 3) {
             Future.failed(new Exception("Not enough unliked pages"))
           } else {
             val likedPageId = Random.shuffle(pIds).head
             val likedPage = pagesCollection.find(BSONDocument {
               "page_id" -> likedPageId
             }).one[FBPage]
-            likedPage.map{ _.map { answer =>
-              val question = Question("WhichPageDidYouLike")
+            likedPage.map {
+              _.map { answer =>
+                val question = Question("WhichPageDidYouLike")
 
-              val possibilities = (answer :: unlikedPages).map { c =>
-                val source = c.photos match {
-                  case Some(p) => p.source
-                  case None => Some("")
-                }
-                Possibility(c.name, source, Some(c.page_id))
-              }.toVector
+                val possibilities = (answer :: unlikedPages).map { c =>
+                  val source = c.photos match {
+                    case Some(p) => p.source
+                    case None => Some("")
+                  }
+                  Possibility(c.name, source, Some(c.page_id))
+                }.toVector
 
-              val answerPossibility = possibilities(0)
-              val randomPossibilities = Random.shuffle(possibilities)
+                val answerPossibility = possibilities(0)
+                val randomPossibilities = Random.shuffle(possibilities)
 
-              MultipleChoiceQuestion(answerPossibility.text.get,
-                user_id, question, randomPossibilities,
-                randomPossibilities.indexOf(answerPossibility))
+                MultipleChoiceQuestion(answerPossibility.text.get,
+                  user_id, question, randomPossibilities,
+                  randomPossibilities.indexOf(answerPossibility))
+              }
             }
-          }
 
           }
         }
 
       }
 
-      result.onComplete{
+      result.onComplete {
         case Success(Some(question)) => client ! FinishedQuestionCreation(question)
         case Failure(e) =>
           log.error("Failed to created WhichPageDidYouLike as this user likes EVERYTHING " + e)

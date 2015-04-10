@@ -8,8 +8,7 @@ import scala.concurrent.duration._
 /**
  * Created by roger on 05/03/15.
  */
-case class FacebookAppConfig(app_id:String, app_secret:String)
-
+case class FacebookAppConfig(app_id: String, app_secret: String)
 
 
 object FacebookServiceConfig {

@@ -18,14 +18,16 @@ import spray.routing.RequestContext
 import scala.concurrent.duration._
 
 
-
-trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCreatorFormatter{
+trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCreatorFormatter {
 
   import context._
 
   def r: RequestContext
+
   def target: ActorRef
+
   def message: RestMessage
+
   setReceiveTimeout(10 seconds)
   target ! message
 
@@ -34,8 +36,8 @@ trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCre
     case FailedToCreateQuestion(m, t) => complete(PreconditionFailed, m)
     case error: Domain.Error => complete(NotFound, error)
     case tooMany: Domain.TooManyRequests => complete(TooManyRequests, tooMany)
-    case v: Domain.Validation    => complete(BadRequest, v)
-    case ReceiveTimeout   => complete(GatewayTimeout, Domain.Error("Request timeout"))
+    case v: Domain.Validation => complete(BadRequest, v)
+    case ReceiveTimeout => complete(GatewayTimeout, Domain.Error("Request timeout"))
     case graphUnreachable: Domain.GraphAPIUnreachable => complete(GatewayTimeout, graphUnreachable)
     case graphInvalidToken: Domain.GraphAPIInvalidToken => complete(Unauthorized, graphInvalidToken)
     case res: RestMessage => complete(OK, res)
@@ -56,11 +58,13 @@ trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCre
 }
 
 object PerRequest {
+
   case class WithActorRef(r: RequestContext, target: ActorRef, message: RestMessage) extends PerRequest
 
   case class WithProps(r: RequestContext, props: Props, message: RestMessage) extends PerRequest {
     lazy val target = context.actorOf(props)
   }
+
 }
 
 trait PerRequestCreator {

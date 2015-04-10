@@ -1,7 +1,7 @@
 package mock
 
 import akka.actor.{Actor, ActorContext, ActorLogging}
-import entities.Entities.{Board, TileQuestionType, Tile}
+import entities.Entities.{Board, Tile, TileQuestionType}
 import mock.MockBoardService.GetGameBoard
 import mock.data.{GeolocationMock, MultipleChoiceMock, TimelineMock}
 import org.json4s.DefaultFormats
@@ -11,15 +11,19 @@ import spray.httpx.Json4sSupport
 import scala.concurrent.ExecutionContextExecutor
 
 object MockBoardService {
+
   case class GetGameBoard(user_id: String, token: String) extends RestMessage
+
 }
 
 /**
  * Created by roger on 10/11/14.
  */
-class MockBoardService extends Actor with ActorLogging with Json4sSupport{
-  implicit def dispatcher: ExecutionContextExecutor =  context.dispatcher
+class MockBoardService extends Actor with ActorLogging with Json4sSupport {
+  implicit def dispatcher: ExecutionContextExecutor = context.dispatcher
+
   implicit def actorRefFactory: ActorContext = context
+
   val json4sFormats = DefaultFormats
 
   def receive = {

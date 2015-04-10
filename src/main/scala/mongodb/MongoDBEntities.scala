@@ -2,6 +2,7 @@ package mongodb
 
 import com.github.nscala_time.time.Imports._
 import reactivemongo.bson._
+
 /**
  * Created by roger on 15/11/14.
  */
@@ -25,57 +26,73 @@ object MongoDBEntities {
   object FBPhoto {
     implicit val fbPhotoFormat = Macros.handler[FBPhoto]
   }
+
   //the facebook page_id can't be used as a mongodb id as its too short
   case class FBPage(id: Option[BSONObjectID], page_id: String, name: Option[String], photos: Option[FBPhoto]) {
   }
+
   object FBPage {
     implicit val fbPageFormat = Macros.handler[FBPage]
   }
+
   case class FBPageLike(id: Option[BSONObjectID], user_id: String, page_id: String)
-  object FBPageLike{
+
+  object FBPageLike {
     implicit val fbPageLikeFormat = Macros.handler[FBPageLike]
   }
 
-  case class FBFrom(user_id: String, user_name:String)
-  object FBFrom{
+  case class FBFrom(user_id: String, user_name: String)
+
+  object FBFrom {
     implicit val fbFromFormat = Macros.handler[FBFrom]
   }
+
   case class FBLike(user_id: String, user_name: String)
-  object FBLike{
+
+  object FBLike {
     implicit val fbLikeFormat = Macros.handler[FBLike]
   }
+
   case class FBMedia(height: Int, width: Int, src: String)
-  object FBMedia{
+
+  object FBMedia {
     implicit val fbMediaFormat = Macros.handler[FBMedia]
   }
+
   case class FBAttachment(description: Option[String] = None, media: Option[FBMedia] = None, `type`: Option[String] = None)
-  object FBAttachment{
+
+  object FBAttachment {
     implicit val fbAttachmentFormat = Macros.handler[FBAttachment]
 
   }
+
   case class FBComment(id: String, from: FBFrom, like_count: Int, message: String)
-  object FBComment{
+
+  object FBComment {
     implicit val fbCommentFormat = Macros.handler[FBComment]
   }
 
-  case class LastCrawled(id: Option[BSONObjectID], user_id: String, date:DateTime)
-  object LastCrawled{
+  case class LastCrawled(id: Option[BSONObjectID], user_id: String, date: DateTime)
+
+  object LastCrawled {
     implicit val lastCrawledFormat = Macros.handler[LastCrawled]
   }
 
   case class FBLocation(city: Option[String],
-                      country: Option[String],
-                      latitude: Double,
-                      longitude: Double,
-                      street: Option[String],
-                      zip: Option[String])
-  object FBLocation{
+                        country: Option[String],
+                        latitude: Double,
+                        longitude: Double,
+                        street: Option[String],
+                        zip: Option[String])
+
+  object FBLocation {
     implicit val fbLocationFormat = Macros.handler[FBLocation]
   }
 
   case class FBPlace(id: Option[String], name: String, location: FBLocation,
                      created_time: Option[String])
-  object FBPlace{
+
+  object FBPlace {
     implicit val fbPlace = Macros.handler[FBPlace]
   }
 
@@ -89,12 +106,13 @@ object MongoDBEntities {
                     from: Option[FBFrom] = None,
                     likes: Option[List[FBLike]] = None,
                     like_count: Option[Int] = None,
-                     `type`: Option[String] = None,
+                    `type`: Option[String] = None,
                     attachments: Option[List[FBAttachment]],
-                     comments: Option[List[FBComment]] = None,
-                     comments_count: Option[Int] = None)
-  object FBPost{
-    implicit  val fbPostFormat = Macros.handler[FBPost]
+                    comments: Option[List[FBComment]] = None,
+                    comments_count: Option[Int] = None)
+
+  object FBPost {
+    implicit val fbPostFormat = Macros.handler[FBPost]
   }
 
 

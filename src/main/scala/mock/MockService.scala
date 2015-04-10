@@ -11,9 +11,12 @@ import spray.routing._
  * Created by roger on 10/11/14.
  */
 
-object MockService{
+object MockService {
+
   case class BoardComplete(board: Board)
+
 }
+
 trait MockServiceActor extends Actor with MockService {
 
   def actorRefFactory = context
@@ -24,9 +27,10 @@ trait MockServiceActor extends Actor with MockService {
 
 trait MockService extends HttpService with PerRequestCreator with Actor {
   def actorRefFactory: ActorContext
+
   val mockRoutes = {
     get {
-      pathEndOrSingleSlash{
+      pathEndOrSingleSlash {
         complete("Say hello")
       }
       pathPrefix("mock") {
@@ -34,13 +38,13 @@ trait MockService extends HttpService with PerRequestCreator with Actor {
           parameters('user_id.as[String], 'token.as[String]) { (user_id, token) =>
             getMockBoard(GetGameBoard(user_id, token))
           }
-          }
         }
       }
     }
+  }
 
-    def getMockBoard(message: RestMessage): Route = {
-      val mocker = actorRefFactory.actorOf(Props[MockBoardService])
-      ctx => perRequest(ctx, mocker, message)
-    }
+  def getMockBoard(message: RestMessage): Route = {
+    val mocker = actorRefFactory.actorOf(Props[MockBoardService])
+    ctx => perRequest(ctx, mocker, message)
+  }
 }

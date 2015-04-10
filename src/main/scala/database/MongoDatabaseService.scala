@@ -17,7 +17,7 @@ import scala.util.{Failure, Success}
  * Created by roger on 17/11/14.
  */
 
-object MongoDatabaseService{
+object MongoDatabaseService {
   val fbPagesCollection = "fb_pages"
   val fbPageLikesCollection = "fb_page_likes"
   val fbTaggedPostsCollection = "fb_tagged_posts"
@@ -28,12 +28,16 @@ object MongoDatabaseService{
     Props(new MongoDatabaseService(user_id, db))
 
   case class SaveFBPage(pages: List[Page])
+
   case class SaveFBPost(posts: List[Post])
+
   case class SaveFBTaggedPost(posts: List[Post])
+
   case class SaveLastCrawledTime()
+
 }
 
-class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseService{
+class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseService {
 
   def receive = {
     case SaveFBPage(pages) =>
@@ -47,7 +51,7 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
     case _ => log.error(s"MongoDB Service received unexpected message")
   }
 
-  def saveFBPagesToDB(pages: List[Page]): Unit ={
+  def saveFBPagesToDB(pages: List[Page]): Unit = {
     import mongodb.MongoDBEntities._
 
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -55,29 +59,29 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     pages.map { p =>
       val photo = p.photos.flatMap(photoRoot => photoRoot.data.map(photo => photo))
-      val fbPhoto = photo.map{photo =>
+      val fbPhoto = photo.map { photo =>
         val tags = photo.tags.flatMap(tagRoot => tagRoot.data).map {
           tags => tags.map { tag => {
             FBTag(tag.id, tag.name, tag.created_time, tag.x, tag.y)
           }
           }
         }
-//        val createDate = photo.created_time.map(t => new DateTime(t.toLong * 1000))
+        //        val createDate = photo.created_time.map(t => new DateTime(t.toLong * 1000))
         FBPhoto(photo.id, photo.source, photo.created_time, tags)
       }
 
       val query = BSONDocument("page_id" -> p.id)
       val futureCount = db.command(Count(fbPageCollection.name, Some(query)))
-      futureCount.map{ count =>
-        if (count < 1){
+      futureCount.map { count =>
+        if (count < 1) {
           fbPageCollection.insert(FBPage(None, p.id, p.name, fbPhoto))
         }
       }
 
-      val query2 = BSONDocument( "user_id" -> user_id, "page_id" -> p.id)
+      val query2 = BSONDocument("user_id" -> user_id, "page_id" -> p.id)
       val futureRelationCount = db.command(Count(fbPageLikeCollection.name, Some(query2)))
-      futureRelationCount.map{ count =>
-        if (count < 1){
+      futureRelationCount.map { count =>
+        if (count < 1) {
           fbPageLikeCollection.insert(FBPageLike(None, user_id, p.id))
         }
       }
@@ -89,23 +93,23 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
     import mongodb.MongoDBEntities._
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    posts.foreach{ p =>
-      val likes = p.likes.flatMap(root => root.data.map(likes => likes.map(l=> FBLike(l.id, l.name))))
+    posts.foreach { p =>
+      val likes = p.likes.flatMap(root => root.data.map(likes => likes.map(l => FBLike(l.id, l.name))))
       val like_count = p.likes.flatMap(root => root.summary.map(s => s.total_count))
       val fbFrom = p.from.map(f => FBFrom(f.id, f.name))
-      val fbComments = p.comments.flatMap(root => root.data.map(comments => comments.map{c =>
+      val fbComments = p.comments.flatMap(root => root.data.map(comments => comments.map { c =>
         FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
-      } ))
-      val fbCommentsCount = p.comments.flatMap{ root => root.summary.map{sum => sum.total_count}}
-      val fbAttachments = p.attachments.flatMap(root => root.data.map( attachments => attachments.map{
-      a =>
-        val media = a.media.flatMap(m => m.image.map(image => FBMedia(image.height, image.width, image.src)))
-        FBAttachment(a.description, media = media, `type` = a.`type`)
-    }))
+      }))
+      val fbCommentsCount = p.comments.flatMap { root => root.summary.map { sum => sum.total_count } }
+      val fbAttachments = p.attachments.flatMap(root => root.data.map(attachments => attachments.map {
+        a =>
+          val media = a.media.flatMap(m => m.image.map(image => FBMedia(image.height, image.width, image.src)))
+          FBAttachment(a.description, media = media, `type` = a.`type`)
+      }))
       val fbPlace: Option[FBPlace] = p.place.flatMap(place => place.name.flatMap(name => place.location.flatMap(
         location => location.latitude.flatMap(lat => location.longitude.flatMap(
-        long => Some(FBPlace(place.id, name, FBLocation(location.city, location.country,
-          lat, long, location.street, location.zip), place.created_time))
+          long => Some(FBPlace(place.id, name, FBLocation(location.city, location.country,
+            lat, long, location.street, location.zip), place.created_time))
         ))
       )))
       val fbPost = FBPost(None, user_id, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,

@@ -11,14 +11,15 @@ import crawler.retrievedata.retrievers.RetrieveTaggedPosts.FinishedRetrievingTag
 /**
  * Created by roger on 05/03/15.
  */
-object RetrieveTaggedPosts{
+object RetrieveTaggedPosts {
   def props(): Props =
     Props(new RetrieveTaggedPosts())
 
   case class FinishedRetrievingTaggedPosts(posts: Vector[Post])
+
 }
 
-class RetrieveTaggedPosts extends RetrieveData{
+class RetrieveTaggedPosts extends RetrieveData {
   def receive = {
     case RetrieveEntities(params) =>
       val client = sender()

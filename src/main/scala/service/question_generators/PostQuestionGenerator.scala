@@ -13,7 +13,7 @@ import scala.util.Random
 /**
  * Created by roger on 20/11/14.
  */
-abstract class PostQuestionGenerator(db: DefaultDB) extends QuestionGenerator{
+abstract class PostQuestionGenerator(db: DefaultDB) extends QuestionGenerator {
   val collection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
 

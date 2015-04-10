@@ -2,8 +2,7 @@ package crawler
 
 import akka.actor._
 import com.github.nscala_time.time.Imports._
-import crawler.CrawlerService.{FetchDataSince, FetchData, FinishedCrawling}
-import crawler.FacebookConfig.FacebookServiceConfig
+import crawler.CrawlerService.{FetchData, FetchDataSince, FinishedCrawling}
 import crawler.common.FBCommunicationManager
 import database.MongoDatabaseService
 import database.MongoDatabaseService.SaveLastCrawledTime
@@ -25,19 +24,22 @@ import scala.util.{Failure, Success}
 object CrawlerService {
 
   case class FetchData(user_id: String, access_token: String) extends RestMessage
+
   case class FetchDataSince(user_id: String, access_token: String, since: DateTime) extends RestMessage
+
   case class FinishedCrawling(user_id: String)
 
   def props(database: DefaultDB): Props =
     Props(new CrawlerService(database))
 }
-class CrawlerService(database: DefaultDB) extends FBCommunicationManager{
+
+class CrawlerService(database: DefaultDB) extends FBCommunicationManager {
   var currentlyCrawling: Set[String] = Set()
 
   def receive() = {
     case FetchData(userId, accessToken) =>
       val client = sender()
-      if (!currentlyCrawling.contains(userId)){
+      if (!currentlyCrawling.contains(userId)) {
         val lastCrawled = database[BSONCollection](MongoDatabaseService.lastCrawledCollection)
         val query = BSONDocument(
           "user_id" -> userId
@@ -67,11 +69,11 @@ class CrawlerService(database: DefaultDB) extends FBCommunicationManager{
 
   }
 
-  def hasToCrawl(currentTime : DateTime, lastCrawled : DateTime): Boolean = {
+  def hasToCrawl(currentTime: DateTime, lastCrawled: DateTime): Boolean = {
     currentTime - 10.seconds > lastCrawled
   }
 
-  def conditionalCrawl(currentTime : DateTime, lastCrawled : DateTime, userId : String, accessToken : String,
+  def conditionalCrawl(currentTime: DateTime, lastCrawled: DateTime, userId: String, accessToken: String,
                        client: ActorRef) = {
     if (hasToCrawl(currentTime, lastCrawled)) {
       val checkPath = s"$facebookPath/$userId?access_token=$accessToken"

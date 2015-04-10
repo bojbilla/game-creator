@@ -14,13 +14,16 @@ import scala.concurrent.ExecutionContextExecutor
 object QuestionGenerator {
 
   case class CreateQuestion(user_id: String) extends RestMessage
+
   case class FinishedQuestionCreation(question: GameQuestion)
+
   case class FailedToCreateQuestion(message: String, questionType: SpecificQuestionType) extends RestMessage
 
 }
 
-abstract class QuestionGenerator extends Actor with ActorLogging{
-  implicit def dispatcher: ExecutionContextExecutor =  context.dispatcher
+abstract class QuestionGenerator extends Actor with ActorLogging {
+  implicit def dispatcher: ExecutionContextExecutor = context.dispatcher
+
   implicit def actorRefFactory: ActorContext = context
 
 }

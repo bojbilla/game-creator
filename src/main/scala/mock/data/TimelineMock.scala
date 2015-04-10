@@ -13,9 +13,9 @@ class TimelineMock {
   private val range = 4
   private val user_id = "1234513"
   private val question1 = Question("When did you share this post", Some(List("finally graduated!")),
-  Some("https://fbcdn-sphotos-c-a.akamaihd.net/hphotos-ak-xfp1/v/t1.0-9/10320518_633371713422" +
-    "361_8865470906024206323_n.jpg?oh=c6592cf487855b03339ea57d4a0b1e0a&oe=54EC7EBE&__gda__=14" +
-    "27920695_cdbd7d718a148b20785c2a35670714ba"))
+    Some("https://fbcdn-sphotos-c-a.akamaihd.net/hphotos-ak-xfp1/v/t1.0-9/10320518_633371713422" +
+      "361_8865470906024206323_n.jpg?oh=c6592cf487855b03339ea57d4a0b1e0a&oe=54EC7EBE&__gda__=14" +
+      "27920695_cdbd7d718a148b20785c2a35670714ba"))
   private val date1 = DateTime.lastMonth - random.nextInt(10).days
   private val min1 = random.nextInt(20)
   private val max1 = 20 - min1
@@ -40,8 +40,6 @@ class TimelineMock {
   private val min3 = random.nextInt(20)
   private val max3 = 20 - min2
   val timeline3 = TimelineQuestion("23239482938", user_id, question3, min3, max3, range, date3)
-
-
 
 
 }
