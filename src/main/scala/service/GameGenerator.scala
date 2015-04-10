@@ -6,7 +6,7 @@ import reactivemongo.api.DefaultDB
 import server.domain.RestMessage
 import service.GameGenerator.CreateBoard
 import service.tile_generator.TileGenerator
-import service.tile_generator.TileGenerator.{CreateMultipleChoiceTile, CreateTimelineTile, FailedTileCreation, FinishedTileCreation}
+import service.tile_generator.TileGenerator._
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Random
@@ -37,9 +37,10 @@ class GameGenerator(database: DefaultDB) extends Actor with ActorLogging{
       val client = sender()
       val tileActors = (0 to 8).map( _ => context.actorOf(TileGenerator.props(database)))
       tileActors.foreach{ a =>
-        Random.nextInt(4) match {
-          case 0 => a ! CreateTimelineTile(user_id)
-          case 1 | 2 | 3 => a ! CreateMultipleChoiceTile(user_id)
+        Random.nextInt(8) match {
+          case 0 | 1 => a ! CreateTimelineTile(user_id)
+          case 2 => a ! CreateGeolocationTile(user_id)
+          case _ => a ! CreateMultipleChoiceTile(user_id)
 
         }
       }

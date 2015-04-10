@@ -1,7 +1,7 @@
 package service.tile_generator
 
 import akka.actor.{ActorRef, PoisonPill, Props}
-import entities.Entities.QuestionType.{QuestionType, _}
+import entities.Entities.TileQuestionType.{TileQuestionType, _}
 import entities.Entities.SpecificQuestionType._
 import entities.Entities.{GameQuestion, _}
 import reactivemongo.api.DefaultDB
@@ -34,31 +34,13 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
 
   def receive = {
     case CreateMultipleChoiceTile(user_id) =>
-      val client = sender()
-      questionPossibilities = Random.shuffle(List(MCWhichPageDidYouLike, MCWhoLikedYourPost, MCWhoMadeThisCommentOnYourPost))
-      val actors =
-        createQuestionGenerators(questionPossibilities.head) ::
-        createQuestionGenerators(questionPossibilities.head) ::
-        createQuestionGenerators(questionPossibilities.head) :: Nil
-      questionPossibilities = questionPossibilities
-      actors foreach { a =>
-        a ! CreateQuestion(user_id)
-      }
-      context.become(awaitingQuestions(client, user_id, MultipleChoice))
+      spawnQuestionActors(user_id, List(MCWhichPageDidYouLike, MCWhoLikedYourPost, MCWhoMadeThisCommentOnYourPost), MultipleChoice)
 
     case CreateTimelineTile(user_id) =>
-      val client = sender()
-      questionPossibilities = Random.shuffle(List(TLWhenDidYouShareThisPost))
-      val actors =
-        createQuestionGenerators(questionPossibilities.head) ::
-          createQuestionGenerators(questionPossibilities.head) ::
-          createQuestionGenerators(questionPossibilities.head) :: Nil
-      questionPossibilities = questionPossibilities
-      actors foreach { a =>
-        a ! CreateQuestion(user_id)
-      }
-      context.become(awaitingQuestions(client, user_id, Timeline))
+      spawnQuestionActors(user_id, List(TLWhenDidYouShareThisPost), Timeline)
 
+    case CreateGeolocationTile(user_id) =>
+      spawnQuestionActors(user_id, List(GeoWhichPlaceWereYouAt, GeoWhatCoordinatesWereYouAt), Geolocation)
 
   }
 
@@ -76,16 +58,22 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
       case TLWhenDidYouShareThisPost =>
         log.info(s"Trying to create question WhenDidYouShareThisPost")
         context.actorOf(WhenDidYouShareThisPost.props(db))
+      case GeoWhichPlaceWereYouAt =>
+        log.info("Trying to create question WhichPlaceWereYou.")
+        context.actorOf(WhichPlaceWereYouAt.props(db))
+      case GeoWhatCoordinatesWereYouAt =>
+        log.info("Trying to create question WhatCoordinatesWereYouAt")
+        context.actorOf(WhichCoordinatesWereYouAt.props(db))
       case _ => log.error("Unknown Question Type")
         log.error(s"Trying to create question Unknown Question Type")
         context.actorOf(WhichPageDidYouLike.props(db))
      }
   }
 
-  def awaitingQuestions(client: ActorRef, user_id: String, questionType: QuestionType): Receive = {
+  def awaitingQuestions(client: ActorRef, user_id: String, questionType: TileQuestionType): Receive = {
     case FinishedQuestionCreation(q) =>
       log.info(s"Created question of type $questionType for user $user_id")
-      if (questions.filter(p => p.id == q.id).isEmpty) {
+      if (!questions.exists(p => p.id == q.id)) {
         questions = q :: questions
         log.info(s"Added question: $questionType for user $user_id having now ${questions.length}")
         sender() ! PoisonPill
@@ -124,6 +112,21 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator{
           log.error(s"No more possiblities for user $user_id")
           client ! FailedTileCreation(message)
       }
+
+  }
+
+  def spawnQuestionActors(user_id: String, specificQuestionTypes: List[SpecificQuestionType], tileType: TileQuestionType) = {
+    val client = sender()
+    questionPossibilities = Random.shuffle(specificQuestionTypes)
+    val actors =
+      createQuestionGenerators(questionPossibilities.head) ::
+        createQuestionGenerators(questionPossibilities.head) ::
+        createQuestionGenerators(questionPossibilities.head) :: Nil
+    questionPossibilities = questionPossibilities
+    actors foreach { a =>
+      a ! CreateQuestion(user_id)
+    }
+    context.become(awaitingQuestions(client, user_id, tileType))
 
   }
 }

@@ -1,6 +1,6 @@
 package entities
 
-import entities.Entities.QuestionType.QuestionType
+import entities.Entities.TileQuestionType.TileQuestionType
 import org.joda.time.DateTime
 import server.domain.RestMessage
 
@@ -18,11 +18,11 @@ object Entities {
   object SpecificQuestionType extends Enumeration {
     type SpecificQuestionType = Value
     val MCWhoLikedYourPost, MCWhichPageDidYouLike, MCWhoMadeThisCommentOnYourPost,
-    TLWhenDidYouShareThisPost = Value
+    TLWhenDidYouShareThisPost, GeoWhatCoordinatesWereYouAt, GeoWhichPlaceWereYouAt = Value
   }
 
-  object QuestionType extends Enumeration {
-    type QuestionType = Value
+  object TileQuestionType extends Enumeration {
+    type TileQuestionType = Value
     val MultipleChoice, Timeline, Geolocation, OrderedList = Value
   }
 
@@ -44,10 +44,12 @@ object Entities {
     case class Possibility(text: Option[String] = Some(""), image_url: Option[String] = Some(""), fb_id: Option[String] = Some(""))
     case class TimelineQuestion(id: String, user_id: String, question: Question, min_date: Int,
                                 max_date: Int, range: Int, answer: DateTime) extends GameQuestion
-    case class GeolocationQuestion(id: String, user_id: String, question: Question, answer: Location) extends GameQuestion
+    case class CoordinatesQuestion(id: String, user_id: String, question: Question, answer: Location) extends GameQuestion
     case class Location(longitude: Double, latitude: Double)
+  
+    case class PlaceQuestion(id: String, user_id: String, question: Question, answer: String) extends  GameQuestion
 
-    case class Tile(`type`: QuestionType, question1: GameQuestion, question2: GameQuestion, question3: GameQuestion) extends RestMessage
+    case class Tile(`type`: TileQuestionType, question1: GameQuestion, question2: GameQuestion, question3: GameQuestion) extends RestMessage
     case class Board(user_id: String, tiles: List[Tile]) extends RestMessage
 
 }

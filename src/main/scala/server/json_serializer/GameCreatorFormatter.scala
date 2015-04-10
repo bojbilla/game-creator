@@ -1,6 +1,6 @@
 package server.json_serializer
 
-import entities.Entities.QuestionType
+import entities.Entities.TileQuestionType
 import org.json4s.ext.{EnumNameSerializer, JodaTimeSerializers}
 import org.json4s.{DefaultFormats, Formats}
 
@@ -9,5 +9,5 @@ import org.json4s.{DefaultFormats, Formats}
  */
 trait GameCreatorFormatter {
   implicit lazy val json4sFormats:Formats = DefaultFormats ++ JodaTimeSerializers.all +
-  new EnumNameSerializer(QuestionType)
+  new EnumNameSerializer(TileQuestionType)
 }

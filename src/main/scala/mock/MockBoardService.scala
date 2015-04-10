@@ -1,7 +1,7 @@
 package mock
 
 import akka.actor.{Actor, ActorContext, ActorLogging}
-import entities.Entities.{Board, QuestionType, Tile}
+import entities.Entities.{Board, TileQuestionType, Tile}
 import mock.MockBoardService.GetGameBoard
 import mock.data.{GeolocationMock, MultipleChoiceMock, TimelineMock}
 import org.json4s.DefaultFormats
@@ -27,9 +27,9 @@ class MockBoardService extends Actor with ActorLogging with Json4sSupport{
       val mc = new MultipleChoiceMock()
       val tl = new TimelineMock()
       val gl = new GeolocationMock()
-      val tile1 = Tile(QuestionType.MultipleChoice, mc.multiQuestion1, mc.multiQuestion2, mc.multiQuestion3)
-      val tile2 = Tile(QuestionType.Timeline, tl.timeline1, tl.timeline2, tl.timeline3)
-      val tile3 = Tile(QuestionType.Geolocation, gl.geolocation1, gl.geolocation2, gl.geolocation3)
+      val tile1 = Tile(TileQuestionType.MultipleChoice, mc.multiQuestion1, mc.multiQuestion2, mc.multiQuestion3)
+      val tile2 = Tile(TileQuestionType.Timeline, tl.timeline1, tl.timeline2, tl.timeline3)
+      val tile3 = Tile(TileQuestionType.Geolocation, gl.geolocation1, gl.geolocation2, gl.geolocation3)
       val board = Board(mc.multiQuestion1.user_id, List(tile1, tile2, tile3))
       sender() ! board
     case _ => log.error("MockBoardService received strange message")
