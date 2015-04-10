@@ -16,6 +16,7 @@ object GraphResponses {
                   from: Option[From],
                   message: Option[String],
                   story: Option[String],
+                  place: Option[Place],
                   likes: Option[Root[List[Like]]],
                   `type`: Option[String],
                   created_time: Option[String],
@@ -23,7 +24,6 @@ object GraphResponses {
                   comments: Option[Root[List[Comment]]]
                    )
   case class PostsList(posts: List[Post]) extends RestMessage
-
   case class From(id: String, name:String)
   case class Attachment(description: Option[String] = None, media: Option[Media] = None, `type`: Option[String] = None)
   case class Media(image: Option[AttachmentImage])
@@ -53,7 +53,7 @@ object GraphResponses {
   case class Comment(id: String, from:From, like_count: Int, message: String, attachments: Option[Attachment])
   case class Photo(id: String, source: Option[String], created_time: Option[String], tags: Option[Root[List[Tag]]])
   case class Page(id: String, name: Option[String], photos: Option[Root[Photo]])
-  case class Place(id: Option[String], name: Option[String], place: Option[Location], created_time: Option[String])
+  case class Place(id: Option[String], name: Option[String], location: Option[Location], created_time: Option[String])
   case class Location(city: Option[String],
                       country: Option[String],
                       latitude: Option[Double],

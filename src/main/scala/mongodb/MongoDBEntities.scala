@@ -63,11 +63,28 @@ object MongoDBEntities {
     implicit val lastCrawledFormat = Macros.handler[LastCrawled]
   }
 
+  case class FBLocation(city: Option[String],
+                      country: Option[String],
+                      latitude: Double,
+                      longitude: Double,
+                      street: Option[String],
+                      zip: Option[String])
+  object FBLocation{
+    implicit val fbLocationFormat = Macros.handler[FBLocation]
+  }
+
+  case class FBPlace(id: Option[String], name: String, location: FBLocation,
+                     created_time: Option[String])
+  object FBPlace{
+    implicit val fbPlace = Macros.handler[FBPlace]
+  }
+
   case class FBPost(id: Option[BSONObjectID] = None,
                     user_id: String,
                     post_id: String,
                     message: Option[String] = None,
                     story: Option[String] = None,
+                    place: Option[FBPlace] = None,
                     created_time: Option[String] = None,
                     from: Option[FBFrom] = None,
                     likes: Option[List[FBLike]] = None,

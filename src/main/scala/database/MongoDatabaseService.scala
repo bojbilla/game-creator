@@ -102,7 +102,14 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
         val media = a.media.flatMap(m => m.image.map(image => FBMedia(image.height, image.width, image.src)))
         FBAttachment(a.description, media = media, `type` = a.`type`)
     }))
-      val fbPost = FBPost(None, user_id, p.id, p.message, p.story, p.created_time, fbFrom, likes, like_count, p.`type`, fbAttachments, fbComments, fbCommentsCount)
+      val fbPlace: Option[FBPlace] = p.place.flatMap(place => place.name.flatMap(name => place.location.flatMap(
+        location => location.latitude.flatMap(lat => location.longitude.flatMap(
+        long => Some(FBPlace(place.id, name, FBLocation(location.city, location.country,
+          lat, long, location.street, location.zip), place.created_time))
+        ))
+      )))
+      val fbPost = FBPost(None, user_id, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,
+        likes, like_count, p.`type`, fbAttachments, fbComments, fbCommentsCount)
       collection.insert(fbPost)
     }
   }
