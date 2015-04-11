@@ -23,8 +23,6 @@ object CrawlerWorker {
 
 class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
   var retrievers: Set[ActorRef] = Set()
-  //Maybe find better refactor to this...
-  var mongoSaver: ActorRef = null
 
   def receive() = {
     case FetchDataSince(userId, accessToken, lastCrawled) =>
@@ -44,7 +42,6 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
       taggedRetriever ! RetrieveEntities(simpleParameters)
       retrievers += taggedRetriever
 
-      mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
       context.become(awaitResults(client, userId))
     case _ =>
       log.error("Crawler worker received an unexpected message.")
@@ -53,31 +50,31 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
   def awaitResults(client: ActorRef, userId: String): Receive = {
 
     case PartialLikedPagesResult(pages) =>
-      mongoSaver ! SaveFBPage(pages.toList)
+      mongoSaver(userId) ! SaveFBPage(pages.toList)
 
     case FinishedRetrievingLikedPages(pages) =>
       log.info(s"Received liked pages for user: $userId")
-      mongoSaver ! SaveFBPage(pages.toList)
+      mongoSaver(userId) ! SaveFBPage(pages.toList)
       retrievers -= sender()
       verifyDone(client, userId)
 
 
     case PartialPostsResult(posts) =>
-      mongoSaver ! SaveFBPost(posts.toList)
+      mongoSaver(userId) ! SaveFBPost(posts.toList)
 
     case FinishedRetrievingPosts(posts) =>
       log.info(s"Received posts for user: $userId")
-      mongoSaver ! SaveFBPost(posts.toList)
+      mongoSaver(userId) ! SaveFBPost(posts.toList)
       retrievers -= sender()
       verifyDone(client, userId)
 
 
     case PartialTaggedPostsResult(posts) =>
-      mongoSaver ! SaveFBPost(posts.toList)
+      mongoSaver(userId) ! SaveFBPost(posts.toList)
 
     case FinishedRetrievingTaggedPosts(posts) =>
       log.info(s"Received tagged posts for user: $userId")
-      mongoSaver ! SaveFBPost(posts.toList)
+      mongoSaver(userId) ! SaveFBPost(posts.toList)
       retrievers -= sender()
       verifyDone(client, userId)
 
@@ -100,6 +97,9 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
 
   }
 
+  def mongoSaver(userId: String): ActorRef = {
+    context.actorOf(MongoDatabaseService.props(userId, database))
+  }
 
 }
 
