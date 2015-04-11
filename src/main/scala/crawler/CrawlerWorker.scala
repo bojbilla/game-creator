@@ -4,9 +4,9 @@ import akka.actor._
 import crawler.CrawlerService.{FetchDataSince, FinishedCrawling}
 import crawler.common.FBSimpleParameters
 import crawler.common.RetrieveEntitiesService.RetrieveEntities
-import crawler.retrievedata.retrievers.RetrieveLikedPages.FinishedRetrievingLikedPages
-import crawler.retrievedata.retrievers.RetrievePosts.FinishedRetrievingPosts
-import crawler.retrievedata.retrievers.RetrieveTaggedPosts.FinishedRetrievingTaggedPosts
+import crawler.retrievedata.retrievers.RetrieveLikedPages.{PartialLikedPagesResult, FinishedRetrievingLikedPages}
+import crawler.retrievedata.retrievers.RetrievePosts.{PartialPostsResult, FinishedRetrievingPosts}
+import crawler.retrievedata.retrievers.RetrieveTaggedPosts.{PartialTaggedPostsResult, FinishedRetrievingTaggedPosts}
 import crawler.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
 import database.MongoDatabaseService
 import database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
@@ -23,6 +23,8 @@ object CrawlerWorker {
 
 class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
   var retrievers: Set[ActorRef] = Set()
+  //Maybe find better refactor to this...
+  var mongoSaver: ActorRef = null
 
   def receive() = {
     case FetchDataSince(userId, accessToken, lastCrawled) =>
@@ -42,6 +44,7 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
       taggedRetriever ! RetrieveEntities(simpleParameters)
       retrievers += taggedRetriever
 
+      mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
       context.become(awaitResults(client, userId))
     case _ =>
       log.error("Crawler worker received an unexpected message.")
@@ -49,24 +52,31 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
 
   def awaitResults(client: ActorRef, userId: String): Receive = {
 
+    case PartialLikedPagesResult(pages) =>
+      mongoSaver ! SaveFBPage(pages.toList)
+
     case FinishedRetrievingLikedPages(pages) =>
       log.info(s"Received liked pages for user: $userId")
-      val mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
       mongoSaver ! SaveFBPage(pages.toList)
       retrievers -= sender()
       verifyDone(client, userId)
 
 
+    case PartialPostsResult(posts) =>
+      mongoSaver ! SaveFBPost(posts.toList)
+
     case FinishedRetrievingPosts(posts) =>
       log.info(s"Received posts for user: $userId")
-      val mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
       mongoSaver ! SaveFBPost(posts.toList)
       retrievers -= sender()
       verifyDone(client, userId)
 
+
+    case PartialTaggedPostsResult(posts) =>
+      mongoSaver ! SaveFBPost(posts.toList)
+
     case FinishedRetrievingTaggedPosts(posts) =>
       log.info(s"Received tagged posts for user: $userId")
-      val mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
       mongoSaver ! SaveFBPost(posts.toList)
       retrievers -= sender()
       verifyDone(client, userId)

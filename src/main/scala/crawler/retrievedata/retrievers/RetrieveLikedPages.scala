@@ -4,9 +4,9 @@ package crawler.retrievedata.retrievers
 import akka.actor.{ActorRef, Props}
 import crawler.common.GraphResponses.Page
 import crawler.common.RetrieveEntitiesService
-import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, RetrieveEntities}
+import crawler.common.RetrieveEntitiesService.{PartialResult, FinishedRetrievingEntities, NotEnoughFound, RetrieveEntities}
 import crawler.retrievedata.RetrieveData
-import crawler.retrievedata.retrievers.RetrieveLikedPages.FinishedRetrievingLikedPages
+import crawler.retrievedata.retrievers.RetrieveLikedPages.{PartialLikedPagesResult, FinishedRetrievingLikedPages}
 
 /**
  * Created by roger on 05/03/15.
@@ -17,11 +17,13 @@ object RetrieveLikedPages {
     Props(new RetrieveLikedPages())
 
   case class FinishedRetrievingLikedPages(pages: Vector[Page])
-
+  case class PartialLikedPagesResult(pages: Vector[Page])
 }
 
 
 class RetrieveLikedPages extends RetrieveData {
+
+  var entityCount = 0
 
   def receive = {
     case RetrieveEntities(params) =>
@@ -33,11 +35,16 @@ class RetrieveLikedPages extends RetrieveData {
   }
 
   def awaitResponse(client: ActorRef): Receive = {
+    case PartialResult(entities) =>
+      entityCount += entities.length
+      client ! PartialLikedPagesResult(entities.asInstanceOf[Vector[Page]])
     case FinishedRetrievingEntities(entities) =>
-      log.info(s"Received ${entities.length} liked pages.")
+      entityCount += entities.length
+      log.info(s"Received $entityCount liked pages.")
       client ! FinishedRetrievingLikedPages(entities.asInstanceOf[Vector[Page]])
     case NotEnoughFound(entities) =>
-      log.info(s"Received not enough (${entities.length}) liked pages.")
+      entityCount += entities.length
+      log.info(s"Received not enough ($entityCount) liked pages.")
       client ! FinishedRetrievingLikedPages(entities.asInstanceOf[Vector[Page]])
 
   }

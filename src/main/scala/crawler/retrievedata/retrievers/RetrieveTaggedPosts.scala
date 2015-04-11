@@ -4,9 +4,9 @@ package crawler.retrievedata.retrievers
 import akka.actor.{ActorRef, Props}
 import crawler.common.GraphResponses.Post
 import crawler.common.RetrieveEntitiesService
-import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, RetrieveEntities}
+import crawler.common.RetrieveEntitiesService.{PartialResult, FinishedRetrievingEntities, NotEnoughFound, RetrieveEntities}
 import crawler.retrievedata.RetrieveData
-import crawler.retrievedata.retrievers.RetrieveTaggedPosts.FinishedRetrievingTaggedPosts
+import crawler.retrievedata.retrievers.RetrieveTaggedPosts.{PartialTaggedPostsResult, FinishedRetrievingTaggedPosts}
 
 /**
  * Created by roger on 05/03/15.
@@ -16,10 +16,14 @@ object RetrieveTaggedPosts {
     Props(new RetrieveTaggedPosts())
 
   case class FinishedRetrievingTaggedPosts(posts: Vector[Post])
+  case class PartialTaggedPostsResult(posts: Vector[Post])
 
 }
 
 class RetrieveTaggedPosts extends RetrieveData {
+
+  var entityCount = 0
+
   def receive = {
     case RetrieveEntities(params) =>
       val client = sender()
@@ -32,11 +36,16 @@ class RetrieveTaggedPosts extends RetrieveData {
   }
 
   def awaitResponse(client: ActorRef): Receive = {
+    case PartialResult(entities) =>
+      entityCount += entities.length
+      client ! PartialTaggedPostsResult(entities.asInstanceOf[Vector[Post]])
     case FinishedRetrievingEntities(entities) =>
-      log.info(s"Received ${entities.length} tagged posts.")
+      entityCount += entities.length
+      log.info(s"Received $entityCount tagged posts.")
       client ! FinishedRetrievingTaggedPosts(entities.asInstanceOf[Vector[Post]])
     case NotEnoughFound(entities) =>
-      log.info(s"Received not enough (${entities.length}) tagged posts.")
+      entityCount += entities.length
+      log.info(s"Received not enough ($entityCount) tagged posts.")
       client ! FinishedRetrievingTaggedPosts(entities.asInstanceOf[Vector[Post]])
     case _ => log.error("RetrievingTaggedPosts received unexpected message")
 

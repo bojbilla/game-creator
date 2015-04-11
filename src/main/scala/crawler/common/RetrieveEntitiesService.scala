@@ -29,16 +29,21 @@ object RetrieveEntitiesService {
     val tpe = typeOf[A]
   }
 
+  case class PartialResult[A: TypeTag](entities: Vector[A]) {
+    val tpe = typeOf[A]
+  }
+
 
   private case class NotEnoughRetrieved[A](client: ActorRef,
                                            paging: Option[Paging],
                                            minimum: Int,
+                                           count: Int = 0,
                                            entities: Vector[A] = Vector())
 
   private case class GetEntities[A](client: ActorRef,
                                     path: String,
                                     minimal: Int,
-                                    entities: Vector[A] = Vector.empty[A])
+                                    count: Int = 0)
 
 
   def props[T](filter: (Vector[T]) => Vector[T])(implicit mf: Manifest[T]): Props =
@@ -68,7 +73,7 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
   }
 
   def retrieveEntities(): Receive = {
-    case GetEntities(client, path, minimum, entities: Vector[T]) =>
+    case GetEntities(client, path, minimum, count) =>
       log.debug(s"Retriever path: $path")
       val responseF = pipelineRawJson(Get(path))
       responseF.onComplete {
@@ -107,32 +112,34 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
                   newEntities = filter(Vector(entity))
               }
 
-              val foundEntities = entities ++ newEntities
-              if (foundEntities.length < minimum || minimum == 0) {
-                self ! NotEnoughRetrieved(client, root.paging, minimum, foundEntities)
+              val newCount = count + newEntities.length
+              if (newCount < minimum || minimum == 0) {
+                self ! NotEnoughRetrieved(client, root.paging, minimum, newCount, newEntities)
               } else {
-                client ! FinishedRetrievingEntities[T](foundEntities)
+                client ! FinishedRetrievingEntities[T](newEntities)
               }
             case BadRequest => log.error(s"Facebook gave bad request for path: $path")
-              client ! NotEnoughFound(entities)
+              client ! NotEnoughFound(Vector[T]())
             case _ =>
-              client ! NotEnoughFound(entities)
+              client ! NotEnoughFound(Vector[T]())
               log.error(s"Can't retrieve entities due to unknown error ${r.status}")
           }
         case Failure(error) =>
           log.error(s"Facebook didn't respond \npath:$path\n  ${error.toString}")
-          client ! NotEnoughFound(entities)
+          client ! NotEnoughFound(Vector[T]())
           context.become(receive)
       }
-    case NotEnoughRetrieved(client, paging, minimum, entities) =>
+    case NotEnoughRetrieved(client, paging, minimum, count, entities) =>
       paging match {
         case Some(p) => p.next match {
-          case Some(next) => self ! GetEntities(client, next, minimum, entities)
+          case Some(next) =>
+            self ! GetEntities(client, next, minimum, count)
+            client ! PartialResult(entities)
           case None =>
             if (minimum == 0) {
               client ! FinishedRetrievingEntities(entities)
             } else {
-              log.info(s"Not enough found end of paging ${entities.length}")
+              log.info(s"Not enough found end of paging")
               client ! NotEnoughFound(entities)
             }
             context.become(receive)
@@ -141,7 +148,7 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
           if (minimum == 0) {
             client ! FinishedRetrievingEntities(entities)
           } else {
-            log.info(s"Not enough found end of paging${entities.length}")
+            log.info(s"Not enough found end of paging")
             client ! NotEnoughFound(entities)
           }
           context.become(receive)
