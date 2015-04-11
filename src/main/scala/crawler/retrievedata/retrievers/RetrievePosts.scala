@@ -4,15 +4,16 @@ package crawler.retrievedata.retrievers
 import akka.actor.{ActorRef, Props}
 import crawler.common.GraphResponses.Post
 import crawler.common.RetrieveEntitiesService
-import crawler.common.RetrieveEntitiesService.{PartialResult, FinishedRetrievingEntities, NotEnoughFound, RetrieveEntities}
+import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, PartialResult, RetrieveEntities}
 import crawler.retrievedata.RetrieveData
-import crawler.retrievedata.retrievers.RetrievePosts.{PartialPostsResult, FinishedRetrievingPosts}
+import crawler.retrievedata.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
 
 object RetrievePosts {
   def props(): Props =
     Props(new RetrievePosts())
 
   case class FinishedRetrievingPosts(posts: Vector[Post])
+
   case class PartialPostsResult(posts: Vector[Post])
 
 }

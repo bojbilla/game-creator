@@ -4,9 +4,9 @@ package crawler.retrievedata.retrievers
 import akka.actor.{ActorRef, Props}
 import crawler.common.GraphResponses.Page
 import crawler.common.RetrieveEntitiesService
-import crawler.common.RetrieveEntitiesService.{PartialResult, FinishedRetrievingEntities, NotEnoughFound, RetrieveEntities}
+import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, PartialResult, RetrieveEntities}
 import crawler.retrievedata.RetrieveData
-import crawler.retrievedata.retrievers.RetrieveLikedPages.{PartialLikedPagesResult, FinishedRetrievingLikedPages}
+import crawler.retrievedata.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
 
 /**
  * Created by roger on 05/03/15.
@@ -17,7 +17,9 @@ object RetrieveLikedPages {
     Props(new RetrieveLikedPages())
 
   case class FinishedRetrievingLikedPages(pages: Vector[Page])
+
   case class PartialLikedPagesResult(pages: Vector[Page])
+
 }
 
 

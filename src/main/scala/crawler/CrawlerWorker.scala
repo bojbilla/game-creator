@@ -4,9 +4,9 @@ import akka.actor._
 import crawler.CrawlerService.{FetchDataSince, FinishedCrawling}
 import crawler.common.FBSimpleParameters
 import crawler.common.RetrieveEntitiesService.RetrieveEntities
-import crawler.retrievedata.retrievers.RetrieveLikedPages.{PartialLikedPagesResult, FinishedRetrievingLikedPages}
-import crawler.retrievedata.retrievers.RetrievePosts.{PartialPostsResult, FinishedRetrievingPosts}
-import crawler.retrievedata.retrievers.RetrieveTaggedPosts.{PartialTaggedPostsResult, FinishedRetrievingTaggedPosts}
+import crawler.retrievedata.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
+import crawler.retrievedata.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
+import crawler.retrievedata.retrievers.RetrieveTaggedPosts.{FinishedRetrievingTaggedPosts, PartialTaggedPostsResult}
 import crawler.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
 import database.MongoDatabaseService
 import database.MongoDatabaseService.{SaveFBPage, SaveFBPost}

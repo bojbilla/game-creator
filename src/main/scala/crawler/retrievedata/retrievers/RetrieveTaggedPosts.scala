@@ -4,9 +4,9 @@ package crawler.retrievedata.retrievers
 import akka.actor.{ActorRef, Props}
 import crawler.common.GraphResponses.Post
 import crawler.common.RetrieveEntitiesService
-import crawler.common.RetrieveEntitiesService.{PartialResult, FinishedRetrievingEntities, NotEnoughFound, RetrieveEntities}
+import crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, PartialResult, RetrieveEntities}
 import crawler.retrievedata.RetrieveData
-import crawler.retrievedata.retrievers.RetrieveTaggedPosts.{PartialTaggedPostsResult, FinishedRetrievingTaggedPosts}
+import crawler.retrievedata.retrievers.RetrieveTaggedPosts.{FinishedRetrievingTaggedPosts, PartialTaggedPostsResult}
 
 /**
  * Created by roger on 05/03/15.
@@ -16,6 +16,7 @@ object RetrieveTaggedPosts {
     Props(new RetrieveTaggedPosts())
 
   case class FinishedRetrievingTaggedPosts(posts: Vector[Post])
+
   case class PartialTaggedPostsResult(posts: Vector[Post])
 
 }
