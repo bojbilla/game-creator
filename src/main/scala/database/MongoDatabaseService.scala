@@ -8,9 +8,6 @@ import mongodb.MongoDBEntities._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
-import reactivemongo.core.commands.{Count, FindAndModify, Update}
-
-import scala.util.{Failure, Success}
 
 
 /**
@@ -47,7 +44,7 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
     case SaveFBTaggedPost(posts) =>
       saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbTaggedPostsCollection))
     case SaveLastCrawledTime =>
-      saveLastCrawlTime
+      saveLastCrawlTime(db[BSONCollection](MongoDatabaseService.lastCrawledCollection))
     case _ => log.error(s"MongoDB Service received unexpected message")
   }
 
@@ -71,20 +68,10 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
       }
 
       val query = BSONDocument("page_id" -> p.id)
-      val futureCount = db.command(Count(fbPageCollection.name, Some(query)))
-      futureCount.map { count =>
-        if (count < 1) {
-          fbPageCollection.insert(FBPage(None, p.id, p.name, fbPhoto))
-        }
-      }
+      fbPageCollection.update(query, FBPage(None, p.id, p.name, fbPhoto), upsert = true)
 
       val query2 = BSONDocument("user_id" -> user_id, "page_id" -> p.id)
-      val futureRelationCount = db.command(Count(fbPageLikeCollection.name, Some(query2)))
-      futureRelationCount.map { count =>
-        if (count < 1) {
-          fbPageLikeCollection.insert(FBPageLike(None, user_id, p.id))
-        }
-      }
+      fbPageLikeCollection.update(query2, FBPageLike(None, user_id, p.id), upsert = true)
     }
   }
 
@@ -114,25 +101,20 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
       )))
       val fbPost = FBPost(None, user_id, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,
         likes, like_count, p.`type`, fbAttachments, fbComments, fbCommentsCount)
-      collection.insert(fbPost)
+      val selector = BSONDocument("post_id" -> p.id)
+      collection.update(selector, fbPost, upsert = true)
     }
   }
 
-  def saveLastCrawlTime: Unit = {
+  def saveLastCrawlTime(collection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val lastCrawled = db[BSONCollection](MongoDatabaseService.lastCrawledCollection)
     val time = DateTime.now
     val selector = BSONDocument("user_id" -> user_id)
 
-    val modifier = BSONDocument(
-      "$set" -> BSONDocument("date" -> time))
+    val update = BSONDocument("user_id" -> user_id, "date" -> time)
 
-    val command = FindAndModify(lastCrawled.name, selector, Update(modifier, fetchNewObject = false), upsert = true)
-    db.command(command).onComplete {
-      case Failure(error) => log.error(s"An error occurred while saving last crawled time for user $user_id.")
-      case Success(maybeDocument) => log.info(s"Last crawled time saved for user : $user_id.")
-    }
+    collection.update(selector, update, upsert = true)
   }
 
 
