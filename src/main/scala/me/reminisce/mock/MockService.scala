@@ -1,7 +1,6 @@
 package me.reminisce.mock
 
 import akka.actor.{Actor, ActorContext, Props}
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.Board
 import me.reminisce.mock.MockBoardService.GetGameBoard
 import me.reminisce.server.domain.RestMessage

@@ -1,6 +1,5 @@
 package me.reminisce.mock.data
 
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.{CoordinatesQuestion, Location, Question}
 
 /**

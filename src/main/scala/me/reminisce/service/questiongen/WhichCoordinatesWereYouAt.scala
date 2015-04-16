@@ -1,11 +1,10 @@
 package me.reminisce.service.questiongen
 
 import akka.actor.{ActorRef, Props}
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.SpecificQuestionType._
 import me.reminisce.entities.Entities.{CoordinatesQuestion, Location, Question}
 import me.reminisce.mongodb.MongoDBEntities.FBPost
-import me.reminisce.service.questiongen.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation, CreateQuestion}
+import me.reminisce.service.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.DefaultDB
 import reactivemongo.bson.BSONDocument
 
@@ -28,7 +27,7 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends PostQuestionGenerator(db)
       )
       getDocument(db, collection, query).onComplete {
         case Success(optPost) => optPost match {
-          case Some(post : FBPost) =>
+          case Some(post: FBPost) =>
             post.place match {
               case Some(place) =>
                 val question = CoordinatesQuestion(post.post_id, user_id, Question("WhichCoordinateWereYouAt",

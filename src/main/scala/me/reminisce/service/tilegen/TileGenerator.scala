@@ -1,7 +1,6 @@
 package me.reminisce.service.tilegen
 
 import akka.actor.{ActorRef, PoisonPill, Props}
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.SpecificQuestionType._
 import me.reminisce.entities.Entities.TileQuestionType.{TileQuestionType, _}
 import me.reminisce.entities.Entities.{GameQuestion, _}

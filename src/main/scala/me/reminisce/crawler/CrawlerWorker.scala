@@ -2,14 +2,14 @@ package me.reminisce.crawler
 
 import akka.actor._
 import me.reminisce.crawler.CrawlerService.{FetchDataSince, FinishedCrawling}
-import me.reminisce.crawler.common.{FBSimpleParameters, RetrieveEntitiesService}
+import me.reminisce.crawler.common.FBSimpleParameters
 import me.reminisce.crawler.common.RetrieveEntitiesService.RetrieveEntities
 import me.reminisce.crawler.retrievedata.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
 import me.reminisce.crawler.retrievedata.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
 import me.reminisce.crawler.retrievedata.retrievers.RetrieveTaggedPosts.{FinishedRetrievingTaggedPosts, PartialTaggedPostsResult}
 import me.reminisce.crawler.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.database.MongoDatabaseService.{SaveFBPost, SaveFBPage}
+import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
 import reactivemongo.api.DefaultDB
 
 

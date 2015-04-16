@@ -2,7 +2,7 @@ package me.reminisce.database
 
 import akka.actor.Props
 import com.github.nscala_time.time.Imports._
-import me.reminisce.crawler.common.GraphResponses.{Post, Page}
+import me.reminisce.crawler.common.GraphResponses.{Page, Post}
 import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SaveFBTaggedPost, SaveLastCrawledTime}
 import me.reminisce.mongodb.MongoDBEntities._
 import reactivemongo.api.DefaultDB

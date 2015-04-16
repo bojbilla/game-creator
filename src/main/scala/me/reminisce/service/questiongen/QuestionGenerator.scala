@@ -1,7 +1,6 @@
 package me.reminisce.service.questiongen
 
 import akka.actor.{Actor, ActorContext, ActorLogging}
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.GameQuestion
 import me.reminisce.entities.Entities.SpecificQuestionType.SpecificQuestionType
 import me.reminisce.server.domain.RestMessage

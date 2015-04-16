@@ -1,6 +1,5 @@
 package me.reminisce.server.jsonserializer
 
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.TileQuestionType
 import org.json4s.ext.{EnumNameSerializer, JodaTimeSerializers}
 import org.json4s.{DefaultFormats, Formats}

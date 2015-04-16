@@ -2,11 +2,10 @@ package me.reminisce.service.questiongen
 
 import akka.actor.Props
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.SpecificQuestionType._
 import me.reminisce.entities.Entities.{MultipleChoiceQuestion, Possibility, Question}
 import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.service.questiongen.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation, CreateQuestion}
+import me.reminisce.service.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument

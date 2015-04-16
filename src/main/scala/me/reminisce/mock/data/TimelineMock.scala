@@ -1,7 +1,6 @@
 package me.reminisce.mock.data
 
 import com.github.nscala_time.time.Imports._
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.{Question, TimelineQuestion}
 
 import scala.util.Random

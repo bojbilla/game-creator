@@ -1,11 +1,10 @@
 package me.reminisce.service.questiongen
 
 import akka.actor.Props
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.SpecificQuestionType._
 import me.reminisce.entities.Entities.{MultipleChoiceQuestion, Possibility, Question}
 import me.reminisce.mongodb.MongoDBEntities.{FBComment, FBPost}
-import me.reminisce.service.questiongen.QuestionGenerator.{FinishedQuestionCreation, FailedToCreateQuestion, CreateQuestion}
+import me.reminisce.service.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.DefaultDB
 import reactivemongo.bson.BSONDocument
 
@@ -64,7 +63,7 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends PostQuestionGenerator(
       )
       val document = getDocument(db, collection, query)
       document.onComplete {
-        case Success(Some(post:FBPost)) =>
+        case Success(Some(post: FBPost)) =>
           val distinct = distinctComments(post.comments.get, Set())
           if (distinct.length >= 4) {
             promise.success(post.copy(comments = Some(distinct)))

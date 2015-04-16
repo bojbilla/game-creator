@@ -1,7 +1,6 @@
 package me.reminisce.mock
 
 import akka.actor.{Actor, ActorContext, ActorLogging}
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.{Board, Tile, TileQuestionType}
 import me.reminisce.mock.MockBoardService.GetGameBoard
 import me.reminisce.mock.data.{GeolocationMock, MultipleChoiceMock, TimelineMock}

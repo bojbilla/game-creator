@@ -1,4 +1,4 @@
-package me.reminisce.crawler.FacebookConfig
+package me.reminisce.crawler
 
 import akka.util.Timeout
 import org.json4s.DefaultFormats

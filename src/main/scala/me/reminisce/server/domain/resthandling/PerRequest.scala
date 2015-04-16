@@ -7,7 +7,7 @@ package me.reminisce.server.domain.resthandling
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{OneForOneStrategy, _}
 import me.reminisce.server.domain.Domain.Error
-import me.reminisce.server.domain.resthandling.PerRequest.{WithProps, WithActorRef}
+import me.reminisce.server.domain.resthandling.PerRequest.{WithActorRef, WithProps}
 import me.reminisce.server.domain.{Domain, RestMessage}
 import me.reminisce.server.jsonserializer.GameCreatorFormatter
 import me.reminisce.service.questiongen.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation}

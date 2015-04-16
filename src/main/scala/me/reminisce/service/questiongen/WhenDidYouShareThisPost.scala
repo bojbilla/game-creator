@@ -1,16 +1,15 @@
 package me.reminisce.service.questiongen
 
 import akka.actor.Props
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities.SpecificQuestionType._
 import me.reminisce.entities.Entities.{Question, TimelineQuestion}
 import me.reminisce.mongodb.MongoDBEntities.FBPost
-import me.reminisce.service.questiongen.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation, CreateQuestion}
+import me.reminisce.service.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import org.joda.time.format.DateTimeFormat
 import reactivemongo.api.DefaultDB
 import reactivemongo.bson.{BSONArray, BSONDocument}
 
-import scala.util.{Failure, Success, Random}
+import scala.util.{Failure, Random, Success}
 
 /**
  * Created by roger on 20/11/14.

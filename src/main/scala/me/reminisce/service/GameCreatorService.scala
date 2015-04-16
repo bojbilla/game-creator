@@ -1,7 +1,6 @@
 package me.reminisce.service
 
 import akka.actor._
-import me.reminisce.crawler.CrawlerService
 import me.reminisce.crawler.CrawlerService.FetchData
 import me.reminisce.server.domain.RestMessage
 import me.reminisce.server.domain.resthandling.PerRequestCreator

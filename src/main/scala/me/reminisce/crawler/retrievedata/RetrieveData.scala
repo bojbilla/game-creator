@@ -2,7 +2,7 @@ package me.reminisce.crawler.retrievedata
 
 import akka.actor.{Actor, ActorContext}
 import akka.event.LogSource
-import me.reminisce.crawler.FacebookConfig.FacebookServiceConfig
+import me.reminisce.crawler.FacebookServiceConfig
 import org.json4s.DefaultFormats
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept

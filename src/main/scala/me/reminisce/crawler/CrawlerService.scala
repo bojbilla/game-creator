@@ -7,7 +7,7 @@ import me.reminisce.crawler.common.FBCommunicationManager
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.MongoDatabaseService.SaveLastCrawledTime
 import me.reminisce.mongodb.MongoDBEntities.LastCrawled
-import me.reminisce.server.domain.Domain.{AlreadyFresh, GraphAPIUnreachable, GraphAPIInvalidToken, Done}
+import me.reminisce.server.domain.Domain.{AlreadyFresh, Done, GraphAPIInvalidToken, GraphAPIUnreachable}
 import me.reminisce.server.domain.{Domain, RestMessage}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection

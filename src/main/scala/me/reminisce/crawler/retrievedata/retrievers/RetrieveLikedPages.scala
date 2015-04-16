@@ -2,8 +2,8 @@ package me.reminisce.crawler.retrievedata.retrievers
 
 import akka.actor.{ActorRef, Props}
 import me.reminisce.crawler.common.GraphResponses.Page
+import me.reminisce.crawler.common.RetrieveEntitiesService
 import me.reminisce.crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, PartialResult, RetrieveEntities}
-import me.reminisce.crawler.common.{GraphResponses, RetrieveEntitiesService}
 import me.reminisce.crawler.retrievedata.RetrieveData
 import me.reminisce.crawler.retrievedata.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
 

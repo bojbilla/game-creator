@@ -1,14 +1,13 @@
 package me.reminisce.service
 
 import akka.actor._
-import me.reminisce.entities.Entities
 import me.reminisce.entities.Entities._
+import me.reminisce.server.domain.Domain.Error
 import me.reminisce.server.domain.RestMessage
 import me.reminisce.service.GameGenerator.CreateBoard
 import me.reminisce.service.tilegen.TileGenerator
 import me.reminisce.service.tilegen.TileGenerator._
 import reactivemongo.api.DefaultDB
-import me.reminisce.server.domain.Domain.Error
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Random
