@@ -1,6 +1,7 @@
 package me.reminisce.service
 
 import akka.actor._
+import me.reminisce.fetcher.FetcherService
 import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.server.domain.RestMessage
 import me.reminisce.server.domain.resthandling.RESTHandlerCreator
@@ -38,7 +39,6 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
 
 
   val db: DefaultDB
-  val dataRetriever: ActorRef
 
   implicit val pipelineRawJson: HttpRequest => Future[HttpResponse] = (
     addHeader(Accept(`application/json`))
@@ -65,9 +65,9 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
         }
       }
     } ~ path("gameboard") {
-      parameters('user_id.as[String]) { user_id: String =>
+      parameters('user_id.as[String], 'access_token.as[String]) { (user_id: String, access_token: String) =>
         createBoard {
-          CreateBoard(user_id)
+          CreateBoard(user_id, access_token)
         }
       }
     }
@@ -93,12 +93,6 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
     ctx => perRequest(ctx, generator, message)
   }
 
-  def tryToCreateBoard(message: RestMessage): Route = {
-    val generator = context.actorOf(GameGenerator.props(db))
-    ctx => perRequest(ctx, generator, message)
-  }
-
-
   def createBoard(message: RestMessage): Route = {
     log.info("Creating game board")
     val generator = context.actorOf(GameGenerator.props(db))
@@ -106,7 +100,8 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
   }
 
   def fetchData(message: RestMessage): Route = {
-    ctx => perRequest(ctx, dataRetriever, message)
+    val fetcherService = context.actorOf(FetcherService.props(db))
+    ctx => perRequest(ctx, fetcherService, message)
   }
 
 }
