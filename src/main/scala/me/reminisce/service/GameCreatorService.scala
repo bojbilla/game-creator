@@ -1,9 +1,9 @@
 package me.reminisce.service
 
 import akka.actor._
-import me.reminisce.crawler.CrawlerService.FetchData
+import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.server.domain.RestMessage
-import me.reminisce.server.domain.resthandling.PerRequestCreator
+import me.reminisce.server.domain.resthandling.RESTHandlerCreator
 import me.reminisce.service.GameGenerator.CreateBoard
 import me.reminisce.service.questiongen.QuestionGenerator.CreateQuestion
 import me.reminisce.service.questiongen.{WhenDidYouShareThisPost, WhichPageDidYouLike, WhoLikedYourPost, WhoMadeThisCommentOnYourPost}
@@ -24,7 +24,6 @@ import scala.concurrent.Future
 
 object GameCreatorService {
 
-  case class CrawlerTest(message: String)
 
 }
 
@@ -34,7 +33,7 @@ trait GameCreatorServiceActor extends GameCreatorService {
   def receive = runRoute(gameCreatorRoutes)
 }
 
-trait GameCreatorService extends HttpService with PerRequestCreator with Actor with ActorLogging with Json4sSupport {
+trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor with ActorLogging with Json4sSupport {
   def actorRefFactory: ActorContext
 
 

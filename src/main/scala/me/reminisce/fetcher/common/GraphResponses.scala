@@ -1,4 +1,4 @@
-package me.reminisce.crawler.common
+package me.reminisce.fetcher.common
 
 import com.github.nscala_time.time.Imports._
 import me.reminisce.server.domain.RestMessage

@@ -28,6 +28,6 @@ object Domain {
 
   // Exceptions
 
-  case object ExampleException extends Exception("Crawler encountered exception: need more power")
+  case object ExampleException extends Exception("Fetcher encountered exception: need more power")
 
 }

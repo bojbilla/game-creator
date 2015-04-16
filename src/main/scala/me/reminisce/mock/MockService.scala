@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorContext, Props}
 import me.reminisce.entities.Entities.Board
 import me.reminisce.mock.MockBoardService.GetGameBoard
 import me.reminisce.server.domain.RestMessage
-import me.reminisce.server.domain.resthandling.PerRequestCreator
+import me.reminisce.server.domain.resthandling.RESTHandlerCreator
 import spray.routing._
 
 /**
@@ -25,7 +25,7 @@ trait MockServiceActor extends Actor with MockService {
 
 }
 
-trait MockService extends HttpService with PerRequestCreator with Actor {
+trait MockService extends HttpService with RESTHandlerCreator with Actor {
   def actorRefFactory: ActorContext
 
   val mockRoutes = {

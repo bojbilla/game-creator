@@ -1,11 +1,11 @@
-package me.reminisce.crawler.retrievedata.retrievers
+package me.reminisce.fetcher.retrievedata.retrievers
 
 import akka.actor.{ActorRef, Props}
-import me.reminisce.crawler.common.GraphResponses.Post
-import me.reminisce.crawler.common.RetrieveEntitiesService
-import me.reminisce.crawler.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, PartialResult, RetrieveEntities}
-import me.reminisce.crawler.retrievedata.RetrieveData
-import me.reminisce.crawler.retrievedata.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
+import me.reminisce.fetcher.common.GraphResponses.Post
+import me.reminisce.fetcher.common.RetrieveEntitiesService
+import me.reminisce.fetcher.common.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, PartialResult, RetrieveEntities}
+import me.reminisce.fetcher.retrievedata.RetrieveData
+import me.reminisce.fetcher.retrievedata.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
 
 object RetrievePosts {
   def props(): Props =

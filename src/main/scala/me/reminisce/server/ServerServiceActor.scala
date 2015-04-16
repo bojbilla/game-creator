@@ -1,7 +1,7 @@
 package me.reminisce.server
 
 import akka.actor.{ActorLogging, ActorRef}
-import me.reminisce.crawler.CrawlerService
+import me.reminisce.fetcher.FetcherService
 import me.reminisce.mock.MockServiceActor
 import me.reminisce.service.GameCreatorServiceActor
 import org.json4s.{DefaultFormats, Formats}
@@ -27,6 +27,6 @@ class ServerServiceActor extends MockServiceActor with GameCreatorServiceActor w
 
   override implicit def json4sFormats: Formats = DefaultFormats
 
-  override val dataRetriever: ActorRef = context.actorOf(CrawlerService.props(db))
+  override val dataRetriever: ActorRef = context.actorOf(FetcherService.props(db))
 
 }

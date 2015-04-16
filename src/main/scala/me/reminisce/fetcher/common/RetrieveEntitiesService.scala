@@ -1,8 +1,8 @@
-package me.reminisce.crawler.common
+package me.reminisce.fetcher.common
 
 import akka.actor.{ActorRef, Props}
-import me.reminisce.crawler.common.GraphResponses.{Paging, Root}
-import me.reminisce.crawler.common.RetrieveEntitiesService._
+import me.reminisce.fetcher.common.GraphResponses.{Paging, Root}
+import me.reminisce.fetcher.common.RetrieveEntitiesService._
 import me.reminisce.server.domain.RestMessage
 import org.json4s.jackson.JsonMethods._
 import spray.client.pipelining._
@@ -14,7 +14,7 @@ import scala.util.{Failure, Success}
 
 object RetrieveEntitiesService {
 
-  //Used for starting to crawl facebook
+  //Used for starting to fetch data on facebook
   //  case class RetrieveEntities(parameters: FBParameters)
   case class RetrieveEntities(params: FBSimpleParameters) extends RestMessage
 

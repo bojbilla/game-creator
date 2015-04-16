@@ -2,8 +2,8 @@ package me.reminisce.database
 
 import akka.actor.Props
 import com.github.nscala_time.time.Imports._
-import me.reminisce.crawler.common.GraphResponses.{Page, Post}
-import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SaveFBTaggedPost, SaveLastCrawledTime}
+import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SaveFBTaggedPost, SavecLastFetchedTime}
+import me.reminisce.fetcher.common.GraphResponses.{Page, Post}
 import me.reminisce.mongodb.MongoDBEntities._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
@@ -19,7 +19,7 @@ object MongoDatabaseService {
   val fbPageLikesCollection = "fb_page_likes"
   val fbTaggedPostsCollection = "fb_tagged_posts"
   val fbPostsCollection = "fb_posts"
-  val lastCrawledCollection = "last_crawled"
+  val lastFetchedCollection = "last_fetched"
 
   def props(user_id: String, db: DefaultDB): Props =
     Props(new MongoDatabaseService(user_id, db))
@@ -30,7 +30,7 @@ object MongoDatabaseService {
 
   case class SaveFBTaggedPost(posts: List[Post])
 
-  case class SaveLastCrawledTime()
+  case class SavecLastFetchedTime()
 
 }
 
@@ -43,8 +43,8 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
       saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbPostsCollection))
     case SaveFBTaggedPost(posts) =>
       saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbTaggedPostsCollection))
-    case SaveLastCrawledTime =>
-      saveLastCrawlTime(db[BSONCollection](MongoDatabaseService.lastCrawledCollection))
+    case SavecLastFetchedTime =>
+      saveLastFetchTime(db[BSONCollection](MongoDatabaseService.lastFetchedCollection))
     case _ => log.error(s"MongoDB Service received unexpected message")
   }
 
@@ -104,7 +104,7 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
     }
   }
 
-  def saveLastCrawlTime(collection: BSONCollection): Unit = {
+  def saveLastFetchTime(collection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val time = DateTime.now

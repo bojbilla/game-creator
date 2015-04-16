@@ -7,7 +7,7 @@ package me.reminisce.server.domain.resthandling
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{OneForOneStrategy, _}
 import me.reminisce.server.domain.Domain.Error
-import me.reminisce.server.domain.resthandling.PerRequest.{WithActorRef, WithProps}
+import me.reminisce.server.domain.resthandling.RESTHandler.{WithActorRef, WithProps}
 import me.reminisce.server.domain.{Domain, RestMessage}
 import me.reminisce.server.jsonserializer.GameCreatorFormatter
 import me.reminisce.service.questiongen.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation}
@@ -19,7 +19,7 @@ import spray.routing.RequestContext
 import scala.concurrent.duration._
 
 
-trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCreatorFormatter {
+trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCreatorFormatter {
 
   import context._
 
@@ -58,17 +58,17 @@ trait PerRequest extends Actor with Json4sSupport with ActorLogging with GameCre
     }
 }
 
-object PerRequest {
+object RESTHandler {
 
-  case class WithActorRef(r: RequestContext, target: ActorRef, message: RestMessage) extends PerRequest
+  case class WithActorRef(r: RequestContext, target: ActorRef, message: RestMessage) extends RESTHandler
 
-  case class WithProps(r: RequestContext, props: Props, message: RestMessage) extends PerRequest {
+  case class WithProps(r: RequestContext, props: Props, message: RestMessage) extends RESTHandler {
     lazy val target = context.actorOf(props)
   }
 
 }
 
-trait PerRequestCreator {
+trait RESTHandlerCreator {
   this: Actor =>
 
   def perRequest(r: RequestContext, target: ActorRef, message: RestMessage) =

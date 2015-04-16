@@ -1,4 +1,4 @@
-package me.reminisce.crawler.common
+package me.reminisce.fetcher.common
 
 import spray.http.HttpResponse
 

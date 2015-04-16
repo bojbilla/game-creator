@@ -23,9 +23,6 @@ object Server extends App {
   //$PAY_ME_BACK_HOST="localhost"  and  $PAY_ME_BACK_PORT="9000"
   val hostName = envOrElse("GAME_CREATOR_HOST", "localhost")
   val port = envOrElse("GAME_CREATOR_PORT", "9900").toInt
-  val crawlerHost = envOrElse("CRAWLER_HOST", "localhost")
-  val crawlerPort = envOrElse("CRAWLER_PORT", "9000").toInt
-  val fullCrawlerHost = s"$protocol$crawlerHost:$crawlerPort"
   // create and start our service actor
   val service = system.actorOf(Props[ServerServiceActor], "server-service")
 

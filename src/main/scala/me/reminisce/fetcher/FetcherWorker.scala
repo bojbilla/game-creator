@@ -1,33 +1,33 @@
-package me.reminisce.crawler
+package me.reminisce.fetcher
 
 import akka.actor._
-import me.reminisce.crawler.CrawlerService.{FetchDataSince, FinishedCrawling}
-import me.reminisce.crawler.common.FBSimpleParameters
-import me.reminisce.crawler.common.RetrieveEntitiesService.RetrieveEntities
-import me.reminisce.crawler.retrievedata.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
-import me.reminisce.crawler.retrievedata.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
-import me.reminisce.crawler.retrievedata.retrievers.RetrieveTaggedPosts.{FinishedRetrievingTaggedPosts, PartialTaggedPostsResult}
-import me.reminisce.crawler.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
+import me.reminisce.fetcher.FetcherService.{FetchDataSince, FinishedFetching}
+import me.reminisce.fetcher.common.FBSimpleParameters
+import me.reminisce.fetcher.common.RetrieveEntitiesService.RetrieveEntities
+import me.reminisce.fetcher.retrievedata.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
+import me.reminisce.fetcher.retrievedata.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
+import me.reminisce.fetcher.retrievedata.retrievers.RetrieveTaggedPosts.{FinishedRetrievingTaggedPosts, PartialTaggedPostsResult}
+import me.reminisce.fetcher.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
 import reactivemongo.api.DefaultDB
 
 
 /**
  * Created by roger on 11/03/15.
  */
-object CrawlerWorker {
+object FetcherWorker {
   def props(database: DefaultDB): Props =
-    Props(new CrawlerWorker(database))
+    Props(new FetcherWorker(database))
 }
 
-class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
+class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
   var retrievers: Set[ActorRef] = Set()
 
   def receive() = {
-    case FetchDataSince(userId, accessToken, lastCrawled) =>
+    case FetchDataSince(userId, accessToken, lastFetched) =>
       val client = sender()
-      val simpleParameters = FBSimpleParameters(Some(userId), Some(accessToken), since = lastCrawled)
+      val simpleParameters = FBSimpleParameters(Some(userId), Some(accessToken), since = lastFetched)
       log.info("Fetching data for " + userId)
 
       val pageRetriever = context.actorOf(RetrieveLikedPages.props())
@@ -44,7 +44,7 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
 
       context.become(awaitResults(client, userId))
     case _ =>
-      log.error("Crawler worker received an unexpected message.")
+      log.error("Fetcher worker received an unexpected message.")
   }
 
   def awaitResults(client: ActorRef, userId: String): Receive = {
@@ -80,14 +80,14 @@ class CrawlerWorker(database: DefaultDB) extends Actor with ActorLogging {
 
 
     case _ =>
-      log.error("crawler worker received unexpected message for " + userId)
-      client ! FinishedCrawling(userId)
+      log.error("Fetcher worker received unexpected message for " + userId)
+      client ! FinishedFetching(userId)
 
   }
 
   def verifyDone(client: ActorRef, userId: String) = {
     if (retrievers.isEmpty) {
-      client ! FinishedCrawling(userId)
+      client ! FinishedFetching(userId)
     }
   }
 

@@ -1,4 +1,4 @@
-package me.reminisce.crawler
+package me.reminisce.fetcher
 
 import akka.util.Timeout
 import org.json4s.DefaultFormats
