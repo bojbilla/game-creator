@@ -96,6 +96,7 @@ object MongoDBEntities {
     implicit val fbPlace = Macros.handler[FBPlace]
   }
 
+
   case class FBPost(id: Option[BSONObjectID] = None,
                     user_id: String,
                     post_id: String,
@@ -109,10 +110,41 @@ object MongoDBEntities {
                     `type`: Option[String] = None,
                     attachments: Option[List[FBAttachment]],
                     comments: Option[List[FBComment]] = None,
-                    comments_count: Option[Int] = None)
+                    comments_count: Option[Int] = None,
+                    available_question_types: List[String] = List()) {
+    def addTypes(types: List[String]): FBPost = {
+      FBPost(id, user_id, post_id, message, story, place, created_time,
+        from, likes, like_count, `type`, attachments, comments, comments_count, types)
+    }
+  }
+
 
   object FBPost {
     implicit val fbPostFormat = Macros.handler[FBPost]
+  }
+
+  case class UserStat(id: Option[BSONObjectID] = None,
+                      user_id: String,
+                      question_counts: List[(String, Int)] = List())
+
+  object UserStat {
+
+    implicit object pairIntStringWriter extends BSONDocumentWriter[(String, Int)] {
+      def write(pairIntString: (String, Int)): BSONDocument = {
+        BSONDocument(
+          "value" -> (pairIntString._1 + "," + pairIntString._2)
+        )
+      }
+    }
+
+    implicit object pairIntStringReader extends BSONDocumentReader[(String, Int)] {
+      def read(doc: BSONDocument): (String, Int) = {
+        val splits = doc.getAs[String]("value").get.split(",")
+        (splits(0), splits(1).toInt)
+      }
+    }
+
+    implicit val userStatFormat = Macros.handler[UserStat]
   }
 
 

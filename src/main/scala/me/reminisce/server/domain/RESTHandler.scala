@@ -1,4 +1,4 @@
-package me.reminisce.server.domain.resthandling
+package me.reminisce.server.domain
 
 /**
  * Created by Aranir on 23/10/14.
@@ -7,8 +7,7 @@ package me.reminisce.server.domain.resthandling
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{OneForOneStrategy, _}
 import me.reminisce.server.domain.Domain.Error
-import me.reminisce.server.domain.resthandling.RESTHandler.{WithActorRef, WithProps}
-import me.reminisce.server.domain.{Domain, RestMessage}
+import me.reminisce.server.domain.RESTHandler.{WithActorRef, WithProps}
 import me.reminisce.server.jsonserializer.GameCreatorFormatter
 import me.reminisce.service.questiongen.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation}
 import spray.http.StatusCode

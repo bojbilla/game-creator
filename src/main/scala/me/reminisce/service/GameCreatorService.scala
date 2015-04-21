@@ -3,8 +3,7 @@ package me.reminisce.service
 import akka.actor._
 import me.reminisce.fetcher.FetcherService
 import me.reminisce.fetcher.FetcherService.FetchData
-import me.reminisce.server.domain.RestMessage
-import me.reminisce.server.domain.resthandling.RESTHandlerCreator
+import me.reminisce.server.domain.{RESTHandlerCreator, RestMessage}
 import me.reminisce.service.GameGenerator.CreateBoard
 import me.reminisce.service.questiongen.QuestionGenerator.CreateQuestion
 import me.reminisce.service.questiongen.{WhenDidYouShareThisPost, WhichPageDidYouLike, WhoLikedYourPost, WhoMadeThisCommentOnYourPost}

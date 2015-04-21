@@ -23,6 +23,7 @@ object FetcherWorker {
 
 class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
   var retrievers: Set[ActorRef] = Set()
+  var foundPosts: Set[String] = Set()
 
   def receive() = {
     case FetchDataSince(userId, accessToken, lastFetched) =>
@@ -60,20 +61,24 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
 
     case PartialPostsResult(posts) =>
+      foundPosts ++= posts.map(post => post.id).toSet
       mongoSaver(userId) ! SaveFBPost(posts.toList)
 
     case FinishedRetrievingPosts(posts) =>
       log.info(s"Received posts for user: $userId")
+      foundPosts ++= posts.map(post => post.id).toSet
       mongoSaver(userId) ! SaveFBPost(posts.toList)
       retrievers -= sender()
       verifyDone(client, userId)
 
 
     case PartialTaggedPostsResult(posts) =>
+      foundPosts ++= posts.map(post => post.id).toSet
       mongoSaver(userId) ! SaveFBPost(posts.toList)
 
     case FinishedRetrievingTaggedPosts(posts) =>
       log.info(s"Received tagged posts for user: $userId")
+      foundPosts ++= posts.map(post => post.id).toSet
       mongoSaver(userId) ! SaveFBPost(posts.toList)
       retrievers -= sender()
       verifyDone(client, userId)
@@ -81,13 +86,13 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
     case _ =>
       log.error("Fetcher worker received unexpected message for " + userId)
-      client ! FinishedFetching(userId)
+      client ! FinishedFetching(userId, Set())
 
   }
 
   def verifyDone(client: ActorRef, userId: String) = {
     if (retrievers.isEmpty) {
-      client ! FinishedFetching(userId)
+      client ! FinishedFetching(userId, foundPosts)
     }
   }
 
