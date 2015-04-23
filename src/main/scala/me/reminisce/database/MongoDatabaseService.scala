@@ -9,7 +9,8 @@ import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
-import scala.util.Success
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 
 /**
@@ -152,6 +153,40 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
     }
   }
 
+  def savePagesStats(pagesCollection: BSONCollection, pagesLikesCollection: BSONCollection): Unit = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val query = BSONDocument(
+      "user_id" -> user_id
+    )
+    val likedPageIds = pagesCollection.find(query).cursor[FBPageLike].collect[List]().map {
+      likes =>
+        likes.map {
+          like =>
+            like.page_id
+        }
+    }
+    likedPageIds.onComplete{
+      case Success(pIds) =>
+        val queryUnliked = BSONDocument(
+          "page_id" -> BSONDocument("$nin" -> pIds)
+        )
+        pagesCollection.find(queryUnliked).cursor[FBPage].collect[List](3).onComplete {
+          case Success(pages) =>
+          case Failure(e) =>
+        }
+      case Failure(e) =>
+    }
+    /*flatMap { pIds =>
+      val queryUnliked = BSONDocument(
+        "page_id" -> BSONDocument("$nin" -> pIds)
+      )
+      pagesCollection.find(queryUnliked).cursor[FBPage].collect[List](3).flatMap { unlikedPages =>
+        if (unlikedPages.length >= 3) {
+          Future
+        }
+      }*/
+  }
+
   def updateCounts(counts: List[(String, Int)], newCounts: List[(String, Int)]): List[(String, Int)] = {
     val countsMap = counts.toMap
     val newMap = newCounts.toMap
@@ -163,27 +198,14 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
   }
 
   def availableQuestionTypes(post: FBPost): List[String] = {
-    checkWhenDidYouShareThisPost(post) ++ checkWhichCoordinatesWereYouAt(post) ++ checkWhichPlaceWereYouAt(post)
+    checkWhenDidYouShareThisPost(post) ++ checkWhichCoordinatesWereYouAt(post) ++ checkWhichPlaceWereYouAt(post) ++ checkWhoMadeThisCommentOnYourPost(post)
   }
 
   def checkWhenDidYouShareThisPost(post: FBPost): List[String] = {
-    post.message match {
-      case Some(m) =>
-        if (m != "")
-          post.`type` match {
-            case Some(t) =>
-              if (t != "photo" && t != "video")
-                List("TLWhenDidYouShareThisPost")
-              else
-                List()
-            case None =>
-              List("TLWhenDidYouShareThisPost")
-          }
-        else
-          List()
-      case None =>
-        List()
-    }
+    if (post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty))
+      List("TLWhenDidYouShareThisPost")
+    else
+      List()
   }
 
   def checkWhichCoordinatesWereYouAt(post: FBPost): List[String] = {
@@ -198,6 +220,14 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
       case Some(p) => List("GeoWhichPlaceWereYouAt")
       case None => List()
     }
+  }
+
+  def checkWhoMadeThisCommentOnYourPost(post: FBPost): List[String] = {
+    if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) &&
+       (!post.comments.nonEmpty && post.comments_count.exists(_ > 3)))
+      List("MCWhoMadeThisCommentOnYourPost")
+    else
+      List()
   }
 
   def questionTypeCounts(questionTypes: List[String]): List[(String, Int)] = {
