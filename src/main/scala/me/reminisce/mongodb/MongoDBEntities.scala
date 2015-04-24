@@ -125,22 +125,25 @@ object MongoDBEntities {
 
   case class UserStat(id: Option[BSONObjectID] = None,
                       user_id: String,
-                      question_counts: List[(String, Int)] = List())
+                      question_counts: List[(String, Int)] = List(),
+                      likers: Set[FBLike] = Set(),
+                      max_likers_per_post: Int = 0)
 
   object UserStat {
 
     implicit object pairIntStringWriter extends BSONDocumentWriter[(String, Int)] {
       def write(pairIntString: (String, Int)): BSONDocument = {
         BSONDocument(
-          "value" -> (pairIntString._1 + "," + pairIntString._2)
+          pairIntString._1 -> pairIntString._2
         )
       }
     }
 
     implicit object pairIntStringReader extends BSONDocumentReader[(String, Int)] {
       def read(doc: BSONDocument): (String, Int) = {
-        val splits = doc.getAs[String]("value").get.split(",")
-        (splits(0), splits(1).toInt)
+        val elems = doc.elements
+        val pair = elems.head
+        (pair._1, pair._2.seeAsOpt[Int].get)
       }
     }
 

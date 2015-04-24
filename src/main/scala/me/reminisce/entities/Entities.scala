@@ -17,11 +17,12 @@ object Entities {
 
   object SpecificQuestionType extends Enumeration {
     type SpecificQuestionType = Value
-    val MCWhoLikedYourPost = Value("MCWhoLikedYourPost")
     val TLWhenDidYouShareThisPost = Value("TLWhenDidYouShareThisPost")
     val GeoWhatCoordinatesWereYouAt = Value("GeoWhatCoordinatesWereYouAt")
     val GeoWhichPlaceWereYouAt = Value("GeoWhichPlaceWereYouAt")
-    val MCWhichPageDidYouLike, MCWhoMadeThisCommentOnYourPost = Value
+    val MCWhoMadeThisCommentOnYourPost = Value("MCWhoMadeThisCommentOnYourPost")
+    val MCWhichPageDidYouLike = Value("MCWhichPageDidYouLike")
+    val MCWhoLikedYourPost = Value("MCWhoLikedYourPost")
   }
 
   object TileQuestionType extends Enumeration {

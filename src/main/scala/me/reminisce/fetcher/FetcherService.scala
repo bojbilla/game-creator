@@ -3,7 +3,7 @@ package me.reminisce.fetcher
 import akka.actor._
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.database.MongoDatabaseService.{SaveLastFetchedTime, SavePostStats}
+import me.reminisce.database.MongoDatabaseService.SaveLastFetchedTime
 import me.reminisce.fetcher.FetcherService.{FetchData, FetchDataSince, FinishedFetching}
 import me.reminisce.fetcher.common.FBCommunicationManager
 import me.reminisce.mongodb.MongoDBEntities.LastFetched
@@ -27,7 +27,7 @@ object FetcherService {
 
   case class FetchDataSince(user_id: String, access_token: String, since: DateTime) extends RestMessage
 
-  case class FinishedFetching(user_id: String, foundPosts: Set[String])
+  case class FinishedFetching(user_id: String)
 
   def props(database: DefaultDB): Props =
     Props(new FetcherService(database))
@@ -57,10 +57,9 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
         sender ! Domain.TooManyRequests("Already fetching for user " + userId)
       }
 
-    case FinishedFetching(userId, foundPosts) =>
+    case FinishedFetching(userId) =>
       log.info(s"Finished fetching for user: $userId")
       val mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
-      mongoSaver ! SavePostStats(foundPosts.toList)
       mongoSaver ! SaveLastFetchedTime
       sender ! PoisonPill
       currentlyFetching = currentlyFetching - userId

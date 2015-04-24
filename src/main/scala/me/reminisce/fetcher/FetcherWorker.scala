@@ -2,7 +2,7 @@ package me.reminisce.fetcher
 
 import akka.actor._
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
+import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SavePagesStats, SavePostStats}
 import me.reminisce.fetcher.FetcherService.{FetchDataSince, FinishedFetching}
 import me.reminisce.fetcher.common.FBSimpleParameters
 import me.reminisce.fetcher.common.RetrieveEntitiesService.RetrieveEntities
@@ -56,6 +56,7 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
     case FinishedRetrievingLikedPages(pages) =>
       log.info(s"Received liked pages for user: $userId")
       mongoSaver(userId) ! SaveFBPage(pages.toList)
+      mongoSaver(userId) ! SavePagesStats
       retrievers -= sender()
       verifyDone(client, userId)
 
@@ -86,13 +87,14 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
     case _ =>
       log.error("Fetcher worker received unexpected message for " + userId)
-      client ! FinishedFetching(userId, Set())
+      client ! FinishedFetching(userId)
 
   }
 
   def verifyDone(client: ActorRef, userId: String) = {
     if (retrievers.isEmpty) {
-      client ! FinishedFetching(userId, foundPosts)
+      client ! FinishedFetching(userId)
+      mongoSaver(userId) ! SavePostStats(foundPosts.toList)
     }
   }
 
