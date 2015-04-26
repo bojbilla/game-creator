@@ -242,36 +242,31 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
   }
 
   def availableQuestionTypes(post: FBPost): List[String] = {
-    checkWhenDidYouShareThisPost(post) ++ checkWhichCoordinatesWereYouAt(post) ++ checkWhichPlaceWereYouAt(post) ++ checkWhoMadeThisCommentOnYourPost(post)
+    List(checkWhichCoordinatesWereYouAt(post), checkWhichPlaceWereYouAt(post),
+      checkWhenDidYouShareThisPost(post), checkWhoMadeThisCommentOnYourPost(post)).flatten
   }
 
-  def checkWhenDidYouShareThisPost(post: FBPost): List[String] = {
+  def checkWhenDidYouShareThisPost(post: FBPost): Option[String] = {
     if (post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty))
-      List("TLWhenDidYouShareThisPost")
+      Some("TLWhenDidYouShareThisPost")
     else
-      List()
+      None
   }
 
-  def checkWhichCoordinatesWereYouAt(post: FBPost): List[String] = {
-    post.place match {
-      case Some(p) => List("GeoWhatCoordinatesWereYouAt")
-      case None => List()
-    }
+  def checkWhichCoordinatesWereYouAt(post: FBPost): Option[String] = {
+    post.place.map(_ => "GeoWhatCoordinatesWereYouAt")
   }
 
-  def checkWhichPlaceWereYouAt(post: FBPost): List[String] = {
-    post.place match {
-      case Some(p) => List("GeoWhichPlaceWereYouAt")
-      case None => List()
-    }
+  def checkWhichPlaceWereYouAt(post: FBPost): Option[String] = {
+    post.place.map(_ => "GeoWhichPlaceWereYouAt")
   }
 
-  def checkWhoMadeThisCommentOnYourPost(post: FBPost): List[String] = {
+  def checkWhoMadeThisCommentOnYourPost(post: FBPost): Option[String] = {
     if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) &&
-      (!post.comments.nonEmpty && post.comments_count.exists(_ > 3)))
-      List("MCWhoMadeThisCommentOnYourPost")
+      (post.comments.nonEmpty && post.comments_count.exists(_ > 3)))
+      Some("MCWhoMadeThisCommentOnYourPost")
     else
-      List()
+      None
   }
 
   def questionTypeCounts(questionTypes: List[String]): List[(String, Int)] = {
