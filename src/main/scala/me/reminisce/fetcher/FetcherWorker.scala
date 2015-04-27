@@ -2,7 +2,7 @@ package me.reminisce.fetcher
 
 import akka.actor._
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SavePagesStats, SavePostStats}
+import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
 import me.reminisce.fetcher.FetcherService.{FetchDataSince, FinishedFetching}
 import me.reminisce.fetcher.common.FBSimpleParameters
 import me.reminisce.fetcher.common.RetrieveEntitiesService.RetrieveEntities
@@ -10,12 +10,11 @@ import me.reminisce.fetcher.retrievedata.retrievers.RetrieveLikedPages.{Finished
 import me.reminisce.fetcher.retrievedata.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
 import me.reminisce.fetcher.retrievedata.retrievers.RetrieveTaggedPosts.{FinishedRetrievingTaggedPosts, PartialTaggedPostsResult}
 import me.reminisce.fetcher.retrievedata.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
+import me.reminisce.service.stats.StatsHandler
+import me.reminisce.service.stats.StatsHandler.{FinalStats, TransientPostsStats}
 import reactivemongo.api.DefaultDB
 
 
-/**
- * Created by roger on 11/03/15.
- */
 object FetcherWorker {
   def props(database: DefaultDB): Props =
     Props(new FetcherWorker(database))
@@ -56,18 +55,19 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
     case FinishedRetrievingLikedPages(pages) =>
       log.info(s"Received liked pages for user: $userId")
       mongoSaver(userId) ! SaveFBPage(pages.toList)
-      mongoSaver(userId) ! SavePagesStats
       retrievers -= sender()
       verifyDone(client, userId)
 
 
     case PartialPostsResult(posts) =>
       foundPosts ++= posts.map(post => post.id).toSet
+      statsHandler(userId) ! TransientPostsStats(posts.toList)
       mongoSaver(userId) ! SaveFBPost(posts.toList)
 
     case FinishedRetrievingPosts(posts) =>
       log.info(s"Received posts for user: $userId")
       foundPosts ++= posts.map(post => post.id).toSet
+      statsHandler(userId) ! TransientPostsStats(posts.toList)
       mongoSaver(userId) ! SaveFBPost(posts.toList)
       retrievers -= sender()
       verifyDone(client, userId)
@@ -75,11 +75,13 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
     case PartialTaggedPostsResult(posts) =>
       foundPosts ++= posts.map(post => post.id).toSet
+      statsHandler(userId) ! TransientPostsStats(posts.toList)
       mongoSaver(userId) ! SaveFBPost(posts.toList)
 
     case FinishedRetrievingTaggedPosts(posts) =>
       log.info(s"Received tagged posts for user: $userId")
       foundPosts ++= posts.map(post => post.id).toSet
+      statsHandler(userId) ! TransientPostsStats(posts.toList)
       mongoSaver(userId) ! SaveFBPost(posts.toList)
       retrievers -= sender()
       verifyDone(client, userId)
@@ -94,18 +96,21 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
   def verifyDone(client: ActorRef, userId: String) = {
     if (retrievers.isEmpty) {
       client ! FinishedFetching(userId)
-      mongoSaver(userId) ! SavePostStats(foundPosts.toList)
+      statsHandler(userId) ! FinalStats(foundPosts)
     }
   }
 
   override def postStop(): Unit = {
     super.postStop()
     retrievers.foreach(r => r ! PoisonPill)
-
   }
 
   def mongoSaver(userId: String): ActorRef = {
     context.actorOf(MongoDatabaseService.props(userId, database))
+  }
+
+  def statsHandler(userId: String): ActorRef = {
+    context.actorOf(StatsHandler.props(userId, database))
   }
 
 }

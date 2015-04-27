@@ -3,10 +3,6 @@ package me.reminisce.mongodb
 import com.github.nscala_time.time.Imports._
 import reactivemongo.bson._
 
-/**
- * Created by roger on 15/11/14.
- */
-
 object MongoDBEntities {
 
   implicit object BSONDateTimeHandler extends BSONHandler[BSONDateTime, DateTime] {
@@ -110,13 +106,7 @@ object MongoDBEntities {
                     `type`: Option[String] = None,
                     attachments: Option[List[FBAttachment]],
                     comments: Option[List[FBComment]] = None,
-                    comments_count: Option[Int] = None,
-                    available_question_types: List[String] = List()) {
-    def addTypes(types: List[String]): FBPost = {
-      FBPost(id, user_id, post_id, message, story, place, created_time,
-        from, likes, like_count, `type`, attachments, comments, comments_count, types)
-    }
-  }
+                    comments_count: Option[Int] = None)
 
 
   object FBPost {
@@ -127,7 +117,9 @@ object MongoDBEntities {
                       user_id: String,
                       question_counts: Map[String, Int] = Map(),
                       likers: Set[FBLike] = Set(),
-                      max_likers_per_post: Int = 0)
+                      max_likers_per_post: Int = 0) {
+
+  }
 
 
   object UserStat {
@@ -161,5 +153,14 @@ object MongoDBEntities {
     implicit val userStatFormat = Macros.handler[UserStat]
   }
 
+  case class PostQuestions(id: Option[BSONObjectID] = None,
+                           user_id: String,
+                           post_id: String,
+                           questions: List[String],
+                           questions_count: Int)
+
+  object PostQuestions {
+    implicit val postQuestionsFormat = Macros.handler[PostQuestions]
+  }
 
 }
