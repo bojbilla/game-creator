@@ -125,27 +125,38 @@ object MongoDBEntities {
 
   case class UserStat(id: Option[BSONObjectID] = None,
                       user_id: String,
-                      question_counts: List[(String, Int)] = List(),
+                      question_counts: Map[String, Int] = Map(),
                       likers: Set[FBLike] = Set(),
                       max_likers_per_post: Int = 0)
 
+
   object UserStat {
 
-    implicit object pairIntStringWriter extends BSONDocumentWriter[(String, Int)] {
-      def write(pairIntString: (String, Int)): BSONDocument = {
-        BSONDocument(
-          pairIntString._1 -> pairIntString._2
-        )
+    def getMapStringIntWriter(implicit intWriter: BSONWriter[Int, BSONInteger]): BSONDocumentWriter[Map[String, Int]] = {
+      new BSONDocumentWriter[Map[String, Int]] {
+        def write(mapIntString: Map[String, Int]): BSONDocument = {
+          val elements = mapIntString.toStream.map {
+            tuple => tuple._1 -> intWriter.write(tuple._2)
+          }
+          BSONDocument(elements)
+        }
       }
     }
 
-    implicit object pairIntStringReader extends BSONDocumentReader[(String, Int)] {
-      def read(doc: BSONDocument): (String, Int) = {
-        val elems = doc.elements
-        val pair = elems.head
-        (pair._1, pair._2.seeAsOpt[Int].get)
+    def getMapStringIntReader(implicit intReader: BSONReader[BSONInteger, Int]): BSONDocumentReader[Map[String, Int]] = {
+      new BSONDocumentReader[Map[String, Int]] {
+        def read(doc: BSONDocument): Map[String, Int] = {
+          val elements = doc.elements.map {
+            tuple => tuple._1 -> intReader.read(tuple._2.seeAsOpt[BSONInteger].get)
+          }
+          elements.toMap
+        }
       }
     }
+
+    implicit val mapStringIntWriter = getMapStringIntWriter
+
+    implicit val mapStringIntReader = getMapStringIntReader
 
     implicit val userStatFormat = Macros.handler[UserStat]
   }

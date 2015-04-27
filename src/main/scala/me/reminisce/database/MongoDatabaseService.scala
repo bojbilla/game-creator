@@ -76,7 +76,6 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
           }
           }
         }
-        //        val createDate = photo.created_time.map(t => new DateTime(t.toLong * 1000))
         FBPhoto(photo.id, photo.source, photo.created_time, tags)
       }
 
@@ -142,7 +141,7 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
           mergeStatsWithNewPosts(postCollection, newPosts, userCollection, new UserStat(user_id = user_id))
       }
       case Failure(e) =>
-        log.error("Could not read database userCollection : " + e)
+        log.error("Could not read database userCollection.")
     }
   }
 
@@ -172,7 +171,7 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
             updateCounts(acc, postCountList)
           }
         }
-        val newCounts = updateCounts(userStat.question_counts, newList)
+        val newCounts = updateCounts(userStat.question_counts.toList, newList)
         val finalCounts = {
           if ((newLikers.size - maxLikerPerPost) >= 3 && !newCounts.contains(("MCWhoLikedYourPost", 1))) {
             ("MCWhoLikedYourPost", 1) :: newCounts
@@ -180,7 +179,7 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
             newCounts
           }
         }
-        userCollection.update(BSONDocument("user_id" -> user_id), UserStat(None, user_id, finalCounts, newLikers, maxLikerPerPost))
+        userCollection.update(BSONDocument("user_id" -> user_id), UserStat(None, user_id, finalCounts.toMap, newLikers, maxLikerPerPost))
       case _ =>
         log.error("Nothing matched stats request.")
     }
@@ -212,14 +211,14 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
                     case Some(userStat) =>
                       val oldQuestionCounts = userStat.question_counts
                       val newQuestionCounts = {
-                        if (oldQuestionCounts.contains(("MCWhichPageDidYouLike", 1)))
+                        if (oldQuestionCounts.contains("MCWhichPageDidYouLike"))
                           oldQuestionCounts
                         else
-                          ("MCWhichPageDidYouLike", 1) :: oldQuestionCounts
+                          oldQuestionCounts + ("MCWhichPageDidYouLike" -> 1)
                       }
                       UserStat(None, userStat.user_id, newQuestionCounts)
                     case None =>
-                      UserStat(None, user_id, List(("MCWhichPageDidYouLike", 1)))
+                      UserStat(None, user_id, Map("MCWhichPageDidYouLike" -> 1))
                   }
                   userCollection.update(selector, newUserStat, upsert = true)
                 case Failure(e) =>
