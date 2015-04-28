@@ -4,7 +4,7 @@ import akka.actor.Props
 import me.reminisce.database.DatabaseService
 import me.reminisce.fetcher.common.GraphResponses.Post
 import me.reminisce.mongodb.MongoDBEntities._
-import me.reminisce.service.stats.StatsHandler.{UpdateWhoLikedYourPost, FinalStats, TransientPostsStats}
+import me.reminisce.service.stats.StatsHandler.{FinalStats, TransientPostsStats}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -21,8 +21,6 @@ object StatsHandler {
   case class FinalStats(fbPosts: Set[String])
 
   case class TransientPostsStats(fbPosts: List[Post])
-
-  case class UpdateWhoLikedYourPost()
 
   def props(user_id: String, db: DefaultDB): Props =
     Props(new StatsHandler(user_id, db))
@@ -60,11 +58,21 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
 
   def availableQuestionTypes(post: Post, userStat: UserStat): List[String] = {
     List(checkWhichCoordinatesWereYouAt(post), checkWhichPlaceWereYouAt(post),
-      checkWhenDidYouShareThisPost(post), checkWhoMadeThisCommentOnYourPost(post)).flatten
+      checkWhenDidYouShareThisPost(post), checkWhoMadeThisCommentOnYourPost(post),
+      checkWhoLikedYourPost(post, userStat)).flatten
   }
 
   def checkWhoLikedYourPost(post: Post, userStat: UserStat): Option[String] = {
-    Some("")
+    post.likes.flatMap {
+      list => list.data.flatMap {
+        data =>
+          if (userStat.likers.size - data.length >= 3) {
+            Some("MCWhoLikedYourPost")
+          } else {
+            None
+          }
+      }
+    }
   }
 
   def checkWhenDidYouShareThisPost(post: Post): Option[String] = {
@@ -128,9 +136,6 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
           case Some(likes) => likes.length
           case None => 0
         })).max
-        if ((newLikers.size - maxLikerPerPost) >= 3 && !userStats.question_counts.contains("MCWhoLikedYourPost")) {
-          self ! UpdateWhoLikedYourPost
-        }
 
         val postQuestionsCollection = db[BSONCollection](StatsHandler.postsQuestionsCollection)
         val cursor2 = postQuestionsCollection.find(BSONDocument("user_id" -> user_id,
@@ -143,9 +148,13 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
             }
 
             val newStats = UserStat(None, user_id, questionCounts, newLikers, maxLikerPerPost)
-            val pagesCollection = db[BSONCollection](StatsHandler.fbPagesCollection)
-            val pageLikesCollection = db[BSONCollection](StatsHandler.fbPageLikesCollection)
-            savePagesStats(pagesCollection, pageLikesCollection, newStats)
+            if ((newLikers.size - maxLikerPerPost) >= 3 && !userStats.question_counts.contains("MCWhoLikedYourPost")) {
+              updateWhoLikedYourPost(userCollection, postCollection, newStats)
+            } else {
+              val pagesCollection = db[BSONCollection](StatsHandler.fbPagesCollection)
+              val pageLikesCollection = db[BSONCollection](StatsHandler.fbPageLikesCollection)
+              savePagesStats(pagesCollection, pageLikesCollection, newStats)
+            }
           case Failure(e) =>
             log.error("Could not reach database : " + e)
         }
@@ -191,44 +200,43 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
         log.error("Wow, strangeness !" + e)
     }
   }
+
   //TODO: make this better
-  def updateWhoLikedYourPost(userCollection : BSONCollection, postCollection: BSONCollection): Unit = {
+  def updateWhoLikedYourPost(userCollection: BSONCollection, postCollection: BSONCollection, userStat: UserStat): Unit = {
+    import scala.concurrent.ExecutionContext.Implicits.global
     val selector = BSONDocument("user_id" -> user_id)
-    userCollection.find(selector).one[UserStat].onComplete {
-      case Success(userStatOpt) =>
-        var userStat = userStatOpt.fold(UserStat(user_id = user_id))(elm => elm)
-        postCollection.find(selector).cursor[FBPost].collect[List]().onComplete {
-          case Success(list) =>
-            list.foreach {
-              post =>
-                val likesNumber = post.likes.fold(0)(elm => elm.length)
-                if (userStat.likers.size - likesNumber >= 3 ) {
-                  val postQuestionsCollection = db[BSONCollection](StatsHandler.postsQuestionsCollection)
-                  val postQuestionsSelector = BSONDocument("user_id" -> user_id, "post_id" -> post.post_id)
-                  postQuestionsCollection.find(postQuestionsSelector).one[PostQuestions].onComplete {
-                    case Success(postQuestionsOpt) =>
-                      postQuestionsOpt match {
-                        case Some(postQuestions) =>
-                          if (!postQuestions.questions.contains("MCWhoLikedYourPost")) {
-                            val newPostQuestions = PostQuestions(None, user_id, postQuestions.post_id,
-                              "MCWhoLikedYourPost" :: postQuestions.questions, postQuestions.questions_count + 1)
-                            postQuestionsCollection.update(postQuestionsSelector, newPostQuestions)
-                            userStat = UserStat(None, user_id, addQuestionToMap("MCWhoLikedYourPost",
-                              userStat.question_counts), userStat.likers, userStat.max_likers_per_post)
-                          }
-                        case None =>
-                      }
-                    case Failure(e) =>
-                      log.error("Could not reach database : " + e)
-                  }
+    postCollection.find(selector).cursor[FBPost].collect[List]().onComplete {
+      case Success(list) =>
+        val interestingPosts = list.map {
+          post => post.post_id -> post.likes.fold(0)(elm => elm.length)
+        }.filter(elm => elm._2 > 0 && userStat.likers.size - elm._2 >= 3).map(elm => elm._1)
+        val postQuestionsCollection = db[BSONCollection](StatsHandler.postsQuestionsCollection)
+        val postQuestionsSelector = BSONDocument("user_id" -> user_id,
+          "post_id" -> BSONDocument("$in" -> interestingPosts))
+        postQuestionsCollection.find(postQuestionsSelector).cursor[PostQuestions].collect[List]().onComplete {
+          case Success(postQuestionsList) =>
+            val newQuestions = postQuestionsList.flatMap {
+              postQuestions =>
+                if (!postQuestions.questions.contains("MCWhoLikedYourPost")) {
+                  val newPostQuestions = PostQuestions(None, user_id, postQuestions.post_id,
+                    "MCWhoLikedYourPost" :: postQuestions.questions, postQuestions.questions_count + 1)
+                  postQuestionsCollection.update(postQuestionsSelector, newPostQuestions)
+                  Some("MCWhoLikedYourPost")
+                } else {
+                  None
                 }
             }
-            userCollection.update(selector, userStat, upsert = true)
+            val newUserStat = UserStat(None, user_id, addQuestionsToMap(newQuestions, userStat.question_counts),
+              userStat.likers, userStat.max_likers_per_post)
+            val pagesCollection = db[BSONCollection](StatsHandler.fbPagesCollection)
+            val pageLikesCollection = db[BSONCollection](StatsHandler.fbPageLikesCollection)
+            savePagesStats(pagesCollection, pageLikesCollection, newUserStat)
           case Failure(e) =>
             log.error("Could not reach database : " + e)
         }
       case Failure(e) =>
         log.error("Could not reach database : " + e)
+
     }
   }
 
