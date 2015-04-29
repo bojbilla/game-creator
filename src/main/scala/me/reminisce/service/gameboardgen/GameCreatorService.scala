@@ -5,8 +5,6 @@ import me.reminisce.fetcher.FetcherService
 import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.server.domain.{RESTHandlerCreator, RestMessage}
 import me.reminisce.service.gameboardgen.GameGenerator.CreateBoard
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.CreateQuestion
-import me.reminisce.service.gameboardgen.questiongen._
 import reactivemongo.api.DefaultDB
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
@@ -51,16 +49,17 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
         }
       }
     } ~ path("gameboard") {
-      parameters("user_id", "access_token", "strategy" ? "random") { (user_id: String, access_token: String, strategy: String) =>
-        createBoard(CreateBoard(user_id, access_token, strategy))
+      parameters("user_id", "access_token", "strategy" ? "random") {
+        (user_id: String, access_token: String, strategy: String) =>
+          createBoard(CreateBoard(access_token, strategy), user_id)
       }
     }
   }
 
 
-  def createBoard(message: RestMessage): Route = {
+  def createBoard(message: RestMessage, user_id: String): Route = {
     log.info("Creating game board")
-    val generator = context.actorOf(GameGenerator.props(db))
+    val generator = context.actorOf(GameGenerator.props(db, user_id))
     ctx => perRequest(ctx, generator, message)
   }
 

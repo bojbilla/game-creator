@@ -2,6 +2,7 @@ package me.reminisce.service.gameboardgen
 
 import me.reminisce.server.domain.RestMessage
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.QuestionKind
+import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType.SpecificQuestionType
 import org.joda.time.DateTime
 
 object GameboardEntities {
@@ -27,34 +28,37 @@ object GameboardEntities {
   }
 
 
-  abstract sealed class GameQuestion {
-    val id: String
-  }
+  abstract sealed class GameQuestion
 
-  case class Question(question: String, text: Option[List[String]] = Some(List("")), image_url: Option[String] = Some(""))
+  abstract sealed class Question(kind: QuestionKind, `type`: SpecificQuestionType)
 
-  case class MultipleChoiceQuestion(id: String,
-                                    user_id: String,
+  case class PostInQuestion(text: String, image_url: Option[String])
+
+  case class PostQuestion(kind: QuestionKind,
+                          `type`: SpecificQuestionType,
+                          post: PostInQuestion, comment: Option[String]) extends Question(kind: QuestionKind, `type`: SpecificQuestionType)
+
+  case class MCQuestion(kind: QuestionKind,
+                        `type`: SpecificQuestionType) extends Question(kind: QuestionKind, `type`: SpecificQuestionType)
+
+  case class Possibility(name: String, image_url: Option[String], fb_id: Option[String] = None)
+
+  case class MultipleChoiceQuestion(user_id: String,
                                     question: Question,
-                                    choices: Vector[Possibility],
-                                    answer: Int) extends GameQuestion {
-    require(answer < choices.length)
-    require(answer >= 0)
-  }
+                                    choices: List[Possibility],
+                                    answer: Int) extends GameQuestion
 
-  case class Possibility(text: Option[String] = Some(""), image_url: Option[String] = Some(""), fb_id: Option[String] = Some(""))
 
-  case class TimelineQuestion(id: String, user_id: String, question: Question, min_date: Int,
-                              max_date: Int, range: Int, answer: DateTime) extends GameQuestion
+  case class TimelineQuestion(user_id: String, question: Question, answer: DateTime) extends GameQuestion
 
-  case class CoordinatesQuestion(id: String, user_id: String, question: Question, answer: Location) extends GameQuestion
+  case class CoordinatesQuestion(user_id: String, question: Question, answer: Location) extends GameQuestion
 
-  case class Location(longitude: Double, latitude: Double)
+  case class Location(latitude: Double, longitude: Double)
 
-  case class PlaceQuestion(id: String, user_id: String, question: Question, answer: String) extends GameQuestion
+  case class PlaceQuestion(user_id: String, question: Question, answer: String) extends GameQuestion
 
-  case class Tile(`type`: QuestionKind, question1: GameQuestion, question2: GameQuestion, question3: GameQuestion) extends RestMessage
+  case class Tile(question1: GameQuestion, question2: GameQuestion, question3: GameQuestion) extends RestMessage
 
-  case class Board(user_id: String, tiles: List[Tile]) extends RestMessage
+  case class Board(user_id: String, tiles: List[Tile], is_token_stale: Boolean) extends RestMessage
 
 }

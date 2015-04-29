@@ -1,14 +1,16 @@
 package me.reminisce.service.gameboardgen.questiongen
 
 import akka.actor.Props
-import me.reminisce.mongodb.MongoDBEntities.{FBComment, FBPost}
+import me.reminisce.database.MongoDatabaseService
+import me.reminisce.mongodb.MongoDBEntities.{FBComment, FBFrom, FBPost}
+import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
-import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, Possibility, Question}
+import me.reminisce.service.gameboardgen.GameboardEntities._
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.DefaultDB
+import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
-import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Random, Success}
 
 object WhoMadeThisCommentOnYourPost {
@@ -17,79 +19,47 @@ object WhoMadeThisCommentOnYourPost {
     Props(new WhoMadeThisCommentOnYourPost(database))
 }
 
-class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends PostQuestionGenerator(db) {
+class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
-    case CreateQuestion(user_id) =>
+    case CreateQuestion(user_id, item_id) =>
+      log.error("MCWhoMadeThisComment")
       val client = sender()
-      retrievePostWithEnoughComments(user_id).onComplete {
-        case Success(post) =>
-          val commentSelection = Random.shuffle(post.comments.get).slice(0, 4)
-          val possibilities = commentSelection.map {
-            c =>
-              Possibility(Some(c.from.user_name), Some(""), Some(c.from.user_id))
+      val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+      postCollection.find(BSONDocument("user_id" -> user_id, "post_id" -> item_id)).one[FBPost].onComplete {
+        case Success(postOpt) =>
+          val post = postOpt.get
+          val selectedComments = getCandidatesComments(post.comments.get)
+          val rightOne = selectedComments.head
+          val shuffled = Random.shuffle(selectedComments)
+          val answer = shuffled.indexOf(rightOne)
+          val questionComment = Some(rightOne.message)
+          val shuffledPos = shuffled.map {
+            comm => Possibility(comm.from.user_name, None, Some(comm.from.user_id))
           }
-          val answer = possibilities.head
-
-          val answerComment = commentSelection.filter(c => c.from.user_id == answer.fb_id.get).head
-
-          val randomPossibilities = Random.shuffle(possibilities).toVector
-
-          val question = Question("WhoMadeThisCommentOnThePost", Some(List(post.message.get, answerComment.message)))
-
-          val mc = MultipleChoiceQuestion(answerComment.id,
-            user_id, question, randomPossibilities,
-            randomPossibilities.indexOf(answer))
-          client ! FinishedQuestionCreation(mc)
-        case Failure(t) =>
-          client ! FailedToCreateQuestion("Could not create question for WhoMadeThisCommentOnYourPost " + t.getMessage, MCWhoMadeThisCommentOnYourPost)
+          val postInQuestion = postInQuestionFromPost(post)
+          val question = PostQuestion(MultipleChoice, MCWhoMadeThisCommentOnYourPost, postInQuestion, questionComment)
+          val gameQuestion = MultipleChoiceQuestion(user_id, question, shuffledPos, answer)
+          client ! FinishedQuestionCreation(gameQuestion)
+        case Failure(e) =>
+          client ! FailedToCreateQuestion(s"Could not reach database : $e", MCWhoMadeThisCommentOnYourPost)
       }
-
+    case any =>
+      log.error(s"Unexpected message received : $any")
   }
 
-  def retrievePostWithEnoughComments(user_id: String): Future[FBPost] = {
-    val promise = Promise[FBPost]()
-    val limit = QuestionParameters.NumberOfTrials
-    def recurse(counter: Int): Unit = {
-      val query = BSONDocument(
-        "user_id" -> user_id,
-        "message" -> BSONDocument("$exists" -> "true"),
-        "comments" -> BSONDocument("$exists" -> "true"),
-        "comments_count" -> BSONDocument("$gt" -> 3)
-      )
-      val document = getDocument(db, collection, query)
-      document.onComplete {
-        case Success(Some(post: FBPost)) =>
-          val distinct = distinctComments(post.comments.get, Set())
-          if (distinct.length >= 4) {
-            promise.success(post.copy(comments = Some(distinct)))
-          } else if (counter > limit) {
-            promise.failure(new Exception("there are not enough comments"))
-          } else {
-            recurse(counter + 1)
-          }
-        case Success(None) =>
-          log.error("There where no comments on that post")
-          promise.failure(new Exception("Something went wrong"))
-        case Failure(t) =>
-          log.error("could not open document for WhoMadeThisCommentOnYourPost ")
-          promise.failure(t)
+  def getCandidatesComments(comments: List[FBComment]): List[FBComment] = {
+    val fromsSet: Set[FBFrom] = comments.map {
+      comm => comm.from
+    }.toSet
 
-      }
-    }
-    def distinctComments(comments: List[FBComment], userSet: Set[String]): List[FBComment] = {
-      comments match {
-        case x :: xs =>
-          if (!userSet.contains(x.from.user_id)) {
-            x :: distinctComments(xs, userSet + x.from.user_id)
-          } else {
-            distinctComments(xs, userSet)
-          }
-        case Nil => Nil
-      }
-    }
-    recurse(0)
-    promise.future
+    val candidatesSet = Random.shuffle(fromsSet).take(4)
+    val shuffledList = Random.shuffle(comments)
+    candidatesSet.map {
+      elm => shuffledList.filter(comm => comm.from == elm).head
+    }.toList
   }
+
 }
+
 

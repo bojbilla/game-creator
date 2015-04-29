@@ -16,6 +16,7 @@ object MongoDatabaseService {
   val fbPostsCollection = "fb_posts"
   val lastFetchedCollection = "last_fetched"
   val userStatisticsCollection = "user_statistics"
+  val postQuestionsCollection = "post_questions"
 
   def props(user_id: String, db: DefaultDB): Props =
     Props(new MongoDatabaseService(user_id, db))
@@ -45,7 +46,6 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
   }
 
   def saveFBPagesToDB(pages: List[Page]): Unit = {
-
     import scala.concurrent.ExecutionContext.Implicits.global
     val fbPageCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)

@@ -1,11 +1,14 @@
 package me.reminisce.service.gameboardgen.questiongen
 
 import akka.actor.{ActorRef, Props}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.FBPost
+import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
-import me.reminisce.service.gameboardgen.GameboardEntities.{CoordinatesQuestion, Location, Question}
+import me.reminisce.service.gameboardgen.GameboardEntities.{CoordinatesQuestion, Location, PostQuestion}
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.DefaultDB
+import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.util.{Failure, Success}
@@ -17,29 +20,28 @@ object WhichCoordinatesWereYouAt {
     Props(new WhichCoordinatesWereYouAt(database))
 }
 
-class WhichCoordinatesWereYouAt(db: DefaultDB) extends PostQuestionGenerator(db) {
+class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
   def receive = {
-    case CreateQuestion(user_id) =>
+    case CreateQuestion(user_id, item_id) =>
       val client = sender()
       val query = BSONDocument(
         "user_id" -> user_id,
-        "place" -> BSONDocument("$exists" -> "true")
+        "post_id" -> item_id
       )
-      getDocument(db, collection, query).onComplete {
-        case Success(optPost) => optPost match {
-          case Some(post: FBPost) =>
-            post.place match {
-              case Some(place) =>
-                val question = CoordinatesQuestion(post.post_id, user_id, Question("WhichCoordinateWereYouAt",
-                  Some(List(post.message.getOrElse(""), post.story.getOrElse("")))),
-                  Location(place.location.latitude, place.location.longitude))
-                client ! FinishedQuestionCreation(question)
-              case None => sendFailure(client, user_id)
-            }
-          case None => sendFailure(client, user_id)
-        }
-        case Failure(e) => sendFailure(client, user_id)
+      val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+      postCollection.find(query).one[FBPost].onComplete {
+        case Success(postOpt) =>
+          val post = postOpt.get
+          val postInQuestion = postInQuestionFromPost(post)
+          val location = Location(post.place.get.location.latitude, post.place.get.location.longitude)
+          val postQuestion = PostQuestion(Geolocation, GeoWhatCoordinatesWereYouAt, postInQuestion, None)
+          val gameQuestion = CoordinatesQuestion(user_id, postQuestion, location)
+          client ! FinishedQuestionCreation(gameQuestion)
+        case Failure(e) =>
+          sendFailure(client, user_id)
       }
+    case any =>
+      log.error(s"Wrong message received $any.")
   }
 
   def sendFailure(client: ActorRef, user_id: String): Unit = {

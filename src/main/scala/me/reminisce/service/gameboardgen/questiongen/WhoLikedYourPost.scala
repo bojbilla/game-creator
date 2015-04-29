@@ -1,131 +1,66 @@
 package me.reminisce.service.gameboardgen.questiongen
 
-import akka.actor.{Actor, ActorContext, ActorLogging, Props}
+import akka.actor.Props
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.mongodb.MongoDBEntities.{FBLike, FBPost}
-import me.reminisce.server.domain.RestMessage
-import me.reminisce.service.gameboardgen.GameboardEntities
+import me.reminisce.mongodb.MongoDBEntities.{FBPost, UserStat}
+import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
-import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, Possibility, Question}
+import me.reminisce.service.gameboardgen.GameboardEntities._
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.BSONDocument
-import reactivemongo.core.commands.Count
 
-import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.{Failure, Random, Success}
 
-/**
- * Created by roger on 19/11/14.
- */
 
 object WhoLikedYourPost {
 
   def props(database: DefaultDB): Props =
     Props(new WhoLikedYourPost(database))
 
-  case class CreatedWhoLikedYourPost(mc: MultipleChoiceQuestion) extends RestMessage
-
 }
 
 
-class WhoLikedYourPost(database: DefaultDB) extends Actor with ActorLogging {
-  implicit def dispatcher: ExecutionContextExecutor = context.dispatcher
-
-  implicit def actorRefFactory: ActorContext = context
-
-  val collection = database[BSONCollection](MongoDatabaseService.fbPostsCollection)
+class WhoLikedYourPost(database: DefaultDB) extends QuestionGenerator {
 
   def receive = {
-    case CreateQuestion(user_id) =>
+    case CreateQuestion(user_id, item_id) =>
       val client = sender()
-      val query = BSONDocument(
-        "user_id" -> user_id,
-        "message" -> BSONDocument("$exists" -> "true")
-      )
-      getDocument(database, collection, query).onComplete {
-        case Success(s) => s match {
-          case Some(post: FBPost) =>
-            post.likes match {
-              case Some(Nil) =>
-                client ! FailedToCreateQuestion(s"Not enough posts with likes > 5 for user: $user_id", MCWhoLikedYourPost)
-              case Some(likers) => getLikesFromOtherPosts(post, likers.toSet).onComplete {
-                case Success(others) =>
-                  val question = Question("WhoLikedThisPost", Some(List(post.message.getOrElse(""))))
-                  val possibilities = Possibility(Some(Random.shuffle(likers).head.user_name), Some(""), Some(Random.shuffle(likers).head.user_id)) +: others.slice(0, 3).map { other =>
-                    Possibility(Some(other.user_name), Some(""), Some(other.user_id))
-                  }.toVector
-                  val answerPossibility = possibilities.head
-                  val randomPossibilities = Random.shuffle(possibilities)
-                  val mc = MultipleChoiceQuestion(post.post_id,
-                    user_id, question, randomPossibilities,
-                    randomPossibilities.indexOf(answerPossibility))
-                  client ! FinishedQuestionCreation(mc)
+      // Note : if this question has been picked, it can only be if a UserStat exists
+
+      val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+
+      userCollection.find(BSONDocument("user_id" -> user_id)).one[UserStat].onComplete {
+        case Success(userStatOpt) =>
+          userStatOpt match {
+            case Some(userStat) =>
+              val postCollection = database[BSONCollection](MongoDatabaseService.fbPostsCollection)
+              postCollection.find(BSONDocument("user_id" -> user_id, "post_id" -> item_id)).one[FBPost].onComplete {
+                case Success(postOpt) =>
+                  val post = postOpt.get //post should exist
+                val postInQuestion = postInQuestionFromPost(post)
+                  val question = PostQuestion(MultipleChoice, MCWhoLikedYourPost, postInQuestion, None)
+                  val liker = Random.shuffle(post.likes.get).head
+                  val choices = (liker :: Random.shuffle((userStat.likers -- post.likes.get.toSet).toList).take(3)) map {
+                    choice => Possibility(choice.user_name, None, Some(choice.user_id))
+                  }
+                  val answer = choices.head
+                  val shuffled = Random.shuffle(choices)
+                  val gameQuestion = MultipleChoiceQuestion(user_id, question, shuffled, shuffled.indexOf(answer))
+                  client ! FinishedQuestionCreation(gameQuestion)
                 case Failure(e) =>
-                  client ! FailedToCreateQuestion(e.getMessage + " -> No people who liked post found", MCWhoLikedYourPost)
+                  client ! FailedToCreateQuestion(s"Failed to reach database : $e", MCWhoLikedYourPost)
               }
-              case None =>
-                client ! FailedToCreateQuestion(s"Not enough posts with likes > 5 for user: $user_id", MCWhoLikedYourPost)
-            }
-
-          case None =>
-            client ! FailedToCreateQuestion(s"Not enough posts with likes > 5 for user: $user_id", MCWhoLikedYourPost)
-        }
+            case None =>
+              client ! FailedToCreateQuestion(s"Strangely there is no userStat", MCWhoLikedYourPost)
+          }
         case Failure(e) =>
-          log.error(s"Failed to create CreatedWhoLikedYourPost due to ${e.getMessage}")
-          client ! FailedToCreateQuestion(s"Not enough posts with likes > 5 for user: $user_id", MCWhoLikedYourPost)
+          client ! FailedToCreateQuestion(s"Failed to reach database : $e", MCWhoLikedYourPost)
       }
 
-
-    case _ => log.error(s"WhoLikedYourPost received a unexpected message ")
+    case any => log.error(s"WhoLikedYourPost received a unexpected message $any")
   }
 
-  def getLikesFromOtherPosts(post: FBPost, likers: Set[FBLike]): Future[Set[FBLike]] = {
-    val promise = Promise[Set[FBLike]]()
-    val limit = QuestionParameters.NumberOfTrials
-    val query = BSONDocument(
-      "user_id" -> post.user_id,
-      "like_count" -> BSONDocument("$gt" -> 5),
-      "message" -> BSONDocument("$exists" -> "true"),
-      "post_id" -> BSONDocument("$ne" -> post.post_id)
-    )
-    def recurs(likers: Set[FBLike], nonLikers: Set[FBLike], counter: Int = 0): Unit = {
-      if (nonLikers.size >= 3) {
-        promise.success(nonLikers)
-      } else if (counter > limit) {
-        promise.failure(new Exception("Unable to find non likers"))
-      } else {
-        getDocument(database, collection, query).onComplete {
-          case Success(Some(otherPost)) =>
-            otherPost.likes match {
-              case Some(likes) =>
-                val newNonLikers = likes.toSet &~ likers
-                recurs(likers, nonLikers ++ newNonLikers, counter + 1)
-              case None =>
-                recurs(likers, nonLikers, counter + 1)
-            }
-          case Success(None) =>
-            promise.failure(new Exception("No posts found"))
 
-          case Failure(t) =>
-            promise.failure(t)
-        }
-      }
-    }
-    recurs(likers, Set())
-    promise.future
-  }
-
-  def getDocument(db: DefaultDB,
-                  collection: BSONCollection,
-                  query: BSONDocument): Future[Option[FBPost]] = {
-    val futureCount = db.command(Count(collection.name, Some(query)))
-    futureCount.flatMap { count =>
-      val skip = Random.nextInt(count)
-      collection.find(query).
-        options(QueryOpts(skipN = skip)).one[FBPost]
-
-    }
-  }
 }
