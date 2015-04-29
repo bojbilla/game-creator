@@ -177,13 +177,13 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
     }
     likedPageIds.onComplete {
       case Success(pIds) =>
-        val queryUnliked = BSONDocument(
+        val queryNotLiked = BSONDocument(
           "page_id" -> BSONDocument("$nin" -> pIds)
         )
-        pagesCollection.find(queryUnliked).cursor[FBPage].collect[List](3).onComplete {
-          case Success(unlikedPages) =>
+        pagesCollection.find(queryNotLiked).cursor[FBPage].collect[List](3).onComplete {
+          case Success(notLikedPages) =>
             val newUserStat = {
-              if (unlikedPages.length >= 3) {
+              if (notLikedPages.length >= 3) {
                 val oldQuestionCounts = userStat.question_counts
                 val newQuestionCounts = oldQuestionCounts.updated("MCWhichPageDidYouLike", pIds.length)
                 UserStat(None, userStat.user_id, newQuestionCounts, userStat.likers, userStat.max_likers_per_post)
@@ -194,10 +194,10 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
             val userCollection = db[BSONCollection](StatsHandler.userStatisticsCollection)
             userCollection.update(selector, newUserStat, upsert = true)
           case Failure(e) =>
-            log.error("Wow, strangeness !" + e)
+            log.error("Could not reach database : " + e)
         }
       case Failure(e) =>
-        log.error("Wow, strangeness !" + e)
+        log.error("Could not reach database : " + e)
     }
   }
 

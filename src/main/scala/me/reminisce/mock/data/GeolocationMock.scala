@@ -1,6 +1,7 @@
 package me.reminisce.mock.data
 
-import me.reminisce.entities.Entities.{CoordinatesQuestion, Location, Question}
+import me.reminisce.service.gameboardgen.GameboardEntities
+import me.reminisce.service.gameboardgen.GameboardEntities.{CoordinatesQuestion, Location, Question}
 
 /**
  * Created by roger on 10/11/14.

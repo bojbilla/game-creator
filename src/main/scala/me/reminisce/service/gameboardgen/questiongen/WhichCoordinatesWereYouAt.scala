@@ -1,10 +1,10 @@
-package me.reminisce.service.questiongen
+package me.reminisce.service.gameboardgen.questiongen
 
 import akka.actor.{ActorRef, Props}
-import me.reminisce.entities.Entities.SpecificQuestionType._
-import me.reminisce.entities.Entities.{CoordinatesQuestion, Location, Question}
 import me.reminisce.mongodb.MongoDBEntities.FBPost
-import me.reminisce.service.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
+import me.reminisce.service.gameboardgen.GameboardEntities.{CoordinatesQuestion, Location, Question}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.DefaultDB
 import reactivemongo.bson.BSONDocument
 

@@ -1,11 +1,11 @@
-package me.reminisce.service.questiongen
+package me.reminisce.service.gameboardgen.questiongen
 
 import akka.actor.Props
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.entities.Entities.SpecificQuestionType._
-import me.reminisce.entities.Entities.{MultipleChoiceQuestion, Possibility, Question}
 import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.service.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
+import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, Possibility, Question}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -13,10 +13,6 @@ import reactivemongo.bson.BSONDocument
 import scala.concurrent.Future
 import scala.util.{Failure, Random, Success}
 
-
-/**
- * Created by roger on 23/12/14.
- */
 
 object WhichPageDidYouLike {
   def props(database: DefaultDB): Props =

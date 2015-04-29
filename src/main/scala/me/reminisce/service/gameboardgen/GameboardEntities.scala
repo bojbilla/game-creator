@@ -1,14 +1,10 @@
-package me.reminisce.entities
+package me.reminisce.service.gameboardgen
 
-import me.reminisce.entities.Entities.TileQuestionType.TileQuestionType
 import me.reminisce.server.domain.RestMessage
+import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.QuestionKind
 import org.joda.time.DateTime
 
-
-/**
- * Created by Aranir on 26/10/14.
- */
-object Entities {
+object GameboardEntities {
 
   object Status extends Enumeration {
     type Status = Value
@@ -25,8 +21,8 @@ object Entities {
     val MCWhoLikedYourPost = Value("MCWhoLikedYourPost")
   }
 
-  object TileQuestionType extends Enumeration {
-    type TileQuestionType = Value
+  object QuestionKind extends Enumeration {
+    type QuestionKind = Value
     val MultipleChoice, Timeline, Geolocation, OrderedList = Value
   }
 
@@ -57,7 +53,7 @@ object Entities {
 
   case class PlaceQuestion(id: String, user_id: String, question: Question, answer: String) extends GameQuestion
 
-  case class Tile(`type`: TileQuestionType, question1: GameQuestion, question2: GameQuestion, question3: GameQuestion) extends RestMessage
+  case class Tile(`type`: QuestionKind, question1: GameQuestion, question2: GameQuestion, question3: GameQuestion) extends RestMessage
 
   case class Board(user_id: String, tiles: List[Tile]) extends RestMessage
 

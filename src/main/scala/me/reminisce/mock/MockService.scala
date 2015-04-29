@@ -1,9 +1,10 @@
 package me.reminisce.mock
 
 import akka.actor.{Actor, ActorContext, Props}
-import me.reminisce.entities.Entities.Board
 import me.reminisce.mock.MockBoardService.GetGameBoard
 import me.reminisce.server.domain.{RESTHandlerCreator, RestMessage}
+import me.reminisce.service.gameboardgen.GameboardEntities
+import me.reminisce.service.gameboardgen.GameboardEntities.Board
 import spray.routing._
 
 /**

@@ -1,19 +1,16 @@
-package me.reminisce.service.tilegen
+package me.reminisce.service.gameboardgen.tilegen
 
 import akka.actor.{ActorRef, PoisonPill, Props}
-import me.reminisce.entities.Entities.SpecificQuestionType._
-import me.reminisce.entities.Entities.TileQuestionType.{TileQuestionType, _}
-import me.reminisce.entities.Entities.{GameQuestion, _}
-import me.reminisce.service.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
-import me.reminisce.service.questiongen._
-import me.reminisce.service.tilegen.TileGenerator._
+import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.{QuestionKind, _}
+import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
+import me.reminisce.service.gameboardgen.GameboardEntities.{GameQuestion, _}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.questiongen._
+import me.reminisce.service.gameboardgen.tilegen.TileGenerator._
 import reactivemongo.api.DefaultDB
 
 import scala.util.Random
 
-/**
- * Created by roger on 24/12/14.
- */
 object TileGenerator {
   def props(database: DefaultDB): Props =
     Props(new TileGenerator(database))
@@ -74,7 +71,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
     }
   }
 
-  def awaitingQuestions(client: ActorRef, user_id: String, questionType: TileQuestionType): Receive = {
+  def awaitingQuestions(client: ActorRef, user_id: String, questionType: QuestionKind): Receive = {
     case FinishedQuestionCreation(q) =>
       log.info(s"Created question of type $questionType for user $user_id")
       if (!questions.exists(p => p.id == q.id)) {
@@ -119,7 +116,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
 
   }
 
-  def spawnQuestionActors(user_id: String, specificQuestionTypes: List[SpecificQuestionType], tileType: TileQuestionType) = {
+  def spawnQuestionActors(user_id: String, specificQuestionTypes: List[SpecificQuestionType], tileType: QuestionKind) = {
     val client = sender()
     questionPossibilities = Random.shuffle(specificQuestionTypes)
     val actors =

@@ -1,6 +1,7 @@
 package me.reminisce.mock.data
 
-import me.reminisce.entities.Entities.{MultipleChoiceQuestion, Possibility, Question}
+import me.reminisce.service.gameboardgen.GameboardEntities
+import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, Possibility, Question}
 
 /**
  * Created by roger on 09/11/14.

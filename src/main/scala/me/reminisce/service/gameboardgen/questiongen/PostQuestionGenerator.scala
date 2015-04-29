@@ -1,4 +1,4 @@
-package me.reminisce.service.questiongen
+package me.reminisce.service.gameboardgen.questiongen
 
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.FBPost
@@ -10,9 +10,6 @@ import reactivemongo.core.commands.Count
 import scala.concurrent.Future
 import scala.util.Random
 
-/**
- * Created by roger on 20/11/14.
- */
 abstract class PostQuestionGenerator(db: DefaultDB) extends QuestionGenerator {
   val collection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 

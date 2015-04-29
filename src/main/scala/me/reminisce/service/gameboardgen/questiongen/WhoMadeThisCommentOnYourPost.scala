@@ -1,19 +1,15 @@
-package me.reminisce.service.questiongen
+package me.reminisce.service.gameboardgen.questiongen
 
 import akka.actor.Props
-import me.reminisce.entities.Entities.SpecificQuestionType._
-import me.reminisce.entities.Entities.{MultipleChoiceQuestion, Possibility, Question}
 import me.reminisce.mongodb.MongoDBEntities.{FBComment, FBPost}
-import me.reminisce.service.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
+import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, Possibility, Question}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.DefaultDB
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Random, Success}
-
-/**
- * Created by roger on 20/11/14.
- */
 
 object WhoMadeThisCommentOnYourPost {
 

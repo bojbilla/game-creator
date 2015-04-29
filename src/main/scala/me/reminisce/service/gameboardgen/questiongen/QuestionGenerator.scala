@@ -1,15 +1,11 @@
-package me.reminisce.service.questiongen
+package me.reminisce.service.gameboardgen.questiongen
 
 import akka.actor.{Actor, ActorContext, ActorLogging}
-import me.reminisce.entities.Entities.GameQuestion
-import me.reminisce.entities.Entities.SpecificQuestionType.SpecificQuestionType
 import me.reminisce.server.domain.RestMessage
+import me.reminisce.service.gameboardgen.GameboardEntities.GameQuestion
+import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType.SpecificQuestionType
 
 import scala.concurrent.ExecutionContextExecutor
-
-/**
- * Created by roger on 20/11/14.
- */
 
 object QuestionGenerator {
 

@@ -9,7 +9,7 @@ import akka.actor.{OneForOneStrategy, _}
 import me.reminisce.server.domain.Domain.Error
 import me.reminisce.server.domain.RESTHandler.{WithActorRef, WithProps}
 import me.reminisce.server.jsonserializer.GameCreatorFormatter
-import me.reminisce.service.questiongen.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation}
 import spray.http.StatusCode
 import spray.http.StatusCodes._
 import spray.httpx.Json4sSupport

@@ -1,29 +1,25 @@
-package me.reminisce.service
+package me.reminisce.service.gameboardgen
 
 import akka.actor._
-import me.reminisce.entities.Entities._
 import me.reminisce.fetcher.FetcherService
 import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.server.domain.Domain._
 import me.reminisce.server.domain.{Domain, RestMessage}
-import me.reminisce.service.GameGenerator.CreateBoard
-import me.reminisce.service.tilegen.TileGenerator
-import me.reminisce.service.tilegen.TileGenerator._
+import me.reminisce.service.gameboardgen.GameGenerator.CreateBoard
+import me.reminisce.service.gameboardgen.GameboardEntities.{Board, Tile}
+import me.reminisce.service.gameboardgen.tilegen.TileGenerator
+import me.reminisce.service.gameboardgen.tilegen.TileGenerator._
 import reactivemongo.api.DefaultDB
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Random
 
-/**
- * Created by roger on 17/11/14.
- */
-
 object GameGenerator {
 
   def props(database: DefaultDB): Props =
-    Props(new GameGenerator(database))
+      Props(new RandomGameGenerator(database))
 
-  case class CreateBoard(user_id: String, access_token: String) extends RestMessage
+  case class CreateBoard(user_id: String, access_token: String, strategy: String) extends RestMessage
 
   case class FinishedBoardCreation(board: Board)
 
@@ -37,7 +33,7 @@ class GameGenerator(database: DefaultDB) extends Actor with ActorLogging {
   var tiles: List[Tile] = List()
 
   def receive = {
-    case CreateBoard(user_id, access_token) =>
+    case CreateBoard(user_id, access_token, strategy) =>
       val client = sender()
       val tileActors = (0 to 8).map(_ => context.actorOf(TileGenerator.props(database)))
       tileActors.foreach { a =>

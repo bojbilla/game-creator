@@ -1,7 +1,7 @@
 package me.reminisce.server
 
 import akka.actor.{Actor, ActorLogging}
-import me.reminisce.service.GameCreatorServiceActor
+import me.reminisce.service.gameboardgen.GameCreatorServiceActor
 import org.json4s.{DefaultFormats, Formats}
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 
@@ -9,9 +9,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Properties._
 
 
-/**
- * Created by roger on 10/11/14.
- */
 class ServerServiceActor extends Actor with GameCreatorServiceActor with ActorLogging {
   override def actorRefFactory = context
 

@@ -1,12 +1,13 @@
-package me.reminisce.service.questiongen
+package me.reminisce.service.gameboardgen.questiongen
 
 import akka.actor.{Actor, ActorContext, ActorLogging, Props}
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.entities.Entities.SpecificQuestionType._
-import me.reminisce.entities.Entities.{MultipleChoiceQuestion, Possibility, Question}
 import me.reminisce.mongodb.MongoDBEntities.{FBLike, FBPost}
 import me.reminisce.server.domain.RestMessage
-import me.reminisce.service.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.GameboardEntities
+import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
+import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, Possibility, Question}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.BSONDocument
