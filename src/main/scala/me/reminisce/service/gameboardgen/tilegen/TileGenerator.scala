@@ -18,7 +18,7 @@ object TileGenerator {
 
   case class CreateGeolocationTile(user_id: String)
 
-  case class CreateTile(user_id: String, choices: List[(String, String)])
+  case class CreateTile(user_id: String, choices: List[(String, String)], `type`: String = "Misc")
 
   case class FinishedTileCreation(user_id: String, tile: Tile)
 
@@ -34,14 +34,14 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
 
-    case CreateTile(user_id, choices) =>
+    case CreateTile(user_id, choices, tpe) =>
       choices.foreach {
         choice =>
           val generator = createQuestionGenerators(SpecificQuestionType.withName(choice._2))
           generator ! CreateQuestion(user_id, choice._1)
       }
       val client = sender()
-      context.become(awaitingQuestions(client, user_id))
+      context.become(awaitingQuestions(client, user_id, tpe))
   }
 
   def createQuestionGenerators(questionType: SpecificQuestionType): ActorRef = {
@@ -54,8 +54,6 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
         context.actorOf(WhoMadeThisCommentOnYourPost.props(db))
       case TLWhenDidYouShareThisPost =>
         context.actorOf(WhenDidYouShareThisPost.props(db))
-      case GeoWhichPlaceWereYouAt =>
-        context.actorOf(WhichPlaceWereYouAt.props(db))
       case GeoWhatCoordinatesWereYouAt =>
         context.actorOf(WhichCoordinatesWereYouAt.props(db))
       case _ => log.error("Unknown Question Type")
@@ -63,12 +61,12 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
     }
   }
 
-  def awaitingQuestions(client: ActorRef, user_id: String): Receive = {
+  def awaitingQuestions(client: ActorRef, user_id: String, `type`: String): Receive = {
     case FinishedQuestionCreation(q) =>
       questions = q :: questions
       sender() ! PoisonPill
       if (questions.length >= 3) {
-        val tile = Tile(questions(0), questions(1), questions(2))
+        val tile = Tile(`type`, questions(0), questions(1), questions(2))
         client ! FinishedTileCreation(user_id, tile)
       }
 

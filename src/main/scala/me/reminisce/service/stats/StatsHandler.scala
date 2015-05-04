@@ -52,7 +52,7 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
   }
 
   def availableQuestionTypes(post: Post, userStat: UserStat): List[String] = {
-    List(checkWhichCoordinatesWereYouAt(post), checkWhichPlaceWereYouAt(post),
+    List(checkWhichCoordinatesWereYouAt(post),
       checkWhenDidYouShareThisPost(post), checkWhoMadeThisCommentOnYourPost(post),
       checkWhoLikedYourPost(post, userStat)).flatten
   }
@@ -83,10 +83,6 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
         long => "GeoWhatCoordinatesWereYouAt"
       ))
     ))
-  }
-
-  def checkWhichPlaceWereYouAt(post: Post): Option[String] = {
-    post.place.flatMap(place => place.name.map(name => "GeoWhichPlaceWereYouAt"))
   }
 
   def checkWhoMadeThisCommentOnYourPost(post: Post): Option[String] = {

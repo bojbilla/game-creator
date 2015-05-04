@@ -92,7 +92,7 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
         ))
       )))
       val fbPost = FBPost(None, user_id, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,
-        likes, like_count, p.`type`, fbAttachments, fbComments, fbCommentsCount)
+        likes, like_count, p.`type`, p.link, fbAttachments, fbComments, fbCommentsCount)
 
       val selector = BSONDocument("user_id" -> user_id, "post_id" -> p.id)
       collection.update(selector, fbPost, upsert = true)

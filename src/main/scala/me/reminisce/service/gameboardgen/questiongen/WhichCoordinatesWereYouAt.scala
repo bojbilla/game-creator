@@ -5,7 +5,7 @@ import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.FBPost
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
-import me.reminisce.service.gameboardgen.GameboardEntities.{CoordinatesQuestion, Location, PostQuestion}
+import me.reminisce.service.gameboardgen.GameboardEntities.{CoordinatesQuestion, Location, Question}
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
@@ -32,10 +32,10 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
       postCollection.find(query).one[FBPost].onComplete {
         case Success(postOpt) =>
           val post = postOpt.get
-          val postInQuestion = postInQuestionFromPost(post)
+          val postSubject = subjectFromPost(post)
           val location = Location(post.place.get.location.latitude, post.place.get.location.longitude)
-          val postQuestion = PostQuestion(Geolocation, GeoWhatCoordinatesWereYouAt, postInQuestion, None)
-          val gameQuestion = CoordinatesQuestion(user_id, postQuestion, location)
+          val question = Question(MultipleChoice, GeoWhatCoordinatesWereYouAt, postSubject)
+          val gameQuestion = CoordinatesQuestion(user_id, question, location)
           client ! FinishedQuestionCreation(gameQuestion)
         case Failure(e) =>
           sendFailure(client, user_id)
@@ -45,7 +45,7 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
   }
 
   def sendFailure(client: ActorRef, user_id: String): Unit = {
-    client ! FailedToCreateQuestion(s"Something went wrong WhichCoordinateWereYouAt user: $user_id", GeoWhichPlaceWereYouAt)
+    client ! FailedToCreateQuestion(s"Something went wrong WhichCoordinateWereYouAt user: $user_id", GeoWhatCoordinatesWereYouAt)
   }
 
 }

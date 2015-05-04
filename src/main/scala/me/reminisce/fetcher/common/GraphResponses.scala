@@ -4,9 +4,6 @@ import com.github.nscala_time.time.Imports._
 import me.reminisce.server.domain.RestMessage
 import org.json4s.DefaultFormats
 
-/**
- * Created by roger on 05/03/15.
- */
 object GraphResponses {
   implicit val formats = DefaultFormats
 
@@ -23,6 +20,7 @@ object GraphResponses {
                   place: Option[Place],
                   likes: Option[Root[List[Like]]],
                   `type`: Option[String],
+                  link: Option[String],
                   created_time: Option[String],
                   attachments: Option[Root[List[Attachment]]],
                   comments: Option[Root[List[Comment]]]

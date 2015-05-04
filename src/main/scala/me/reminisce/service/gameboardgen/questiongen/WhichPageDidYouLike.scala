@@ -42,7 +42,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
               getDocuments[FBPage](db, pagesCollection, queryNotLiked, 3).onComplete {
                 case Success(listPages) =>
                   if (listPages.length < 3) {
-                    client ! FailedToCreateQuestion("Unable to create question : not enough not liked pages.", MCWhichPageDidYouLike)
+                    client ! FailedToCreateQuestion(s"Unable to create question : not enough not liked pages", MCWhichPageDidYouLike)
                   } else {
                     val possibilities = (page :: listPages).map {
                       pge =>
@@ -50,11 +50,12 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
                           case Some(p) => p.source
                           case None => None
                         }
-                        Possibility(pge.name.get, url)
+                        Possibility(pge.name.get, url, Some(pge.page_id))
                     }
                     val answer = possibilities.head
                     val shuffled = Random.shuffle(possibilities)
-                    val question = MCQuestion(MultipleChoice, MCWhichPageDidYouLike)
+                    val subject = PageSubject(answer.name, "http://facebook.com/" + answer.fb_id.get, answer.image_url)
+                    val question = Question(MultipleChoice, MCWhichPageDidYouLike, subject)
                     val gameQuestion = MultipleChoiceQuestion(user_id, question, shuffled, shuffled.indexOf(answer))
                     client ! FinishedQuestionCreation(gameQuestion)
                   }
@@ -63,7 +64,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
               }
           }
         case None =>
-          client ! FailedToCreateQuestion("Unable to create question WhichPageDidYouLike, page not found", MCWhichPageDidYouLike)
+          client ! FailedToCreateQuestion(s"Unable to create question WhichPageDidYouLike, page not found. Item_id : $item_id ", MCWhichPageDidYouLike)
       }
     case x => log.error(s"WhichPageDidYouLike received a unexpected message $x")
   }

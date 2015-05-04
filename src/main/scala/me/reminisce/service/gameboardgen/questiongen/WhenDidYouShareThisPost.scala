@@ -5,7 +5,7 @@ import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.FBPost
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
-import me.reminisce.service.gameboardgen.GameboardEntities.{PostQuestion, TimelineQuestion}
+import me.reminisce.service.gameboardgen.GameboardEntities.{Question, TimelineQuestion}
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
 import org.joda.time.format.DateTimeFormat
 import reactivemongo.api.DefaultDB
@@ -37,8 +37,8 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends QuestionGenerator {
           val dateString = post.created_time.get.substring(0, index)
           val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
           val actualDate = formatter.parseDateTime(dateString)
-          val postInQuestion = postInQuestionFromPost(post)
-          val question = PostQuestion(Timeline, TLWhenDidYouShareThisPost, postInQuestion, None)
+          val postSubject = subjectFromPost(post)
+          val question = Question(Timeline, TLWhenDidYouShareThisPost, postSubject)
           val tlQuestion = TimelineQuestion(user_id, question, actualDate)
           client ! FinishedQuestionCreation(tlQuestion)
         case Failure(e) =>

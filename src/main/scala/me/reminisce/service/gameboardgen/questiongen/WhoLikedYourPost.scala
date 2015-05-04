@@ -39,8 +39,8 @@ class WhoLikedYourPost(database: DefaultDB) extends QuestionGenerator {
               postCollection.find(BSONDocument("user_id" -> user_id, "post_id" -> item_id)).one[FBPost].onComplete {
                 case Success(postOpt) =>
                   val post = postOpt.get //post should exist
-                val postInQuestion = postInQuestionFromPost(post)
-                  val question = PostQuestion(MultipleChoice, MCWhoLikedYourPost, postInQuestion, None)
+                val postSubject = subjectFromPost(post)
+                  val question = Question(MultipleChoice, MCWhoLikedYourPost, postSubject)
                   val liker = Random.shuffle(post.likes.get).head
                   val choices = (liker :: Random.shuffle((userStat.likers -- post.likes.get.toSet).toList).take(3)) map {
                     choice => Possibility(choice.user_name, None, Some(choice.user_id))

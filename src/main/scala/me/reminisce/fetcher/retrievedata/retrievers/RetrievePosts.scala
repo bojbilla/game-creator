@@ -25,7 +25,7 @@ class RetrievePosts extends RetrieveData {
     case RetrieveEntities(params) =>
       val client = sender()
       val params1 = params.copy(query = Some(s"${params.userId.getOrElse("me")}/" +
-        s"posts?fields=likes.limit(1000).summary(true),message,type,story,source," +
+        s"posts?fields=likes.limit(1000).summary(true),message,link,type,story,source," +
         s"full_picture,attachments{id,description,media{image},type},place," +
         s"comments.limit(1000).summary(true){created_time,from,message,attachment,like_count}" +
         s"&since=${params.getSince}&until=${params.getUntil}"))

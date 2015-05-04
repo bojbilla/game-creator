@@ -42,6 +42,7 @@ class RandomBoardGenerator(database: DefaultDB, user_id: String) extends BoardGe
   }
 
   def generateRandomBoardWithPages(client: ActorRef): Unit = {
+    log.error("I SHOULD NOT COME HERE !")
     val postSelector = BSONDocument("user_id" -> user_id, "questions_count" -> BSONDocument("$gt" -> 0))
     val postsQuestionsCollection = database[BSONCollection](MongoDatabaseService.postQuestionsCollection)
     findSome[PostQuestions](postsQuestionsCollection, postSelector, client) {

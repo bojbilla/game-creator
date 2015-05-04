@@ -23,7 +23,6 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
     case CreateQuestion(user_id, item_id) =>
-      log.error("MCWhoMadeThisComment")
       val client = sender()
       val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
       postCollection.find(BSONDocument("user_id" -> user_id, "post_id" -> item_id)).one[FBPost].onComplete {
@@ -33,13 +32,13 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
           val rightOne = selectedComments.head
           val shuffled = Random.shuffle(selectedComments)
           val answer = shuffled.indexOf(rightOne)
-          val questionComment = Some(rightOne.message)
-          val shuffledPos = shuffled.map {
+          val shuffledPossibilities = shuffled.map {
             comm => Possibility(comm.from.user_name, None, Some(comm.from.user_id))
           }
-          val postInQuestion = postInQuestionFromPost(post)
-          val question = PostQuestion(MultipleChoice, MCWhoMadeThisCommentOnYourPost, postInQuestion, questionComment)
-          val gameQuestion = MultipleChoiceQuestion(user_id, question, shuffledPos, answer)
+          val postSubject = subjectFromPost(post)
+          val commentSubject = CommentSubject(rightOne.message, postSubject)
+          val question = Question(MultipleChoice, MCWhoMadeThisCommentOnYourPost, commentSubject)
+          val gameQuestion = MultipleChoiceQuestion(user_id, question, shuffledPossibilities, answer)
           client ! FinishedQuestionCreation(gameQuestion)
         case Failure(e) =>
           client ! FailedToCreateQuestion(s"Could not reach database : $e", MCWhoMadeThisCommentOnYourPost)

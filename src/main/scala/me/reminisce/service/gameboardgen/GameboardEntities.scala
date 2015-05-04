@@ -16,7 +16,6 @@ object GameboardEntities {
     type SpecificQuestionType = Value
     val TLWhenDidYouShareThisPost = Value("TLWhenDidYouShareThisPost")
     val GeoWhatCoordinatesWereYouAt = Value("GeoWhatCoordinatesWereYouAt")
-    val GeoWhichPlaceWereYouAt = Value("GeoWhichPlaceWereYouAt")
     val MCWhoMadeThisCommentOnYourPost = Value("MCWhoMadeThisCommentOnYourPost")
     val MCWhichPageDidYouLike = Value("MCWhichPageDidYouLike")
     val MCWhoLikedYourPost = Value("MCWhoLikedYourPost")
@@ -28,36 +27,54 @@ object GameboardEntities {
   }
 
 
-  abstract sealed class GameQuestion
+  abstract sealed class Subject(`type`: String)
 
-  abstract sealed class Question(kind: QuestionKind, `type`: SpecificQuestionType)
+  abstract sealed class PostSubject(`type`: String, text: String) extends Subject(`type`)
 
-  case class PostInQuestion(text: String, image_url: Option[String])
+  case class PageSubject(name: String, url: String,
+                         photo_url: Option[String],
+                         `type`: String = "Page") extends Subject(`type`)
 
-  case class PostQuestion(kind: QuestionKind,
-                          `type`: SpecificQuestionType,
-                          post: PostInQuestion, comment: Option[String]) extends Question(kind: QuestionKind, `type`: SpecificQuestionType)
+  case class TextPostSubject(text: String, `type`: String = "TextPost") extends PostSubject(`type`, text)
 
-  case class MCQuestion(kind: QuestionKind,
-                        `type`: SpecificQuestionType) extends Question(kind: QuestionKind, `type`: SpecificQuestionType)
+  case class ImagePostSubject(text: String, image_url: Option[String], facebook_image_url: Option[String],
+                              `type`: String = "ImagePost") extends PostSubject(`type`, text)
 
-  case class Possibility(name: String, image_url: Option[String], fb_id: Option[String] = None)
+  case class VideoPostSubject(text: String, thumbnail_url: Option[String], url: Option[String],
+                              `type`: String = "VideoPost") extends PostSubject(`type`, text)
+
+  case class LinkPostSubject(text: String, thumbnail_url: Option[String], url: Option[String],
+                             `type`: String = "LinkPost") extends PostSubject(`type`, text)
+
+  case class CommentSubject(comment: String, post: PostSubject, `type`: String = "Comment") extends Subject(`type`)
+
+
+  case class Question(kind: QuestionKind, `type`: SpecificQuestionType, subject: Subject)
+
+  abstract sealed class GameQuestion(user_id: String, question: Question)
 
   case class MultipleChoiceQuestion(user_id: String,
                                     question: Question,
                                     choices: List[Possibility],
-                                    answer: Int) extends GameQuestion
+                                    answer: Int) extends GameQuestion(user_id, question)
+
+  case class TimelineQuestion(user_id: String,
+                              question: Question,
+                              answer: DateTime) extends GameQuestion(user_id, question)
 
 
-  case class TimelineQuestion(user_id: String, question: Question, answer: DateTime) extends GameQuestion
+  case class Possibility(name: String, image_url: Option[String], fb_id: Option[String] = None)
 
-  case class CoordinatesQuestion(user_id: String, question: Question, answer: Location) extends GameQuestion
+  case class CoordinatesQuestion(user_id: String,
+                                 question: Question,
+                                 answer: Location) extends GameQuestion(user_id, question)
 
   case class Location(latitude: Double, longitude: Double)
 
-  case class PlaceQuestion(user_id: String, question: Question, answer: String) extends GameQuestion
-
-  case class Tile(question1: GameQuestion, question2: GameQuestion, question3: GameQuestion) extends RestMessage
+  case class Tile(`type`: String,
+                  question1: GameQuestion,
+                  question2: GameQuestion,
+                  question3: GameQuestion) extends RestMessage
 
   case class Board(user_id: String, tiles: List[Tile], is_token_stale: Boolean) extends RestMessage
 
