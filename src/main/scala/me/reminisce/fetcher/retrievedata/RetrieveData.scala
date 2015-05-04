@@ -11,9 +11,6 @@ import spray.http.{HttpRequest, HttpResponse}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-/**
- * Created by roger on 05/03/15.
- */
 object MyLogger {
   implicit val logSource: LogSource[AnyRef] = new LogSource[AnyRef] {
     def genString(o: AnyRef): String = o.getClass.getName

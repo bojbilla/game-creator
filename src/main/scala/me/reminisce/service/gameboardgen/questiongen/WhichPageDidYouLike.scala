@@ -24,20 +24,20 @@ object WhichPageDidYouLike {
 class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
-    case CreateQuestion(user_id, item_id) =>
+    case CreateQuestion(userId, itemId) =>
       val client = sender()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
       val likesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
       val pageQuery = BSONDocument(
-        "page_id" -> item_id
+        "pageId" -> itemId
       )
-      fetchPage(pagesCollection, item_id, client) {
+      fetchPage(pagesCollection, itemId, client) {
         case Some(page) =>
-          fetchLikedPages(likesCollection, user_id, client) {
+          fetchLikedPages(likesCollection, userId, client) {
             list =>
-              val ids = list.map(fbPageLike => fbPageLike.page_id)
+              val ids = list.map(fbPageLike => fbPageLike.pageId)
               val queryNotLiked = BSONDocument(
-                "page_id" -> BSONDocument("$nin" -> ids)
+                "pageId" -> BSONDocument("$nin" -> ids)
               )
               getDocuments[FBPage](db, pagesCollection, queryNotLiked, 3).onComplete {
                 case Success(listPages) =>
@@ -50,12 +50,12 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
                           case Some(p) => p.source
                           case None => None
                         }
-                        Possibility(pge.name.get, url, Some(pge.page_id))
+                        Possibility(pge.name.get, url, Some(pge.pageId))
                     }
                     val answer = possibilities.head
                     val shuffled = Random.shuffle(possibilities)
                     val subject = PageSubject(answer.name, "http://facebook.com/" + answer.fbId.get, answer.imageUrl)
-                    val gameQuestion = MultipleChoiceQuestion(user_id, MultipleChoice, MCWhichPageDidYouLike, subject, shuffled, shuffled.indexOf(answer))
+                    val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhichPageDidYouLike, subject, shuffled, shuffled.indexOf(answer))
                     client ! FinishedQuestionCreation(gameQuestion)
                   }
                 case Failure(e) =>

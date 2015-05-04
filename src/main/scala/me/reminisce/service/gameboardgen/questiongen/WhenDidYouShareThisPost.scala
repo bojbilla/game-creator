@@ -23,22 +23,22 @@ object WhenDidYouShareThisPost {
 
 class WhenDidYouShareThisPost(db: DefaultDB) extends QuestionGenerator {
   def receive = {
-    case CreateQuestion(user_id, item_id) =>
+    case CreateQuestion(userId, itemId) =>
       val client = sender()
       val query = BSONDocument(
-        "user_id" -> user_id,
-        "post_id" -> item_id
+        "userId" -> userId,
+        "postId" -> itemId
       )
       val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
       postCollection.find(query).one[FBPost].onComplete {
         case Success(postOpt) =>
           val post = postOpt.get
-          val index = post.created_time.get.indexOf('T')
-          val dateString = post.created_time.get.substring(0, index)
+          val index = post.createdTime.get.indexOf('T')
+          val dateString = post.createdTime.get.substring(0, index)
           val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
           val actualDate = formatter.parseDateTime(dateString)
           val postSubject = subjectFromPost(post)
-          val tlQuestion = TimelineQuestion(user_id, Timeline, TLWhenDidYouShareThisPost, postSubject, actualDate)
+          val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouShareThisPost, postSubject, actualDate)
           client ! FinishedQuestionCreation(tlQuestion)
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")

@@ -22,10 +22,10 @@ object WhoMadeThisCommentOnYourPost {
 class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
-    case CreateQuestion(user_id, item_id) =>
+    case CreateQuestion(userId, itemId) =>
       val client = sender()
       val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
-      postCollection.find(BSONDocument("user_id" -> user_id, "post_id" -> item_id)).one[FBPost].onComplete {
+      postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost].onComplete {
         case Success(postOpt) =>
           val post = postOpt.get
           val selectedComments = getCandidatesComments(post.comments.get)
@@ -33,11 +33,11 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
           val shuffled = Random.shuffle(selectedComments)
           val answer = shuffled.indexOf(rightOne)
           val shuffledPossibilities = shuffled.map {
-            comm => Possibility(comm.from.user_name, None, Some(comm.from.user_id))
+            comm => Possibility(comm.from.userName, None, Some(comm.from.userId))
           }
           val postSubject = subjectFromPost(post)
           val commentSubject = CommentSubject(rightOne.message, postSubject)
-          val gameQuestion = MultipleChoiceQuestion(user_id, MultipleChoice, MCWhoMadeThisCommentOnYourPost, commentSubject, shuffledPossibilities, answer)
+          val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoMadeThisCommentOnYourPost, commentSubject, shuffledPossibilities, answer)
           client ! FinishedQuestionCreation(gameQuestion)
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")

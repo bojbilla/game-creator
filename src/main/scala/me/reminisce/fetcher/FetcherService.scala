@@ -17,17 +17,14 @@ import spray.http.StatusCodes._
 
 import scala.util.{Failure, Success}
 
-/**
- * Created by roger on 05/03/15.
- */
 
 object FetcherService {
 
-  case class FetchData(user_id: String, access_token: String) extends RestMessage
+  case class FetchData(userId: String, accessToken: String) extends RestMessage
 
-  case class FetchDataSince(user_id: String, access_token: String, since: DateTime) extends RestMessage
+  case class FetchDataSince(userId: String, accessToken: String, since: DateTime) extends RestMessage
 
-  case class FinishedFetching(user_id: String)
+  case class FinishedFetching(userId: String)
 
   def props(database: DefaultDB): Props =
     Props(new FetcherService(database))
@@ -36,13 +33,13 @@ object FetcherService {
 class FetcherService(database: DefaultDB) extends FBCommunicationManager {
   var currentlyFetching: Set[String] = Set()
 
-  def receive() = {
+  def receive = {
     case FetchData(userId, accessToken) =>
       val client = sender()
       if (!currentlyFetching.contains(userId)) {
         val lastFetched = database[BSONCollection](MongoDatabaseService.lastFetchedCollection)
         val query = BSONDocument(
-          "user_id" -> userId
+          "userId" -> userId
         )
         val currentTime = DateTime.now
         lastFetched.find(query).cursor[LastFetched].collect[List]().map {

@@ -15,10 +15,10 @@ import scala.concurrent.ExecutionContextExecutor
 
 object GameGenerator {
 
-  def props(database: DefaultDB, user_id: String): Props =
-    Props(new GameGenerator(database, user_id))
+  def props(database: DefaultDB, userId: String): Props =
+    Props(new GameGenerator(database, userId))
 
-  case class CreateBoard(access_token: String, strategy: String) extends RestMessage
+  case class CreateBoard(accessToken: String, strategy: String) extends RestMessage
 
   case class InitBoardCreation()
 
@@ -26,7 +26,7 @@ object GameGenerator {
 
 }
 
-class GameGenerator(database: DefaultDB, user_id: String) extends Actor with ActorLogging {
+class GameGenerator(database: DefaultDB, userId: String) extends Actor with ActorLogging {
   implicit def dispatcher: ExecutionContextExecutor = context.dispatcher
 
   implicit def actorRefFactory: ActorContext = context
@@ -36,12 +36,12 @@ class GameGenerator(database: DefaultDB, user_id: String) extends Actor with Act
   var isTokenStale = false
 
   def receive = {
-    case CreateBoard(access_token, strategy) =>
+    case CreateBoard(accessToken, strategy) =>
       val client = sender()
       val creator = getCreatorFromStrategy(strategy)
       val fetcherService = context.actorOf(FetcherService.props(database))
       creator ! InitBoardCreation()
-      fetcherService ! FetchData(user_id, access_token)
+      fetcherService ! FetchData(userId, accessToken)
       context.become(awaitFeedBack(client, creator))
     case x => log.error("GameGenerator received unexpected Message " + x)
   }
@@ -49,15 +49,15 @@ class GameGenerator(database: DefaultDB, user_id: String) extends Actor with Act
 
   def getCreatorFromStrategy(strategy: String): ActorRef = strategy match {
     case "random" =>
-      context.actorOf(Props(new RandomBoardGenerator(database, user_id)))
+      context.actorOf(Props(new RandomBoardGenerator(database, userId)))
     case any =>
-      context.actorOf(Props(new RandomBoardGenerator(database, user_id)))
+      context.actorOf(Props(new RandomBoardGenerator(database, userId)))
   }
 
 
   // Awaits feedback from the FetcherService and the tile creators
   def awaitFeedBack(client: ActorRef, worker: ActorRef): Receive = {
-    case FinishedTileCreation(userId, tile) =>
+    case FinishedTileCreation(usrId, tile) =>
       tiles = tile :: tiles
       verifyAndAnswer(client)
     case FailedBoardGeneration(message) =>
@@ -89,7 +89,7 @@ class GameGenerator(database: DefaultDB, user_id: String) extends Actor with Act
 
   def verifyAndAnswer(client: ActorRef): Unit = {
     if (tiles.length == 9 && fetcherAcked) {
-      val board = Board(user_id, tiles, isTokenStale = isTokenStale)
+      val board = Board(userId, tiles, isTokenStale = isTokenStale)
       client ! board
       sender() ! PoisonPill
     }

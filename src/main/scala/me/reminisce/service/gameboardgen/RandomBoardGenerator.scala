@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen
 
 import akka.actor.ActorRef
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.mongodb.MongoDBEntities.{FBPageLike, PostQuestions, UserStat}
+import me.reminisce.mongodb.MongoDBEntities.{FBPageLike, PostQuestions, UserStats}
 import me.reminisce.service.gameboardgen.BoardGenerator.FailedBoardGeneration
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType
@@ -19,14 +19,14 @@ object RandomBoardGenerator {
 
 }
 
-class RandomBoardGenerator(database: DefaultDB, user_id: String) extends BoardGenerator(database, user_id) {
+class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGenerator(database, userId) {
 
   def createGame(client: ActorRef): Unit = {
     val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)
-    val selector = BSONDocument("user_id" -> user_id)
-    findOne[UserStat](userCollection, selector, client) {
-      case Some(userStat) =>
-        if (userStat.question_counts.contains("MCWhichPageDidYouLike")) {
+    val selector = BSONDocument("userId" -> userId)
+    findOne[UserStats](userCollection, selector, client) {
+      case Some(userStats) =>
+        if (userStats.questionCounts.contains("MCWhichPageDidYouLike")) {
           generateRandomBoardWithPages(client)
         } else {
           generateRandomBoard(client)
@@ -38,7 +38,7 @@ class RandomBoardGenerator(database: DefaultDB, user_id: String) extends BoardGe
 
 
   def handleTileCreated(client: ActorRef, finish: FinishedTileCreation): Unit = {
-    client ! FinishedTileCreation(finish.user_id, finish.tile)
+    client ! FinishedTileCreation(finish.userId, finish.tile)
   }
 
   def handleTileFailed(client: ActorRef, failed: FailedTileCreation): Unit = {
@@ -48,16 +48,16 @@ class RandomBoardGenerator(database: DefaultDB, user_id: String) extends BoardGe
   }
 
   def generateRandomBoardWithPages(client: ActorRef): Unit = {
-    val postSelector = BSONDocument("user_id" -> user_id, "questions_count" -> BSONDocument("$gt" -> 0))
+    val postSelector = BSONDocument("userId" -> userId, "questionsCount" -> BSONDocument("$gt" -> 0))
     val postsQuestionsCollection = database[BSONCollection](MongoDatabaseService.postQuestionsCollection)
     findSome[PostQuestions](postsQuestionsCollection, postSelector, client) {
       listPostQuestions =>
-        val pagesSelector = BSONDocument("user_id" -> user_id)
+        val pagesSelector = BSONDocument("userId" -> userId)
         val pageLikesCollection = database[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
         findSome[FBPageLike](pageLikesCollection, pagesSelector, client) {
           listPageLikes =>
-            val listPageLikesReformed = listPageLikes.map(pageLike => pageLike.page_id -> List("MCWhichPageDidYouLike"))
-            val listPostQuestionsReformed = listPostQuestions.map(postQuestion => postQuestion.post_id -> postQuestion.questions)
+            val listPageLikesReformed = listPageLikes.map(pageLike => pageLike.pageId -> List("MCWhichPageDidYouLike"))
+            val listPostQuestionsReformed = listPostQuestions.map(postQuestion => postQuestion.postId -> postQuestion.questions)
             val fullQuestionChoice = listPageLikesReformed ++ listPostQuestionsReformed
             generateWithListOfChoices(client, fullQuestionChoice)
         }
@@ -65,11 +65,11 @@ class RandomBoardGenerator(database: DefaultDB, user_id: String) extends BoardGe
   }
 
   def generateRandomBoard(client: ActorRef): Unit = {
-    val selector = BSONDocument("user_id" -> user_id, "questions_count" -> BSONDocument("$gt" -> 0))
+    val selector = BSONDocument("userId" -> userId, "questionsCount" -> BSONDocument("$gt" -> 0))
     val postsQuestionsCollection = database[BSONCollection](MongoDatabaseService.postQuestionsCollection)
     findSome[PostQuestions](postsQuestionsCollection, selector, client) {
       listPostQuestions =>
-        val listPostQuestionsReformed = listPostQuestions.map(postQuestion => postQuestion.post_id -> postQuestion.questions)
+        val listPostQuestionsReformed = listPostQuestions.map(postQuestion => postQuestion.postId -> postQuestion.questions)
         generateWithListOfChoices(client, listPostQuestionsReformed)
     }
   }
@@ -91,7 +91,7 @@ class RandomBoardGenerator(database: DefaultDB, user_id: String) extends BoardGe
         val mappedWithKind = mapToKind(preparedQuestions)
         generateTiles(mappedWithKind)
       } else {
-        client ! FailedBoardGeneration(s"Failed to generate board for user $user_id : not enough data.")
+        client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
       }
 
     }
@@ -124,13 +124,13 @@ class RandomBoardGenerator(database: DefaultDB, user_id: String) extends BoardGe
           case List() =>
             val (selected, next) = questions.splitAt(3)
             val worker = context.actorOf(TileGenerator.props(database))
-            worker ! CreateTile(user_id, selected.map(_._2))
+            worker ! CreateTile(userId, selected.map(_._2))
             generateTiles(next)
           case someQs =>
             val selectedQuestions = someQs.head._2.take(3)
             val kind = selectedQuestions.head._1
             val worker = context.actorOf(TileGenerator.props(database))
-            worker ! CreateTile(user_id, selectedQuestions.map(_._2), kind)
+            worker ! CreateTile(userId, selectedQuestions.map(_._2), kind)
             generateTiles(questions.filterNot(selectedQuestions.toSet))
         }
 

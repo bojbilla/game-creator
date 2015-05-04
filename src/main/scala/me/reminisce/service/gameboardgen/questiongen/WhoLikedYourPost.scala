@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import akka.actor.Props
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.mongodb.MongoDBEntities.{FBPost, UserStat}
+import me.reminisce.mongodb.MongoDBEntities.{FBPost, UserStats}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities._
@@ -25,35 +25,35 @@ object WhoLikedYourPost {
 class WhoLikedYourPost(database: DefaultDB) extends QuestionGenerator {
 
   def receive = {
-    case CreateQuestion(user_id, item_id) =>
+    case CreateQuestion(userId, itemId) =>
       val client = sender()
-      // Note : if this question has been picked, it can only be if a UserStat exists
+      // Note : if this question has been picked, it can only be if a UserStats exists
 
       val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
-      userCollection.find(BSONDocument("user_id" -> user_id)).one[UserStat].onComplete {
-        case Success(userStatOpt) =>
-          userStatOpt match {
-            case Some(userStat) =>
+      userCollection.find(BSONDocument("userId" -> userId)).one[UserStats].onComplete {
+        case Success(userStatsOpt) =>
+          userStatsOpt match {
+            case Some(userStats) =>
               val postCollection = database[BSONCollection](MongoDatabaseService.fbPostsCollection)
-              postCollection.find(BSONDocument("user_id" -> user_id, "post_id" -> item_id)).one[FBPost].onComplete {
+              postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost].onComplete {
                 case Success(postOpt) => {
                   val post = postOpt.get //post should exist
                   val postSubject = subjectFromPost(post)
                   val liker = Random.shuffle(post.likes.get).head
-                  val choices = (liker :: Random.shuffle((userStat.likers -- post.likes.get.toSet).toList).take(3)) map {
-                    choice => Possibility(choice.user_name, None, Some(choice.user_id))
+                  val choices = (liker :: Random.shuffle((userStats.likers -- post.likes.get.toSet).toList).take(3)) map {
+                    choice => Possibility(choice.userName, None, Some(choice.userId))
                   }
                   val answer = choices.head
                   val shuffled = Random.shuffle(choices)
-                  val gameQuestion = MultipleChoiceQuestion(user_id, MultipleChoice, MCWhoLikedYourPost, postSubject, shuffled, shuffled.indexOf(answer))
+                  val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, postSubject, shuffled, shuffled.indexOf(answer))
                   client ! FinishedQuestionCreation(gameQuestion)
                 }
                 case Failure(e) =>
                   client ! MongoDBError(s"${e.getMessage}")
               }
             case None =>
-              client ! NotEnoughData(s"Strangely there is no userStat.")
+              client ! NotEnoughData(s"Strangely there is no userStats.")
           }
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")

@@ -9,9 +9,6 @@ import spray.can.Http
 import scala.concurrent.ExecutionContext
 import scala.util.Properties._
 
-/**
- * Created by roger on 10/11/14.
- */
 object Server extends App {
   // we Server an ActorSystem to host our application in
   implicit val system = ActorSystem("server")

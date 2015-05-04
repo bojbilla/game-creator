@@ -10,9 +10,6 @@ import spray.http.{HttpRequest, HttpResponse}
 
 import scala.concurrent.Future
 
-/** d
-  * Created by roger on 05/03/15.
-  */
 
 abstract class FBCommunicationManager extends Actor with ActorLogging {
   implicit def dispatcher = context.dispatcher

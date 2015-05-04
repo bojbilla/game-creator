@@ -14,7 +14,7 @@ import scala.util.Random
 
 object QuestionGenerator {
 
-  case class CreateQuestion(user_id: String, item_id: String) extends RestMessage
+  case class CreateQuestion(userId: String, itemId: String) extends RestMessage
 
   case class FinishedQuestionCreation(question: GameQuestion)
 
@@ -61,19 +61,19 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
         tpe match {
           case "photo" =>
             val text = textFromPost(post)
-            val image_url = srcFromAttachments(post.attachments)
+            val imageUrl = srcFromAttachments(post.attachments)
             val facebook_image_url = post.link
-            ImagePostSubject(text, image_url, facebook_image_url)
+            ImagePostSubject(text, imageUrl, facebook_image_url)
           case "video" =>
             val text = textFromPost(post)
-            val thumbnail_url = srcFromAttachments(post.attachments)
+            val thumbnailUrl = srcFromAttachments(post.attachments)
             val url = post.link
-            VideoPostSubject(text, thumbnail_url, url)
+            VideoPostSubject(text, thumbnailUrl, url)
           case "link" =>
             val text = textFromPost(post)
-            val thumbnail_url = srcFromAttachments(post.attachments)
+            val thumbnailUrl = srcFromAttachments(post.attachments)
             val url = post.link
-            LinkPostSubject(text, thumbnail_url, url)
+            LinkPostSubject(text, thumbnailUrl, url)
           case _ =>
             val text = textFromPost(post)
             TextPostSubject(text)

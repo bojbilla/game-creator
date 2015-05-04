@@ -42,24 +42,24 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
     path("fetchData") {
       get {
         parameters('user_id.as[String], 'access_token.as[String]) {
-          (user_id: String, access_token: String) =>
+          (userId: String, accessToken: String) =>
             fetchData {
-              FetchData(user_id, access_token)
+              FetchData(userId, accessToken)
             }
         }
       }
     } ~ path("gameboard") {
       parameters("user_id", "access_token", "strategy" ? "random") {
-        (user_id: String, access_token: String, strategy: String) =>
-          createBoard(CreateBoard(access_token, strategy), user_id)
+        (userId: String, accessToken: String, strategy: String) =>
+          createBoard(CreateBoard(accessToken, strategy), userId)
       }
     }
   }
 
 
-  def createBoard(message: RestMessage, user_id: String): Route = {
+  def createBoard(message: RestMessage, userId: String): Route = {
     log.info("Creating game board")
-    val generator = context.actorOf(GameGenerator.props(db, user_id))
+    val generator = context.actorOf(GameGenerator.props(db, userId))
     ctx => perRequest(ctx, generator, message)
   }
 

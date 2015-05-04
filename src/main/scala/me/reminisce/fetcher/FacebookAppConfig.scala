@@ -5,10 +5,7 @@ import org.json4s.DefaultFormats
 
 import scala.concurrent.duration._
 
-/**
- * Created by roger on 05/03/15.
- */
-case class FacebookAppConfig(app_id: String, app_secret: String)
+case class FacebookAppConfig(appId: String, appSecret: String)
 
 
 object FacebookServiceConfig {

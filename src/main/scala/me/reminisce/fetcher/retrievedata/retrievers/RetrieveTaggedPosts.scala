@@ -7,9 +7,6 @@ import me.reminisce.fetcher.common.RetrieveEntitiesService.{FinishedRetrievingEn
 import me.reminisce.fetcher.retrievedata.RetrieveData
 import me.reminisce.fetcher.retrievedata.retrievers.RetrieveTaggedPosts.{FinishedRetrievingTaggedPosts, PartialTaggedPostsResult}
 
-/**
- * Created by roger on 05/03/15.
- */
 object RetrieveTaggedPosts {
   def props(): Props =
     Props(new RetrieveTaggedPosts())

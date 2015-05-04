@@ -10,16 +10,16 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 object MongoDatabaseService {
-  val fbPagesCollection = "fb_pages"
-  val fbPageLikesCollection = "fb_page_likes"
-  val fbTaggedPostsCollection = "fb_tagged_posts"
-  val fbPostsCollection = "fb_posts"
-  val lastFetchedCollection = "last_fetched"
-  val userStatisticsCollection = "user_statistics"
-  val postQuestionsCollection = "post_questions"
+  val fbPagesCollection = "fbPages"
+  val fbPageLikesCollection = "fbPageLikes"
+  val fbTaggedPostsCollection = "fbTaggedPosts"
+  val fbPostsCollection = "fbPosts"
+  val lastFetchedCollection = "lastFetched"
+  val userStatisticsCollection = "userStatistics"
+  val postQuestionsCollection = "postQuestions"
 
-  def props(userID: String, db: DefaultDB): Props =
-    Props(new MongoDatabaseService(userID, db))
+  def props(userId: String, db: DefaultDB): Props =
+    Props(new MongoDatabaseService(userId, db))
 
   case class SaveFBPage(pages: List[Page])
 
@@ -31,7 +31,7 @@ object MongoDatabaseService {
 
 }
 
-class MongoDatabaseService(userID: String, db: DefaultDB) extends DatabaseService {
+class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseService {
 
   def receive = {
     case SaveFBPage(pages) =>
@@ -42,7 +42,7 @@ class MongoDatabaseService(userID: String, db: DefaultDB) extends DatabaseServic
       saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbTaggedPostsCollection))
     case SaveLastFetchedTime =>
       saveLastFetchTime(db[BSONCollection](MongoDatabaseService.lastFetchedCollection))
-    case any => log.error(s"MongoDB Service received unexpected message : " + any)
+    case any => log.error(s"MongoDB Service received unexpected message : $any")
   }
 
   def saveFBPagesToDB(pages: List[Page]): Unit = {
@@ -61,11 +61,11 @@ class MongoDatabaseService(userID: String, db: DefaultDB) extends DatabaseServic
         FBPhoto(photo.id, photo.source, photo.created_time, tags)
       }
 
-      val query = BSONDocument("page_id" -> p.id)
+      val query = BSONDocument("pageId" -> p.id)
       fbPageCollection.update(query, FBPage(None, p.id, p.name, fbPhoto), upsert = true)
 
-      val query2 = BSONDocument("user_id" -> userID, "page_id" -> p.id)
-      fbPageLikeCollection.update(query2, FBPageLike(None, userID, p.id), upsert = true)
+      val query2 = BSONDocument("userId" -> userId, "pageId" -> p.id)
+      fbPageLikeCollection.update(query2, FBPageLike(None, userId, p.id), upsert = true)
     }
   }
 
@@ -91,10 +91,10 @@ class MongoDatabaseService(userID: String, db: DefaultDB) extends DatabaseServic
             lat, long, location.street, location.zip), place.created_time))
         ))
       )))
-      val fbPost = FBPost(None, userID, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,
+      val fbPost = FBPost(None, userId, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,
         likes, like_count, p.`type`, p.link, fbAttachments, fbComments, fbCommentsCount)
 
-      val selector = BSONDocument("user_id" -> userID, "post_id" -> p.id)
+      val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
       collection.update(selector, fbPost, upsert = true)
     }
   }
@@ -103,9 +103,9 @@ class MongoDatabaseService(userID: String, db: DefaultDB) extends DatabaseServic
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val time = DateTime.now
-    val selector = BSONDocument("user_id" -> userID)
+    val selector = BSONDocument("userId" -> userId)
 
-    val update = BSONDocument("user_id" -> userID, "date" -> time)
+    val update = BSONDocument("userId" -> userId, "date" -> time)
 
     collection.update(selector, update, upsert = true)
   }

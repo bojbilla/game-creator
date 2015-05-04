@@ -23,7 +23,7 @@ object GameboardEntities {
 
   object QuestionKind extends Enumeration {
     type QuestionKind = Value
-    val MultipleChoice, Timeline, Geolocation, OrderedList, Misc = Value
+    val MultipleChoice, Timeline, Geolocation, Misc = Value
   }
 
 
@@ -32,7 +32,7 @@ object GameboardEntities {
   abstract sealed class PostSubject(`type`: String, text: String) extends Subject(`type`)
 
   case class PageSubject(name: String, url: String,
-                         photoURL: Option[String],
+                         photoUrl: Option[String],
                          `type`: String = "Page") extends Subject(`type`)
 
   case class TextPostSubject(text: String, `type`: String = "TextPost") extends PostSubject(`type`, text)

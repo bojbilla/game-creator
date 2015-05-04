@@ -13,15 +13,9 @@ object TileGenerator {
   def props(database: DefaultDB): Props =
     Props(new TileGenerator(database))
 
-  case class CreateMultipleChoiceTile(user_id: String)
+  case class CreateTile(userId: String, choices: List[(String, String)], `type`: QuestionKind = Misc)
 
-  case class CreateTimelineTile(user_id: String)
-
-  case class CreateGeolocationTile(user_id: String)
-
-  case class CreateTile(user_id: String, choices: List[(String, String)], `type`: QuestionKind = Misc)
-
-  case class FinishedTileCreation(user_id: String, tile: Tile)
+  case class FinishedTileCreation(userId: String, tile: Tile)
 
   case class FailedTileCreation(message: String)
 
@@ -35,14 +29,14 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
 
-    case CreateTile(user_id, choices, tpe) =>
+    case CreateTile(userId, choices, tpe) =>
       choices.foreach {
         choice =>
           val generator = createQuestionGenerators(SpecificQuestionType.withName(choice._2))
-          generator ! CreateQuestion(user_id, choice._1)
+          generator ! CreateQuestion(userId, choice._1)
       }
       val client = sender()
-      context.become(awaitingQuestions(client, user_id, tpe))
+      context.become(awaitingQuestions(client, userId, tpe))
   }
 
   def createQuestionGenerators(questionType: SpecificQuestionType): ActorRef = {
@@ -62,13 +56,13 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
     }
   }
 
-  def awaitingQuestions(client: ActorRef, user_id: String, `type`: QuestionKind): Receive = {
+  def awaitingQuestions(client: ActorRef, userId: String, `type`: QuestionKind): Receive = {
     case FinishedQuestionCreation(q) =>
       questions = q :: questions
       sender() ! PoisonPill
       if (questions.length >= 3) {
         val tile = Tile(`type`, questions(0), questions(1), questions(2))
-        client ! FinishedTileCreation(user_id, tile)
+        client ! FinishedTileCreation(userId, tile)
       }
 
     case MongoDBError(message) =>

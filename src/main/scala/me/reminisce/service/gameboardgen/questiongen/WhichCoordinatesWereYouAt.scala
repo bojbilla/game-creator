@@ -22,11 +22,11 @@ object WhichCoordinatesWereYouAt {
 
 class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
   def receive = {
-    case CreateQuestion(user_id, item_id) =>
+    case CreateQuestion(userId, itemId) =>
       val client = sender()
       val query = BSONDocument(
-        "user_id" -> user_id,
-        "post_id" -> item_id
+        "userId" -> userId,
+        "postId" -> itemId
       )
       val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
       postCollection.find(query).one[FBPost].onComplete {
@@ -34,7 +34,7 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
           val post = postOpt.get
           val postSubject = subjectFromPost(post)
           val location = Location(post.place.get.location.latitude, post.place.get.location.longitude)
-          val gameQuestion = CoordinatesQuestion(user_id, MultipleChoice, GeoWhatCoordinatesWereYouAt, postSubject, location)
+          val gameQuestion = CoordinatesQuestion(userId, MultipleChoice, GeoWhatCoordinatesWereYouAt, postSubject, location)
           client ! FinishedQuestionCreation(gameQuestion)
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")

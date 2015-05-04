@@ -7,9 +7,6 @@ import me.reminisce.fetcher.common.RetrieveEntitiesService.{FinishedRetrievingEn
 import me.reminisce.fetcher.retrievedata.RetrieveData
 import me.reminisce.fetcher.retrievedata.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
 
-/**
- * Created by roger on 05/03/15.
- */
 
 object RetrieveLikedPages {
   def props(): Props =

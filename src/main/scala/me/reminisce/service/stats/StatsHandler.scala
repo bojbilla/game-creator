@@ -17,11 +17,11 @@ object StatsHandler {
 
   case class TransientPostsStats(fbPosts: List[Post])
 
-  def props(user_id: String, db: DefaultDB): Props =
-    Props(new StatsHandler(user_id, db))
+  def props(userId: String, db: DefaultDB): Props =
+    Props(new StatsHandler(userId, db))
 }
 
-class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
+class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
 
   def receive = {
     case FinalStats(fbPosts) =>
@@ -35,15 +35,15 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
   def saveTransientStats(fbPosts: List[Post], postQuestionsCollection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val userCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
-    val selector = BSONDocument("user_id" -> user_id)
-    userCollection.find(selector).one[UserStat].onComplete {
-      case Success(userStatOpt) =>
-        val userStat = userStatOpt.fold(UserStat(user_id = user_id))(elm => elm)
+    val selector = BSONDocument("userId" -> userId)
+    userCollection.find(selector).one[UserStats].onComplete {
+      case Success(userStatsOpt) =>
+        val userStats = userStatsOpt.fold(UserStats(userId = userId))(elm => elm)
         fbPosts.foreach {
           post =>
-            val selector = BSONDocument("user_id" -> user_id, "post_id" -> post.id)
-            val availableQuestions = availableQuestionTypes(post, userStat)
-            val postQuestions = PostQuestions(None, user_id, post.id, availableQuestions, availableQuestions.length)
+            val selector = BSONDocument("userId" -> userId, "postId" -> post.id)
+            val availableQuestions = availableQuestionTypes(post, userStats)
+            val postQuestions = PostQuestions(None, userId, post.id, availableQuestions, availableQuestions.length)
             postQuestionsCollection.update(selector, postQuestions, upsert = true)
         }
       case Failure(e) =>
@@ -51,17 +51,17 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
     }
   }
 
-  def availableQuestionTypes(post: Post, userStat: UserStat): List[String] = {
+  def availableQuestionTypes(post: Post, userStats: UserStats): List[String] = {
     List(checkWhichCoordinatesWereYouAt(post),
       checkWhenDidYouShareThisPost(post), checkWhoMadeThisCommentOnYourPost(post),
-      checkWhoLikedYourPost(post, userStat)).flatten
+      checkWhoLikedYourPost(post, userStats)).flatten
   }
 
-  def checkWhoLikedYourPost(post: Post, userStat: UserStat): Option[String] = {
+  def checkWhoLikedYourPost(post: Post, userStats: UserStats): Option[String] = {
     post.likes.flatMap {
       list => list.data.flatMap {
         data =>
-          if (userStat.likers.size - data.length >= 3) {
+          if (userStats.likers.size - data.length >= 3) {
             Some("MCWhoLikedYourPost")
           } else {
             None
@@ -106,10 +106,10 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
   def savePostsStats(newPosts: List[String], userCollection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
-    val selector = BSONDocument("user_id" -> user_id)
-    userCollection.find(selector).one[UserStat].onComplete {
+    val selector = BSONDocument("userId" -> userId)
+    userCollection.find(selector).one[UserStats].onComplete {
       case Success(userStatsOpt) =>
-        val userStats = userStatsOpt.fold(UserStat(user_id = user_id))(elm => elm)
+        val userStats = userStatsOpt.fold(UserStats(userId = userId))(elm => elm)
         mergeStatsWithNewPosts(postCollection, newPosts, userCollection, userStats)
       case Failure(e) =>
         log.error("Could not access user DB.")
@@ -118,10 +118,10 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
 
 
   def mergeStatsWithNewPosts(postCollection: BSONCollection, newPosts: List[String], userCollection: BSONCollection,
-                             userStats: UserStat): Unit = {
+                             userStats: UserStats): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val cursor = postCollection.find(BSONDocument("user_id" -> user_id,
-      "post_id" -> BSONDocument("$in" -> newPosts))).cursor[FBPost]
+    val cursor = postCollection.find(BSONDocument("userId" -> userId,
+      "postId" -> BSONDocument("$in" -> newPosts))).cursor[FBPost]
     cursor.collect[List](newPosts.length, stopOnError = true).onComplete {
       case Success(list: List[FBPost]) =>
         val newLikers = list.foldLeft(Set[FBLike]()) {
@@ -131,24 +131,24 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
               case None => acc
             }
           }
-        }
-        val maxLikerPerPost = (userStats.max_likers_per_post :: list.map(post => post.likes match {
+        } ++ userStats.likers
+        val maxLikerPerPost = (userStats.maxLikerPerPost :: list.map(post => post.likes match {
           case Some(likes) => likes.length
           case None => 0
         })).max
 
         val postQuestionsCollection = db[BSONCollection](MongoDatabaseService.postQuestionsCollection)
-        val cursor2 = postQuestionsCollection.find(BSONDocument("user_id" -> user_id,
-          "post_id" -> BSONDocument("$in" -> newPosts))).cursor[PostQuestions]
+        val cursor2 = postQuestionsCollection.find(BSONDocument("userId" -> userId,
+          "postId" -> BSONDocument("$in" -> newPosts))).cursor[PostQuestions]
         cursor2.collect[List](newPosts.length, stopOnError = true).onComplete {
           case Success(l: List[PostQuestions]) =>
-            val questionCounts = l.foldLeft(userStats.question_counts) {
+            val questionCounts = l.foldLeft(userStats.questionCounts) {
               (acc: Map[String, Int], postQuestions: PostQuestions) =>
                 addQuestionsToMap(postQuestions.questions, acc)
             }
 
-            val newStats = UserStat(None, user_id, questionCounts, newLikers, maxLikerPerPost)
-            if ((newLikers.size - maxLikerPerPost) >= 3 && !userStats.question_counts.contains("MCWhoLikedYourPost")) {
+            val newStats = UserStats(None, userId, questionCounts, newLikers, maxLikerPerPost)
+            if ((newLikers.size - maxLikerPerPost) >= 3 && !userStats.questionCounts.contains("MCWhoLikedYourPost")) {
               updateWhoLikedYourPost(userCollection, postCollection, newStats)
             } else {
               val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
@@ -163,36 +163,36 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
     }
   }
 
-  def savePagesStats(pagesCollection: BSONCollection, pageLikesCollection: BSONCollection, userStat: UserStat): Unit = {
+  def savePagesStats(pagesCollection: BSONCollection, pageLikesCollection: BSONCollection, userStats: UserStats): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val selector = BSONDocument(
-      "user_id" -> user_id
+      "userId" -> userId
     )
     val likedPageIds = pageLikesCollection.find(selector).cursor[FBPageLike].collect[List]().map {
       likes =>
         likes.map {
           like =>
-            like.page_id
+            like.pageId
         }
     }
     likedPageIds.onComplete {
       case Success(pIds) =>
         val queryNotLiked = BSONDocument(
-          "page_id" -> BSONDocument("$nin" -> pIds)
+          "pageId" -> BSONDocument("$nin" -> pIds)
         )
         pagesCollection.find(queryNotLiked).cursor[FBPage].collect[List](3).onComplete {
           case Success(notLikedPages) =>
-            val newUserStat = {
+            val newUserStats = {
               if (notLikedPages.length >= 3) {
-                val oldQuestionCounts = userStat.question_counts
+                val oldQuestionCounts = userStats.questionCounts
                 val newQuestionCounts = oldQuestionCounts.updated("MCWhichPageDidYouLike", pIds.length)
-                UserStat(None, userStat.user_id, newQuestionCounts, userStat.likers, userStat.max_likers_per_post)
+                UserStats(None, userStats.userId, newQuestionCounts, userStats.likers, userStats.maxLikerPerPost)
               } else {
-                userStat
+                userStats
               }
             }
             val userCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
-            userCollection.update(selector, newUserStat, upsert = true)
+            userCollection.update(selector, newUserStats, upsert = true)
           case Failure(e) =>
             log.error("Could not reach database : " + e)
         }
@@ -202,36 +202,36 @@ class StatsHandler(user_id: String, db: DefaultDB) extends DatabaseService {
   }
 
   //TODO: make this better
-  def updateWhoLikedYourPost(userCollection: BSONCollection, postCollection: BSONCollection, userStat: UserStat): Unit = {
+  def updateWhoLikedYourPost(userCollection: BSONCollection, postCollection: BSONCollection, userStats: UserStats): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val selector = BSONDocument("user_id" -> user_id)
+    val selector = BSONDocument("userId" -> userId)
     postCollection.find(selector).cursor[FBPost].collect[List]().onComplete {
       case Success(list) =>
         val interestingPosts = list.map {
-          post => post.post_id -> post.likes.fold(0)(elm => elm.length)
-        }.filter(elm => elm._2 > 0 && userStat.likers.size - elm._2 >= 3).map(elm => elm._1)
+          post => post.postId -> post.likes.fold(0)(elm => elm.length)
+        }.filter(elm => elm._2 > 0 && userStats.likers.size - elm._2 >= 3).map(elm => elm._1)
         val postQuestionsCollection = db[BSONCollection](MongoDatabaseService.postQuestionsCollection)
-        val postQuestionsSelector = BSONDocument("user_id" -> user_id,
-          "post_id" -> BSONDocument("$in" -> interestingPosts))
+        val postQuestionsSelector = BSONDocument("userId" -> userId,
+          "postId" -> BSONDocument("$in" -> interestingPosts))
         postQuestionsCollection.find(postQuestionsSelector).cursor[PostQuestions].collect[List]().onComplete {
           case Success(postQuestionsList) =>
             val newQuestions = postQuestionsList.flatMap {
               postQuestions =>
                 if (!postQuestions.questions.contains("MCWhoLikedYourPost")) {
-                  val newPostQuestions = PostQuestions(None, user_id, postQuestions.post_id,
-                    "MCWhoLikedYourPost" :: postQuestions.questions, postQuestions.questions_count + 1)
-                  val selector = BSONDocument("user_id" -> user_id, "post_id" -> postQuestions.post_id)
+                  val newPostQuestions = PostQuestions(None, userId, postQuestions.postId,
+                    "MCWhoLikedYourPost" :: postQuestions.questions, postQuestions.questionsCount + 1)
+                  val selector = BSONDocument("userId" -> userId, "postId" -> postQuestions.postId)
                   postQuestionsCollection.update(selector, newPostQuestions, upsert = true)
                   Some("MCWhoLikedYourPost")
                 } else {
                   None
                 }
             }
-            val newUserStat = UserStat(None, user_id, addQuestionsToMap(newQuestions, userStat.question_counts),
-              userStat.likers, userStat.max_likers_per_post)
+            val newUserStats = UserStats(None, userId, addQuestionsToMap(newQuestions, userStats.questionCounts),
+              userStats.likers, userStats.maxLikerPerPost)
             val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
             val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
-            savePagesStats(pagesCollection, pageLikesCollection, newUserStat)
+            savePagesStats(pagesCollection, pageLikesCollection, newUserStats)
           case Failure(e) =>
             log.error("Could not reach database : " + e)
         }
