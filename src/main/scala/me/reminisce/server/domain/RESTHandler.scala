@@ -9,7 +9,7 @@ import akka.actor.{OneForOneStrategy, _}
 import me.reminisce.server.domain.Domain.Error
 import me.reminisce.server.domain.RESTHandler.{WithActorRef, WithProps}
 import me.reminisce.server.jsonserializer.GameCreatorFormatter
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.FinishedQuestionCreation
 import spray.http.StatusCode
 import spray.http.StatusCodes._
 import spray.httpx.Json4sSupport
@@ -33,7 +33,6 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
 
   def receive = {
     case FinishedQuestionCreation(q) => complete(OK, q)
-    case FailedToCreateQuestion(m, t) => complete(PreconditionFailed, m)
     case error: Error => complete(NotFound, error)
     case tooMany: Domain.TooManyRequests => complete(TooManyRequests, tooMany)
     case v: Domain.Validation => complete(BadRequest, v)

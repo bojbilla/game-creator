@@ -23,7 +23,9 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
   implicit def actorRefFactory: ActorContext = context
 
   def createGame(client: ActorRef): Unit
+
   def handleTileCreated(client: ActorRef, finishMessage: FinishedTileCreation): Unit
+
   def handleTileFailed(client: ActorRef, failureMessage: FailedTileCreation): Unit
 
   var client: ActorRef = null
@@ -39,7 +41,7 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     case any =>
       client = sender()
       client ! FailedBoardGeneration(s"Received any : $any")
-      log.error("Received any : " + any)
+      log.error(s"Received any : $any")
   }
 
   def findOne[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (Option[T] => Unit))
@@ -47,7 +49,7 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     collection.find(selector).one[T].onComplete {
       case Success(opt) => f(opt)
       case Failure(e) =>
-        client ! FailedBoardGeneration(s"Could not generate board for user $user_id. Cause : $e")
+        client ! FailedBoardGeneration(s"MongoDB error : ${e.getMessage}.")
     }
   }
 
@@ -56,7 +58,7 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     collection.find(selector).cursor[T].collect[List]().onComplete {
       case Success(list) => f(list)
       case Failure(e) =>
-        client ! FailedBoardGeneration(s"Could not generate board for user $user_id. Cause : $e")
+        client ! FailedBoardGeneration(s"MongoDB error : ${e.getMessage}.")
     }
   }
 }

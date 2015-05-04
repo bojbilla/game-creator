@@ -1,12 +1,12 @@
 package me.reminisce.service.gameboardgen.questiongen
 
-import akka.actor.{ActorRef, Props}
+import akka.actor.Props
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.FBPost
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
-import me.reminisce.service.gameboardgen.GameboardEntities.{CoordinatesQuestion, Location, Question}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.GameboardEntities.{CoordinatesQuestion, Location}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -34,18 +34,13 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
           val post = postOpt.get
           val postSubject = subjectFromPost(post)
           val location = Location(post.place.get.location.latitude, post.place.get.location.longitude)
-          val question = Question(MultipleChoice, GeoWhatCoordinatesWereYouAt, postSubject)
-          val gameQuestion = CoordinatesQuestion(user_id, question, location)
+          val gameQuestion = CoordinatesQuestion(user_id, MultipleChoice, GeoWhatCoordinatesWereYouAt, postSubject, location)
           client ! FinishedQuestionCreation(gameQuestion)
         case Failure(e) =>
-          sendFailure(client, user_id)
+          client ! MongoDBError(s"${e.getMessage}")
       }
     case any =>
       log.error(s"Wrong message received $any.")
-  }
-
-  def sendFailure(client: ActorRef, user_id: String): Unit = {
-    client ! FailedToCreateQuestion(s"Something went wrong WhichCoordinateWereYouAt user: $user_id", GeoWhatCoordinatesWereYouAt)
   }
 
 }

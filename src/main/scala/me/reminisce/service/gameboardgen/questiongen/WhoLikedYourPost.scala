@@ -6,7 +6,7 @@ import me.reminisce.mongodb.MongoDBEntities.{FBPost, UserStat}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities._
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -37,26 +37,26 @@ class WhoLikedYourPost(database: DefaultDB) extends QuestionGenerator {
             case Some(userStat) =>
               val postCollection = database[BSONCollection](MongoDatabaseService.fbPostsCollection)
               postCollection.find(BSONDocument("user_id" -> user_id, "post_id" -> item_id)).one[FBPost].onComplete {
-                case Success(postOpt) =>
+                case Success(postOpt) => {
                   val post = postOpt.get //post should exist
-                val postSubject = subjectFromPost(post)
-                  val question = Question(MultipleChoice, MCWhoLikedYourPost, postSubject)
+                  val postSubject = subjectFromPost(post)
                   val liker = Random.shuffle(post.likes.get).head
                   val choices = (liker :: Random.shuffle((userStat.likers -- post.likes.get.toSet).toList).take(3)) map {
                     choice => Possibility(choice.user_name, None, Some(choice.user_id))
                   }
                   val answer = choices.head
                   val shuffled = Random.shuffle(choices)
-                  val gameQuestion = MultipleChoiceQuestion(user_id, question, shuffled, shuffled.indexOf(answer))
+                  val gameQuestion = MultipleChoiceQuestion(user_id, MultipleChoice, MCWhoLikedYourPost, postSubject, shuffled, shuffled.indexOf(answer))
                   client ! FinishedQuestionCreation(gameQuestion)
+                }
                 case Failure(e) =>
-                  client ! FailedToCreateQuestion(s"Failed to reach database : $e", MCWhoLikedYourPost)
+                  client ! MongoDBError(s"${e.getMessage}")
               }
             case None =>
-              client ! FailedToCreateQuestion(s"Strangely there is no userStat", MCWhoLikedYourPost)
+              client ! NotEnoughData(s"Strangely there is no userStat.")
           }
         case Failure(e) =>
-          client ! FailedToCreateQuestion(s"Failed to reach database : $e", MCWhoLikedYourPost)
+          client ! MongoDBError(s"${e.getMessage}")
       }
 
     case any => log.error(s"WhoLikedYourPost received a unexpected message $any")

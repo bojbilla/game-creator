@@ -3,7 +3,6 @@ package me.reminisce.service.gameboardgen.questiongen
 import akka.actor.{Actor, ActorContext, ActorLogging}
 import me.reminisce.mongodb.MongoDBEntities.{FBAttachment, FBPost}
 import me.reminisce.server.domain.RestMessage
-import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType.SpecificQuestionType
 import me.reminisce.service.gameboardgen.GameboardEntities._
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.api.{DefaultDB, QueryOpts}
@@ -19,7 +18,9 @@ object QuestionGenerator {
 
   case class FinishedQuestionCreation(question: GameQuestion)
 
-  case class FailedToCreateQuestion(message: String, questionType: SpecificQuestionType) extends RestMessage
+  case class MongoDBError(message: String)
+
+  case class NotEnoughData(message: String)
 
 }
 

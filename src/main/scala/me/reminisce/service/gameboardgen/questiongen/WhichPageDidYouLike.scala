@@ -6,7 +6,7 @@ import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities._
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -42,7 +42,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
               getDocuments[FBPage](db, pagesCollection, queryNotLiked, 3).onComplete {
                 case Success(listPages) =>
                   if (listPages.length < 3) {
-                    client ! FailedToCreateQuestion(s"Unable to create question : not enough not liked pages", MCWhichPageDidYouLike)
+                    client ! NotEnoughData(s"Unable to create question : not enough not liked pages.")
                   } else {
                     val possibilities = (page :: listPages).map {
                       pge =>
@@ -54,17 +54,16 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
                     }
                     val answer = possibilities.head
                     val shuffled = Random.shuffle(possibilities)
-                    val subject = PageSubject(answer.name, "http://facebook.com/" + answer.fb_id.get, answer.image_url)
-                    val question = Question(MultipleChoice, MCWhichPageDidYouLike, subject)
-                    val gameQuestion = MultipleChoiceQuestion(user_id, question, shuffled, shuffled.indexOf(answer))
+                    val subject = PageSubject(answer.name, "http://facebook.com/" + answer.fbID.get, answer.imageURL)
+                    val gameQuestion = MultipleChoiceQuestion(user_id, MultipleChoice, MCWhichPageDidYouLike, subject, shuffled, shuffled.indexOf(answer))
                     client ! FinishedQuestionCreation(gameQuestion)
                   }
                 case Failure(e) =>
-                  client ! FailedToCreateQuestion("Unable to create question WhichPageDidYouLike, error reaching database", MCWhichPageDidYouLike)
+                  client ! MongoDBError(s"${e.getMessage}")
               }
           }
         case None =>
-          client ! FailedToCreateQuestion(s"Unable to create question WhichPageDidYouLike, page not found. Item_id : $item_id ", MCWhichPageDidYouLike)
+          client ! NotEnoughData("Page not found.")
       }
     case x => log.error(s"WhichPageDidYouLike received a unexpected message $x")
   }
@@ -74,7 +73,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
     pageLikesCollection.find(query).cursor[FBPageLike].collect[List]().onComplete {
       case Success(list) => f(list)
       case Failure(e) =>
-        client ! FailedToCreateQuestion("Unable to create question WhichPageDidYouLike, error reaching database", MCWhichPageDidYouLike)
+        client ! MongoDBError(s"${e.getMessage}")
     }
   }
 
@@ -83,7 +82,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
     pagesCollection.find(query).one[FBPage].onComplete {
       case Success(opt) => f(opt)
       case Failure(e) =>
-        client ! FailedToCreateQuestion("Unable to create question WhichPageDidYouLike, error reaching database", MCWhichPageDidYouLike)
+        client ! MongoDBError(s"${e.getMessage}")
     }
   }
 

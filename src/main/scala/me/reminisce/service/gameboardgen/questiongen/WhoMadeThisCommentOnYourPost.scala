@@ -6,7 +6,7 @@ import me.reminisce.mongodb.MongoDBEntities.{FBComment, FBFrom, FBPost}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities._
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -37,11 +37,10 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
           }
           val postSubject = subjectFromPost(post)
           val commentSubject = CommentSubject(rightOne.message, postSubject)
-          val question = Question(MultipleChoice, MCWhoMadeThisCommentOnYourPost, commentSubject)
-          val gameQuestion = MultipleChoiceQuestion(user_id, question, shuffledPossibilities, answer)
+          val gameQuestion = MultipleChoiceQuestion(user_id, MultipleChoice, MCWhoMadeThisCommentOnYourPost, commentSubject, shuffledPossibilities, answer)
           client ! FinishedQuestionCreation(gameQuestion)
         case Failure(e) =>
-          client ! FailedToCreateQuestion(s"Could not reach database : $e", MCWhoMadeThisCommentOnYourPost)
+          client ! MongoDBError(s"${e.getMessage}")
       }
     case any =>
       log.error(s"Unexpected message received : $any")

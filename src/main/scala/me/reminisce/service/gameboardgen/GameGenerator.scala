@@ -67,7 +67,7 @@ class GameGenerator(database: DefaultDB, user_id: String) extends Actor with Act
     case Done(message) =>
       fetcherAcked = true
       verifyAndAnswer(client)
-      log.info("Update done. " + message)
+      log.info(s"Update done. $message")
     case Domain.TooManyRequests(message) =>
       fetcherAcked = true
       verifyAndAnswer(client)
@@ -89,7 +89,7 @@ class GameGenerator(database: DefaultDB, user_id: String) extends Actor with Act
 
   def verifyAndAnswer(client: ActorRef): Unit = {
     if (tiles.length == 9 && fetcherAcked) {
-      val board = Board(user_id, tiles, is_token_stale = isTokenStale)
+      val board = Board(user_id, tiles, isTokenStale = isTokenStale)
       client ! board
       sender() ! PoisonPill
     }

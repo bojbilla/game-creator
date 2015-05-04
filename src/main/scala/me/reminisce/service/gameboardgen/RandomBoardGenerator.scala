@@ -1,7 +1,6 @@
 package me.reminisce.service.gameboardgen
 
 import akka.actor.ActorRef
-import com.sun.security.ntlm.Client
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.{FBPageLike, PostQuestions, UserStat}
 import me.reminisce.service.gameboardgen.BoardGenerator.FailedBoardGeneration
@@ -97,7 +96,7 @@ class RandomBoardGenerator(database: DefaultDB, user_id: String) extends BoardGe
 
     }
 
-    def prepareQuestions(shuffledChoices: List[(String, List[String])]) : List[(String, String)] = {
+    def prepareQuestions(shuffledChoices: List[(String, List[String])]): List[(String, String)] = {
       shuffledChoices.map {
         case (itemId, list) => {
           val len = list.length

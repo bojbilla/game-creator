@@ -18,8 +18,8 @@ object MongoDatabaseService {
   val userStatisticsCollection = "user_statistics"
   val postQuestionsCollection = "post_questions"
 
-  def props(user_id: String, db: DefaultDB): Props =
-    Props(new MongoDatabaseService(user_id, db))
+  def props(userID: String, db: DefaultDB): Props =
+    Props(new MongoDatabaseService(userID, db))
 
   case class SaveFBPage(pages: List[Page])
 
@@ -31,7 +31,7 @@ object MongoDatabaseService {
 
 }
 
-class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseService {
+class MongoDatabaseService(userID: String, db: DefaultDB) extends DatabaseService {
 
   def receive = {
     case SaveFBPage(pages) =>
@@ -64,8 +64,8 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
       val query = BSONDocument("page_id" -> p.id)
       fbPageCollection.update(query, FBPage(None, p.id, p.name, fbPhoto), upsert = true)
 
-      val query2 = BSONDocument("user_id" -> user_id, "page_id" -> p.id)
-      fbPageLikeCollection.update(query2, FBPageLike(None, user_id, p.id), upsert = true)
+      val query2 = BSONDocument("user_id" -> userID, "page_id" -> p.id)
+      fbPageLikeCollection.update(query2, FBPageLike(None, userID, p.id), upsert = true)
     }
   }
 
@@ -91,10 +91,10 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
             lat, long, location.street, location.zip), place.created_time))
         ))
       )))
-      val fbPost = FBPost(None, user_id, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,
+      val fbPost = FBPost(None, userID, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,
         likes, like_count, p.`type`, p.link, fbAttachments, fbComments, fbCommentsCount)
 
-      val selector = BSONDocument("user_id" -> user_id, "post_id" -> p.id)
+      val selector = BSONDocument("user_id" -> userID, "post_id" -> p.id)
       collection.update(selector, fbPost, upsert = true)
     }
   }
@@ -103,9 +103,9 @@ class MongoDatabaseService(user_id: String, db: DefaultDB) extends DatabaseServi
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val time = DateTime.now
-    val selector = BSONDocument("user_id" -> user_id)
+    val selector = BSONDocument("user_id" -> userID)
 
-    val update = BSONDocument("user_id" -> user_id, "date" -> time)
+    val update = BSONDocument("user_id" -> userID, "date" -> time)
 
     collection.update(selector, update, upsert = true)
   }

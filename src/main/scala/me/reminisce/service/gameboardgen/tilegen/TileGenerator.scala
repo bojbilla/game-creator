@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, PoisonPill, Props}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities.{GameQuestion, _}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator._
 import me.reminisce.service.gameboardgen.questiongen._
 import me.reminisce.service.gameboardgen.tilegen.TileGenerator._
 import reactivemongo.api.DefaultDB
@@ -71,10 +71,14 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
         client ! FinishedTileCreation(user_id, tile)
       }
 
-    case FailedToCreateQuestion(message, specificType) =>
-      log.error(s"Question generation for tile failed $message for type $specificType")
+    case MongoDBError(message) =>
+      log.error(s"Question generation for tile failed, mongodb error : $message.")
       sender() ! PoisonPill
-      client ! FailedTileCreation(message)
+      client ! FailedTileCreation(s"MongoDBError: $message.")
 
+    case NotEnoughData(message) =>
+      log.error(s"Not enough data : $message")
+      sender() ! PoisonPill
+      client ! FailedTileCreation(s"Not enough data : $message")
   }
 }
