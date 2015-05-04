@@ -54,7 +54,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
                     }
                     val answer = possibilities.head
                     val shuffled = Random.shuffle(possibilities)
-                    val subject = PageSubject(answer.name, "http://facebook.com/" + answer.fbID.get, answer.imageURL)
+                    val subject = PageSubject(answer.name, "http://facebook.com/" + answer.fbId.get, answer.imageUrl)
                     val gameQuestion = MultipleChoiceQuestion(user_id, MultipleChoice, MCWhichPageDidYouLike, subject, shuffled, shuffled.indexOf(answer))
                     client ! FinishedQuestionCreation(gameQuestion)
                   }

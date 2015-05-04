@@ -37,41 +37,41 @@ object GameboardEntities {
 
   case class TextPostSubject(text: String, `type`: String = "TextPost") extends PostSubject(`type`, text)
 
-  case class ImagePostSubject(text: String, imageURL: Option[String], facebookImageURL: Option[String],
+  case class ImagePostSubject(text: String, imageUrl: Option[String], facebookImageUrl: Option[String],
                               `type`: String = "ImagePost") extends PostSubject(`type`, text)
 
-  case class VideoPostSubject(text: String, thumbnailURL: Option[String], url: Option[String],
+  case class VideoPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String],
                               `type`: String = "VideoPost") extends PostSubject(`type`, text)
 
-  case class LinkPostSubject(text: String, thumbnailURL: Option[String], url: Option[String],
+  case class LinkPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String],
                              `type`: String = "LinkPost") extends PostSubject(`type`, text)
 
   case class CommentSubject(comment: String, post: PostSubject, `type`: String = "Comment") extends Subject(`type`)
 
 
-  abstract sealed class GameQuestion(userID: String, kind: QuestionKind, `type`: SpecificQuestionType, subject: Subject)
+  abstract sealed class GameQuestion(userId: String, kind: QuestionKind, `type`: SpecificQuestionType, subject: Subject)
 
-  case class MultipleChoiceQuestion(userID: String,
+  case class MultipleChoiceQuestion(userId: String,
                                     kind: QuestionKind,
                                     `type`: SpecificQuestionType,
                                     subject: Subject,
                                     choices: List[Possibility],
-                                    answer: Int) extends GameQuestion(userID, kind, `type`, subject)
+                                    answer: Int) extends GameQuestion(userId, kind, `type`, subject)
 
-  case class TimelineQuestion(userID: String,
+  case class TimelineQuestion(userId: String,
                               kind: QuestionKind,
                               `type`: SpecificQuestionType,
                               subject: Subject,
-                              answer: DateTime) extends GameQuestion(userID, kind, `type`, subject)
+                              answer: DateTime) extends GameQuestion(userId, kind, `type`, subject)
 
 
-  case class Possibility(name: String, imageURL: Option[String], fbID: Option[String] = None)
+  case class Possibility(name: String, imageUrl: Option[String], fbId: Option[String] = None)
 
-  case class CoordinatesQuestion(userID: String,
+  case class CoordinatesQuestion(userId: String,
                                  kind: QuestionKind,
                                  `type`: SpecificQuestionType,
                                  subject: Subject,
-                                 answer: Location) extends GameQuestion(userID, kind, `type`, subject)
+                                 answer: Location) extends GameQuestion(userId, kind, `type`, subject)
 
   case class Location(latitude: Double, longitude: Double)
 
@@ -80,6 +80,6 @@ object GameboardEntities {
                   question2: GameQuestion,
                   question3: GameQuestion) extends RestMessage
 
-  case class Board(userID: String, tiles: List[Tile], isTokenStale: Boolean) extends RestMessage
+  case class Board(userId: String, tiles: List[Tile], isTokenStale: Boolean) extends RestMessage
 
 }
