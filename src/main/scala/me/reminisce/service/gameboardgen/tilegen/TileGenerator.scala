@@ -1,6 +1,7 @@
 package me.reminisce.service.gameboardgen.tilegen
 
 import akka.actor.{ActorRef, PoisonPill, Props}
+import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities.{GameQuestion, _}
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FailedToCreateQuestion, FinishedQuestionCreation}
@@ -18,7 +19,7 @@ object TileGenerator {
 
   case class CreateGeolocationTile(user_id: String)
 
-  case class CreateTile(user_id: String, choices: List[(String, String)], `type`: String = "Misc")
+  case class CreateTile(user_id: String, choices: List[(String, String)], `type`: QuestionKind = Misc)
 
   case class FinishedTileCreation(user_id: String, tile: Tile)
 
@@ -61,7 +62,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
     }
   }
 
-  def awaitingQuestions(client: ActorRef, user_id: String, `type`: String): Receive = {
+  def awaitingQuestions(client: ActorRef, user_id: String, `type`: QuestionKind): Receive = {
     case FinishedQuestionCreation(q) =>
       questions = q :: questions
       sender() ! PoisonPill

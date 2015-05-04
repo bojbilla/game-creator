@@ -23,7 +23,7 @@ object GameboardEntities {
 
   object QuestionKind extends Enumeration {
     type QuestionKind = Value
-    val MultipleChoice, Timeline, Geolocation, OrderedList = Value
+    val MultipleChoice, Timeline, Geolocation, OrderedList, Misc = Value
   }
 
 
@@ -71,7 +71,7 @@ object GameboardEntities {
 
   case class Location(latitude: Double, longitude: Double)
 
-  case class Tile(`type`: String,
+  case class Tile(`type`: QuestionKind,
                   question1: GameQuestion,
                   question2: GameQuestion,
                   question3: GameQuestion) extends RestMessage
