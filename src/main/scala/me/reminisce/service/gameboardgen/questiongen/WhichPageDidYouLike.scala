@@ -50,12 +50,11 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
                           case Some(p) => p.source
                           case None => None
                         }
-                        Possibility(pge.name.get, url, Some(pge.pageId))
+                        Possibility(pge.name.get, url, "Page", Some(pge.pageId))
                     }
                     val answer = possibilities.head
                     val shuffled = Random.shuffle(possibilities)
-                    val subject = PageSubject(answer.name, "http://facebook.com/" + answer.fbId.get, answer.imageUrl)
-                    val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhichPageDidYouLike, subject, shuffled, shuffled.indexOf(answer))
+                    val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhichPageDidYouLike, None, shuffled, shuffled.indexOf(answer))
                     client ! FinishedQuestionCreation(gameQuestion)
                   }
                 case Failure(e) =>

@@ -34,7 +34,7 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
           val post = postOpt.get
           val postSubject = subjectFromPost(post)
           val location = Location(post.place.get.location.latitude, post.place.get.location.longitude)
-          val gameQuestion = CoordinatesQuestion(userId, MultipleChoice, GeoWhatCoordinatesWereYouAt, postSubject, location)
+          val gameQuestion = CoordinatesQuestion(userId, MultipleChoice, GeoWhatCoordinatesWereYouAt, Some(postSubject), location)
           client ! FinishedQuestionCreation(gameQuestion)
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")

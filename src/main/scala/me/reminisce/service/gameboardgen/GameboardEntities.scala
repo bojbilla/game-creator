@@ -31,7 +31,7 @@ object GameboardEntities {
 
   abstract sealed class PostSubject(`type`: String, text: String) extends Subject(`type`)
 
-  case class PageSubject(name: String, url: String,
+  case class PageSubject(name: String, pageId: String,
                          photoUrl: Option[String],
                          `type`: String = "Page") extends Subject(`type`)
 
@@ -49,28 +49,28 @@ object GameboardEntities {
   case class CommentSubject(comment: String, post: PostSubject, `type`: String = "Comment") extends Subject(`type`)
 
 
-  abstract sealed class GameQuestion(userId: String, kind: QuestionKind, `type`: SpecificQuestionType, subject: Subject)
+  abstract sealed class GameQuestion(userId: String, kind: QuestionKind, `type`: SpecificQuestionType, subject: Option[Subject])
 
   case class MultipleChoiceQuestion(userId: String,
                                     kind: QuestionKind,
                                     `type`: SpecificQuestionType,
-                                    subject: Subject,
+                                    subject: Option[Subject],
                                     choices: List[Possibility],
                                     answer: Int) extends GameQuestion(userId, kind, `type`, subject)
 
   case class TimelineQuestion(userId: String,
                               kind: QuestionKind,
                               `type`: SpecificQuestionType,
-                              subject: Subject,
+                              subject: Option[Subject],
                               answer: DateTime) extends GameQuestion(userId, kind, `type`, subject)
 
 
-  case class Possibility(name: String, imageUrl: Option[String], fbId: Option[String] = None)
+  case class Possibility(name: String, imageUrl: Option[String], `type`: String, fbId: Option[String] = None)
 
   case class CoordinatesQuestion(userId: String,
                                  kind: QuestionKind,
                                  `type`: SpecificQuestionType,
-                                 subject: Subject,
+                                 subject: Option[Subject],
                                  answer: Location) extends GameQuestion(userId, kind, `type`, subject)
 
   case class Location(latitude: Double, longitude: Double)

@@ -38,7 +38,7 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends QuestionGenerator {
           val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
           val actualDate = formatter.parseDateTime(dateString)
           val postSubject = subjectFromPost(post)
-          val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouShareThisPost, postSubject, actualDate)
+          val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouShareThisPost, Some(postSubject), actualDate)
           client ! FinishedQuestionCreation(tlQuestion)
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")

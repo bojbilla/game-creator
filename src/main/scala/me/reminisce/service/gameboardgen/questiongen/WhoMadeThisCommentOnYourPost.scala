@@ -33,11 +33,11 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
           val shuffled = Random.shuffle(selectedComments)
           val answer = shuffled.indexOf(rightOne)
           val shuffledPossibilities = shuffled.map {
-            comm => Possibility(comm.from.userName, None, Some(comm.from.userId))
+            comm => Possibility(comm.from.userName, None, "Person", Some(comm.from.userId))
           }
           val postSubject = subjectFromPost(post)
           val commentSubject = CommentSubject(rightOne.message, postSubject)
-          val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoMadeThisCommentOnYourPost, commentSubject, shuffledPossibilities, answer)
+          val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoMadeThisCommentOnYourPost, Some(commentSubject), shuffledPossibilities, answer)
           client ! FinishedQuestionCreation(gameQuestion)
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")

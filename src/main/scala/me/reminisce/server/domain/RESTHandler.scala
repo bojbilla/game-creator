@@ -1,9 +1,5 @@
 package me.reminisce.server.domain
 
-/**
- * Created by Aranir on 23/10/14.
- */
-
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{OneForOneStrategy, _}
 import me.reminisce.server.domain.Domain.Error

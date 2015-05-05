@@ -42,11 +42,11 @@ class WhoLikedYourPost(database: DefaultDB) extends QuestionGenerator {
                   val postSubject = subjectFromPost(post)
                   val liker = Random.shuffle(post.likes.get).head
                   val choices = (liker :: Random.shuffle((userStats.likers -- post.likes.get.toSet).toList).take(3)) map {
-                    choice => Possibility(choice.userName, None, Some(choice.userId))
+                    choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
                   }
                   val answer = choices.head
                   val shuffled = Random.shuffle(choices)
-                  val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, postSubject, shuffled, shuffled.indexOf(answer))
+                  val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
                   client ! FinishedQuestionCreation(gameQuestion)
                 }
                 case Failure(e) =>
