@@ -5,10 +5,9 @@ import me.reminisce.fetcher.FetcherService
 import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.server.domain.Domain._
 import me.reminisce.server.domain.{Domain, RestMessage}
-import me.reminisce.service.gameboardgen.BoardGenerator.FailedBoardGeneration
+import me.reminisce.service.gameboardgen.BoardGenerator.{FailedBoardGeneration, FinishedBoardGeneration}
 import me.reminisce.service.gameboardgen.GameGenerator.{CreateBoard, InitBoardCreation}
 import me.reminisce.service.gameboardgen.GameboardEntities.{Board, Tile}
-import me.reminisce.service.gameboardgen.tilegen.TileGenerator._
 import reactivemongo.api.DefaultDB
 
 import scala.concurrent.ExecutionContextExecutor
@@ -21,8 +20,6 @@ object GameGenerator {
   case class CreateBoard(accessToken: String, strategy: String) extends RestMessage
 
   case class InitBoardCreation()
-
-  case class FinishedBoardCreation(board: Board)
 
 }
 
@@ -57,8 +54,8 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
 
   // Awaits feedback from the FetcherService and the tile creators
   def awaitFeedBack(client: ActorRef, worker: ActorRef): Receive = {
-    case FinishedTileCreation(usrId, tile) =>
-      tiles = tile :: tiles
+    case FinishedBoardGeneration(receivedTiles) =>
+      tiles = receivedTiles
       verifyAndAnswer(client)
     case FailedBoardGeneration(message) =>
       log.error(s"Failed board creation: $message")
@@ -89,8 +86,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
 
   def verifyAndAnswer(client: ActorRef): Unit = {
     if (tiles.length == 9 && fetcherAcked) {
-      val board = Board(userId, tiles, isTokenStale = isTokenStale)
-      client ! board
+      client ! Board(userId, tiles, isTokenStale)
       sender() ! PoisonPill
     }
   }

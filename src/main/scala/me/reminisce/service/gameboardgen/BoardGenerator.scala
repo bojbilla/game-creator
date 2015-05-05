@@ -3,7 +3,7 @@ package me.reminisce.service.gameboardgen
 import akka.actor.{Actor, ActorContext, ActorLogging, ActorRef}
 import me.reminisce.service.gameboardgen.BoardGenerator.FailedBoardGeneration
 import me.reminisce.service.gameboardgen.GameGenerator.InitBoardCreation
-import me.reminisce.service.gameboardgen.tilegen.TileGenerator.{FailedTileCreation, FinishedTileCreation}
+import me.reminisce.service.gameboardgen.GameboardEntities.Tile
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
@@ -15,6 +15,8 @@ object BoardGenerator {
 
   case class FailedBoardGeneration(message: String)
 
+  case class FinishedBoardGeneration(tiles: List[Tile])
+
 }
 
 abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Actor with ActorLogging {
@@ -24,22 +26,12 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
 
   def createGame(client: ActorRef): Unit
 
-  def handleTileCreated(client: ActorRef, finishMessage: FinishedTileCreation): Unit
-
-  def handleTileFailed(client: ActorRef, failureMessage: FailedTileCreation): Unit
-
-  var client: ActorRef = null
-
   def receive = {
     case InitBoardCreation() =>
-      client = sender()
+      val client = sender()
       createGame(client)
-    case finish: FinishedTileCreation =>
-      handleTileCreated(client, finish)
-    case failed: FailedTileCreation =>
-      handleTileFailed(client, failed)
     case any =>
-      client = sender()
+      val client = sender()
       client ! FailedBoardGeneration(s"Received any : $any")
       log.error(s"Received any : $any")
   }

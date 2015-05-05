@@ -3,10 +3,10 @@ package me.reminisce.service.gameboardgen
 import akka.actor.ActorRef
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.{FBPageLike, PostQuestions, UserStats}
-import me.reminisce.service.gameboardgen.BoardGenerator.FailedBoardGeneration
+import me.reminisce.service.gameboardgen.BoardGenerator.{FailedBoardGeneration, FinishedBoardGeneration}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
-import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
+import me.reminisce.service.gameboardgen.GameboardEntities.{SpecificQuestionType, Tile}
 import me.reminisce.service.gameboardgen.tilegen.TileGenerator
 import me.reminisce.service.gameboardgen.tilegen.TileGenerator.{CreateTile, FailedTileCreation, FinishedTileCreation}
 import reactivemongo.api.DefaultDB
@@ -20,6 +20,8 @@ object RandomBoardGenerator {
 }
 
 class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGenerator(database, userId) {
+
+  var tiles: List[Tile] = List()
 
   def createGame(client: ActorRef): Unit = {
     val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)
@@ -36,15 +38,16 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
     }
   }
 
-
-  def handleTileCreated(client: ActorRef, finish: FinishedTileCreation): Unit = {
-    client ! FinishedTileCreation(finish.userId, finish.tile)
-  }
-
-  def handleTileFailed(client: ActorRef, failed: FailedTileCreation): Unit = {
-    val message = failed.message
-    log.error(s"Failed board creation: $message")
-    client ! FailedBoardGeneration(message)
+  def awaitFeedBack(client: ActorRef): Receive = {
+    case FinishedTileCreation(usrId, tile) =>
+      tiles = tile :: tiles
+      if (tiles.length == 9) {
+        tiles = Random.shuffle(tiles)
+        client ! FinishedBoardGeneration(tiles)
+      }
+    case FailedTileCreation(message) =>
+      log.error(s"Failed board creation: $message")
+      client ! FailedBoardGeneration(message)
   }
 
   def generateRandomBoardWithPages(client: ActorRef): Unit = {
@@ -80,8 +83,7 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
       val preparedQuestions = prepareQuestions(shuffledList)
       val mappedWithKind = mapToKind(preparedQuestions)
       generateTiles(mappedWithKind)
-    }
-    else {
+    } else {
       val moreChoices: List[(String, List[String])] = choices.flatMap {
         case (itemId, list) => list.map(elm => itemId -> List(elm))
       }
@@ -117,23 +119,28 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
       }
     }
 
-    def generateTiles(questions: List[(QuestionKind, (String, String))]): Unit = questions match {
-      case Nil =>
-      case qList =>
-        qList.groupBy(_._1).toList.filter(elm => elm._2.length >= 3) match {
-          case List() =>
-            val (selected, next) = questions.splitAt(3)
-            val worker = context.actorOf(TileGenerator.props(database))
-            worker ! CreateTile(userId, selected.map(_._2))
-            generateTiles(next)
-          case someQs =>
-            val selectedQuestions = someQs.head._2.take(3)
-            val kind = selectedQuestions.head._1
-            val worker = context.actorOf(TileGenerator.props(database))
-            worker ! CreateTile(userId, selectedQuestions.map(_._2), kind)
-            generateTiles(questions.filterNot(selectedQuestions.toSet))
-        }
+    def generateTiles(questions: List[(QuestionKind, (String, String))]): Unit = {
+      def generateRequests(questions: List[(QuestionKind, (String, String))]): List[CreateTile] =
+        questions match {
+          case Nil => List()
+          case qList =>
+            qList.groupBy(_._1).toList.filter(elm => elm._2.length >= 3) match {
+              case List() =>
+                val (selected, next) = questions.splitAt(3)
+                CreateTile(userId, selected.map(_._2)) :: generateRequests(next)
+              case someQs =>
+                val selectedQuestions = someQs.head._2.take(3)
+                val kind = selectedQuestions.head._1
+                CreateTile(userId, selectedQuestions.map(_._2), kind) :: generateRequests(questions.filterNot(selectedQuestions.toSet))
+            }
 
+        }
+      context.become(awaitFeedBack(client))
+      generateRequests(questions).foreach {
+        req =>
+          val worker = context.actorOf(TileGenerator.props(database))
+          worker ! req
+      }
     }
   }
 }
