@@ -1,9 +1,9 @@
 #!/bin/sh
 
-a=0
+a=1
 
-while [ $a -lt 100 ]
+while [ $a -le 10 ]
 do
-   curl -sL -w "%{http_code}\\n" 'http://'$1:$2'/'gameboard'?user_id='$3'&access_token=XXX' -o /dev/null
+   ./test.sh "$1" "$2" "$3" &
    a=`expr $a + 1`
 done
