@@ -24,7 +24,7 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
 
   def message: RestMessage
 
-  setReceiveTimeout(10 seconds)
+  setReceiveTimeout(10.seconds)
   target ! message
 
   def receive = {
