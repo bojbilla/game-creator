@@ -67,7 +67,7 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
   }
 
   def hasToFetch(currentTime: DateTime, lastFetched: DateTime): Boolean = {
-    currentTime - 10.seconds > lastFetched
+    currentTime - 1.days > lastFetched
   }
 
   def conditionalFetch(currentTime: DateTime, lastFetched: DateTime, userId: String, accessToken: String,
