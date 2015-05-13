@@ -5,6 +5,7 @@ import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
 import me.reminisce.fetcher.FetcherService.{FetchDataSince, FinishedFetching}
 import me.reminisce.fetcher.common.FBSimpleParameters
+import me.reminisce.fetcher.common.GraphResponses.Post
 import me.reminisce.fetcher.common.RetrieveEntitiesService.RetrieveEntities
 import me.reminisce.fetcher.retrievedata.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
 import me.reminisce.fetcher.retrievedata.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
@@ -24,7 +25,7 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
   var retrievers: Set[ActorRef] = Set()
   var foundPosts: Set[String] = Set()
 
-  def receive() = {
+  def receive = {
     case FetchDataSince(userId, accessToken, lastFetched) =>
       val client = sender()
       val simpleParameters = FBSimpleParameters(Some(userId), Some(accessToken), since = lastFetched)
@@ -60,29 +61,33 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
 
     case PartialPostsResult(posts) =>
-      foundPosts ++= posts.map(post => post.id).toSet
-      statsHandler(userId) ! TransientPostsStats(posts.toList)
-      mongoSaver(userId) ! SaveFBPost(posts.toList)
+      val prunedPosts = prunePosts(posts)
+      foundPosts ++= prunedPosts.map(post => post.id).toSet
+      statsHandler(userId) ! TransientPostsStats(prunedPosts.toList)
+      mongoSaver(userId) ! SaveFBPost(prunedPosts.toList)
 
     case FinishedRetrievingPosts(posts) =>
+      val prunedPosts = prunePosts(posts)
       log.info(s"Received posts for user: $userId")
-      foundPosts ++= posts.map(post => post.id).toSet
-      statsHandler(userId) ! TransientPostsStats(posts.toList)
-      mongoSaver(userId) ! SaveFBPost(posts.toList)
+      foundPosts ++= prunedPosts.map(post => post.id).toSet
+      statsHandler(userId) ! TransientPostsStats(prunedPosts.toList)
+      mongoSaver(userId) ! SaveFBPost(prunedPosts.toList)
       retrievers -= sender()
       verifyDone(client, userId)
 
 
     case PartialTaggedPostsResult(posts) =>
-      foundPosts ++= posts.map(post => post.id).toSet
-      statsHandler(userId) ! TransientPostsStats(posts.toList)
-      mongoSaver(userId) ! SaveFBPost(posts.toList)
+      val prunedPosts = prunePosts(posts)
+      foundPosts ++= prunedPosts.map(post => post.id).toSet
+      statsHandler(userId) ! TransientPostsStats(prunedPosts.toList)
+      mongoSaver(userId) ! SaveFBPost(prunedPosts.toList)
 
     case FinishedRetrievingTaggedPosts(posts) =>
+      val prunedPosts = prunePosts(posts)
       log.info(s"Received tagged posts for user: $userId")
-      foundPosts ++= posts.map(post => post.id).toSet
-      statsHandler(userId) ! TransientPostsStats(posts.toList)
-      mongoSaver(userId) ! SaveFBPost(posts.toList)
+      foundPosts ++= prunedPosts.map(post => post.id).toSet
+      statsHandler(userId) ! TransientPostsStats(prunedPosts.toList)
+      mongoSaver(userId) ! SaveFBPost(prunedPosts.toList)
       retrievers -= sender()
       verifyDone(client, userId)
 
@@ -111,6 +116,10 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
   def statsHandler(userId: String): ActorRef = {
     context.actorOf(StatsHandler.props(userId, database))
+  }
+
+  def prunePosts(posts: Vector[Post]): Vector[Post] = {
+    posts.filter(p => p.message.exists(_.nonEmpty) || p.story.exists(_.nonEmpty))
   }
 
 }
