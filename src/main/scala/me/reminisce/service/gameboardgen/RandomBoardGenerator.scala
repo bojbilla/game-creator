@@ -11,7 +11,7 @@ import me.reminisce.service.gameboardgen.tilegen.TileGenerator
 import me.reminisce.service.gameboardgen.tilegen.TileGenerator.{CreateTile, FailedTileCreation, FinishedTileCreation}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
+import reactivemongo.bson.{BSONArray, BSONDocument}
 
 import scala.util.Random
 
@@ -68,7 +68,11 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
   }
 
   def generateRandomBoard(client: ActorRef): Unit = {
-    val selector = BSONDocument("userId" -> userId, "questionsCount" -> BSONDocument("$gt" -> 0))
+    //TODO: Temporary measure to avoid geolocation
+    val selector = BSONDocument("userId" -> userId,
+      "$or" -> BSONArray(
+        BSONDocument("questionsCount" -> BSONDocument("$gt" -> 1)),
+        BSONDocument("questions" -> BSONDocument("$nin" -> BSONArray("GeoWhatCoordinatesWereYouAt")))))
     val postsQuestionsCollection = database[BSONCollection](MongoDatabaseService.postQuestionsCollection)
     findSome[PostQuestions](postsQuestionsCollection, selector, client) {
       listPostQuestions =>
@@ -84,8 +88,9 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
       val mappedWithKind = mapToKind(preparedQuestions)
       generateTiles(mappedWithKind)
     } else {
+      //TODO: Temporary measure to avoid geolocation
       val moreChoices: List[(String, List[String])] = choices.flatMap {
-        case (itemId, list) => list.map(elm => itemId -> List(elm))
+        case (itemId, list) => list.filter(s => s != "GeoWhatCoordinatesWereYouAt").map(elm => itemId -> List(elm))
       }
       if (moreChoices.length >= 27) {
         val shuffledList = Random.shuffle(moreChoices).take(27)
@@ -100,10 +105,11 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
 
     def prepareQuestions(shuffledChoices: List[(String, List[String])]): List[(String, String)] = {
       shuffledChoices.map {
-        case (itemId, list) => {
-          val len = list.length
-          (itemId, list(Random.nextInt(len)))
-        }
+        case (itemId, list) =>
+          //TODO: Temporary measure to avoid geolocation
+          val filteredList = list.filter(s => s != "GeoWhatCoordinatesWereYouAt")
+          val len = filteredList.length
+          (itemId, filteredList(Random.nextInt(len)))
       }
     }
 
