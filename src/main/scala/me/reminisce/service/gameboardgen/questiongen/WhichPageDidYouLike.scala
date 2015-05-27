@@ -28,9 +28,6 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
       val client = sender()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
       val likesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
-      val pageQuery = BSONDocument(
-        "pageId" -> itemId
-      )
       fetchPage(pagesCollection, itemId, client) {
         case Some(page) =>
           fetchLikedPages(likesCollection, userId, client) {
@@ -62,13 +59,13 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
               }
           }
         case None =>
-          client ! NotEnoughData("Page not found.")
+          client ! NotEnoughData(s"Page not found. $itemId")
       }
     case x => log.error(s"WhichPageDidYouLike received a unexpected message $x")
   }
 
-  def fetchLikedPages(pageLikesCollection: BSONCollection, user_id: String, client: ActorRef)(f: List[FBPageLike] => Unit): Unit = {
-    val query = BSONDocument("user_id" -> user_id)
+  def fetchLikedPages(pageLikesCollection: BSONCollection, userId: String, client: ActorRef)(f: List[FBPageLike] => Unit): Unit = {
+    val query = BSONDocument("userId" -> userId)
     pageLikesCollection.find(query).cursor[FBPageLike].collect[List]().onComplete {
       case Success(list) => f(list)
       case Failure(e) =>
@@ -76,8 +73,8 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
     }
   }
 
-  def fetchPage(pagesCollection: BSONCollection, page_id: String, client: ActorRef)(f: Option[FBPage] => Unit): Unit = {
-    val query = BSONDocument("page_id" -> page_id)
+  def fetchPage(pagesCollection: BSONCollection, userId: String, client: ActorRef)(f: Option[FBPage] => Unit): Unit = {
+    val query = BSONDocument("pageId" -> userId)
     pagesCollection.find(query).one[FBPage].onComplete {
       case Success(opt) => f(opt)
       case Failure(e) =>

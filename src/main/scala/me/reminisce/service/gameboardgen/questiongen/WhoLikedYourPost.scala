@@ -37,17 +37,20 @@ class WhoLikedYourPost(database: DefaultDB) extends QuestionGenerator {
             case Some(userStats) =>
               val postCollection = database[BSONCollection](MongoDatabaseService.fbPostsCollection)
               postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost].onComplete {
-                case Success(postOpt) => {
-                  val post = postOpt.get //post should exist
-                  val postSubject = subjectFromPost(post)
-                  val liker = Random.shuffle(post.likes.get).head
-                  val choices = (liker :: Random.shuffle((userStats.likers -- post.likes.get.toSet).toList).take(3)) map {
-                    choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
-                  }
-                  val answer = choices.head
-                  val shuffled = Random.shuffle(choices)
-                  val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
-                  client ! FinishedQuestionCreation(gameQuestion)
+                case Success(postOpt) => postOpt match {
+                  case Some(post) =>
+                    val post = postOpt.get //post should exist
+                    val postSubject = subjectFromPost(post)
+                    val liker = Random.shuffle(post.likes.get).head
+                    val choices = (liker :: Random.shuffle((userStats.likers -- post.likes.get.toSet).toList).take(3)) map {
+                      choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
+                    }
+                    val answer = choices.head
+                    val shuffled = Random.shuffle(choices)
+                    val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
+                    client ! FinishedQuestionCreation(gameQuestion)
+                  case None =>
+                    client ! NotEnoughData(s"Post not found : $itemId") // this should be investigated
                 }
                 case Failure(e) =>
                   client ! MongoDBError(s"${e.getMessage}")
