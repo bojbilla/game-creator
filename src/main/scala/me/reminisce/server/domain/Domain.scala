@@ -1,8 +1,5 @@
 package me.reminisce.server.domain
 
-/**
- * Created by roger on 09/11/14.
- */
 trait RestMessage
 
 
@@ -18,6 +15,8 @@ object Domain {
 
   case class Error(message: String)
 
+  case class InternalError(message: String) extends RestMessage
+
   case class TooManyRequests(message: String) extends RestMessage
 
   case class AlreadyFresh(message: String) extends RestMessage
@@ -25,6 +24,8 @@ object Domain {
   case class Validation(message: String)
 
   case class NoContentFound(message: String) extends RestMessage
+
+  case class ActionForbidden(message : String) extends RestMessage
 
   // Exceptions
 

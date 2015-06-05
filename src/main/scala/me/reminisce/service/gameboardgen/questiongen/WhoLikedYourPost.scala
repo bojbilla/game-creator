@@ -26,6 +26,7 @@ class WhoLikedYourPost(database: DefaultDB) extends QuestionGenerator {
 
   def receive = {
     case CreateQuestion(userId, itemId) =>
+      import scala.concurrent.ExecutionContext.Implicits.global
       val client = sender()
       // Note : if this question has been picked, it can only be if a UserStats exists
 
@@ -40,7 +41,7 @@ class WhoLikedYourPost(database: DefaultDB) extends QuestionGenerator {
                 case Success(postOpt) => postOpt match {
                   case Some(post) =>
                     val post = postOpt.get //post should exist
-                    val postSubject = subjectFromPost(post)
+                  val postSubject = subjectFromPost(post)
                     val liker = Random.shuffle(post.likes.get).head
                     val choices = (liker :: Random.shuffle((userStats.likers -- post.likes.get.toSet).toList).take(3)) map {
                       choice => Possibility(choice.userName, None, "Person", Some(choice.userId))

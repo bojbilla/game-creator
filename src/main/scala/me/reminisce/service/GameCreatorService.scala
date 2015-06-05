@@ -1,9 +1,12 @@
-package me.reminisce.service.gameboardgen
+package me.reminisce.service
 
 import akka.actor._
+import me.reminisce.database.DeletionService
+import me.reminisce.database.DeletionService.{ClearDatabase, RemoveUser}
 import me.reminisce.fetcher.FetcherService
 import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.server.domain.{RESTHandlerCreator, RestMessage}
+import me.reminisce.service.gameboardgen.GameGenerator
 import me.reminisce.service.gameboardgen.GameGenerator.CreateBoard
 import reactivemongo.api.DefaultDB
 import spray.client.pipelining._
@@ -15,6 +18,7 @@ import spray.routing._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.Properties._
 
 object GameCreatorService {
 
@@ -30,6 +34,8 @@ trait GameCreatorServiceActor extends GameCreatorService {
 trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor with ActorLogging with Json4sSupport {
   def actorRefFactory: ActorContext
 
+  // Development ? Release ?
+  val appMode = envOrElse("GAME_CREATOR_MODE", "DEV")
 
   val db: DefaultDB
 
@@ -49,16 +55,33 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
         }
       }
     } ~ path("gameboard") {
-      parameters("user_id", "access_token", "strategy" ? "random") {
-        (userId: String, accessToken: String, strategy: String) =>
-          createBoard(CreateBoard(accessToken, strategy), userId)
+      get {
+        parameters("user_id", "access_token", "strategy" ? "random") {
+          (userId: String, accessToken: String, strategy: String) =>
+            createBoard(CreateBoard(accessToken, strategy), userId)
+        }
+      }
+    } ~ path("removeUser") {
+      delete {
+        parameters("user_id") {
+          (userId: String) =>
+            removeUser(RemoveUser(userId), userId)
+        }
+      }
+    } ~ path("dropDatabase") {
+      delete {
+        parameters("UNUSED" ? "") {
+          //ugly fix
+          (UNUSED: String) =>
+            dropDatabase(ClearDatabase(appMode))
+        }
       }
     }
   }
 
 
   def createBoard(message: RestMessage, userId: String): Route = {
-    log.info("Creating game board")
+    log.info("Creating game board.")
     val generator = context.actorOf(GameGenerator.props(db, userId))
     ctx => perRequest(ctx, generator, message)
   }
@@ -66,6 +89,16 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
   def fetchData(message: RestMessage): Route = {
     val fetcherService = context.actorOf(FetcherService.props(db))
     ctx => perRequest(ctx, fetcherService, message)
+  }
+
+  def removeUser(message: RestMessage, userId: String): Route = {
+    val deletionService = context.actorOf(DeletionService.props(db))
+    ctx => perRequest(ctx, deletionService, message)
+  }
+
+  def dropDatabase(message: RestMessage): Route = {
+    val deletionService = context.actorOf(DeletionService.props(db))
+    ctx => perRequest(ctx, deletionService, message)
   }
 
 }

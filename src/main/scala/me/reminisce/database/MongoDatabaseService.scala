@@ -17,6 +17,7 @@ object MongoDatabaseService {
   val lastFetchedCollection = "lastFetched"
   val userStatisticsCollection = "userStatistics"
   val postQuestionsCollection = "postQuestions"
+  val itemsStatsCollection = "itemsStats"
 
   def props(userId: String, db: DefaultDB): Props =
     Props(new MongoDatabaseService(userId, db))
@@ -49,7 +50,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     import scala.concurrent.ExecutionContext.Implicits.global
     val fbPageCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
-    pages.map { p =>
+    pages.foreach { p =>
       val photo = p.photos.flatMap(photoRoot => photoRoot.data.map(photo => photo))
       val fbPhoto = photo.map { photo =>
         val tags = photo.tags.flatMap(tagRoot => tagRoot.data).map {
@@ -62,10 +63,13 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
       }
 
       val query = BSONDocument("pageId" -> p.id)
-      fbPageCollection.update(query, FBPage(None, p.id, p.name, fbPhoto), upsert = true)
+      fbPageCollection.update(query, FBPage(None, p.id, p.name, fbPhoto, p.likes.get), upsert = true)
+
+      val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
+      val date = formatter.parseDateTime(p.created_time)
 
       val query2 = BSONDocument("userId" -> userId, "pageId" -> p.id)
-      fbPageLikeCollection.update(query2, FBPageLike(None, userId, p.id), upsert = true)
+      fbPageLikeCollection.update(query2, FBPageLike(None, userId, p.id, date), upsert = true)
     }
   }
 

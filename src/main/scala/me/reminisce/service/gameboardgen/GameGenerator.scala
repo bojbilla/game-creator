@@ -45,6 +45,8 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
 
 
   def getCreatorFromStrategy(strategy: String): ActorRef = strategy match {
+    case "choose" =>
+      context.actorOf(Props(new StrategyChooser(database, userId)))
     case "random" =>
       context.actorOf(Props(new RandomBoardGenerator(database, userId)))
     case any =>
@@ -58,9 +60,9 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
       tiles = receivedTiles
       verifyAndAnswer(client)
     case FailedBoardGeneration(message) =>
-      log.error(s"Failed board creation: $message")
       worker ! PoisonPill
-      client ! Error(message)
+      client ! InternalError(message)
+      log.error(s"An internal error occurred while serving the request.")
     case Done(message) =>
       fetcherAcked = true
       verifyAndAnswer(client)

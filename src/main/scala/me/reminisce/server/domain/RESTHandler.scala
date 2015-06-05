@@ -2,7 +2,7 @@ package me.reminisce.server.domain
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{OneForOneStrategy, _}
-import me.reminisce.server.domain.Domain.Error
+import me.reminisce.server.domain.Domain.{ActionForbidden, Error}
 import me.reminisce.server.domain.RESTHandler.{WithActorRef, WithProps}
 import me.reminisce.server.jsonserializer.GameCreatorFormatter
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.FinishedQuestionCreation
@@ -35,6 +35,8 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
     case ReceiveTimeout => complete(GatewayTimeout, Domain.Error("Request timeout"))
     case graphUnreachable: Domain.GraphAPIUnreachable => complete(GatewayTimeout, graphUnreachable)
     case graphInvalidToken: Domain.GraphAPIInvalidToken => complete(Unauthorized, graphInvalidToken)
+    case internalError: Domain.InternalError => complete(InternalServerError, internalError)
+    case forbidden: ActionForbidden => complete(Forbidden, forbidden)
     case res: RestMessage => complete(OK, res)
     case x => log.info("Per request received strange message " + x)
   }

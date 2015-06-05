@@ -24,14 +24,14 @@ object MongoDBEntities {
   }
 
   //the facebook page_id can't be used as a mongodb id as its too short
-  case class FBPage(id: Option[BSONObjectID], pageId: String, name: Option[String], photos: Option[FBPhoto]) {
+  case class FBPage(id: Option[BSONObjectID], pageId: String, name: Option[String], photos: Option[FBPhoto], likesNumber: Int) {
   }
 
   object FBPage {
     implicit val fbPageFormat = Macros.handler[FBPage]
   }
 
-  case class FBPageLike(id: Option[BSONObjectID], userId: String, pageId: String)
+  case class FBPageLike(id: Option[BSONObjectID], userId: String, pageId: String, likeTime: DateTime)
 
   object FBPageLike {
     implicit val fbPageLikeFormat = Macros.handler[FBPageLike]
@@ -102,12 +102,12 @@ object MongoDBEntities {
                     createdTime: Option[String] = None,
                     from: Option[FBFrom] = None,
                     likes: Option[List[FBLike]] = None,
-                    likeCount: Option[Int] = None,
+                    likesCount: Option[Int] = None,
                     `type`: Option[String] = None,
                     link: Option[String] = None,
                     attachments: Option[List[FBAttachment]],
                     comments: Option[List[FBComment]] = None,
-                    comments_count: Option[Int] = None)
+                    commentsCount: Option[Int] = None)
 
 
   object FBPost {
@@ -116,9 +116,9 @@ object MongoDBEntities {
 
   case class UserStats(id: Option[BSONObjectID] = None,
                        userId: String,
+                       dataTypeCounts: Map[String, Int] = Map(),
                        questionCounts: Map[String, Int] = Map(),
-                       likers: Set[FBLike] = Set(),
-                       maxLikerPerPost: Int = 0) {
+                       likers: Set[FBLike] = Set()) {
 
   }
 
@@ -162,6 +162,19 @@ object MongoDBEntities {
 
   object PostQuestions {
     implicit val postQuestionsFormat = Macros.handler[PostQuestions]
+  }
+
+
+  case class ItemStats(id: Option[BSONObjectID] = None,
+                       userId: String,
+                       itemId: String,
+                       itemType: String,
+                       dataTypes: List[String],
+                       dataCount: Int,
+                       readForStats: Boolean = false)
+
+  object ItemStats {
+    implicit val itemStatsFormat = Macros.handler[ItemStats]
   }
 
 }

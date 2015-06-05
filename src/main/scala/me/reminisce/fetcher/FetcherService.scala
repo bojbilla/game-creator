@@ -9,6 +9,8 @@ import me.reminisce.fetcher.common.FBCommunicationManager
 import me.reminisce.mongodb.MongoDBEntities.LastFetched
 import me.reminisce.server.domain.Domain.{AlreadyFresh, Done, GraphAPIInvalidToken, GraphAPIUnreachable}
 import me.reminisce.server.domain.{Domain, RestMessage}
+import me.reminisce.service.stats.StatsHandler
+import me.reminisce.service.stats.StatsHandler.FinalStats
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -93,6 +95,9 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
       }
     } else {
       client ! AlreadyFresh(s"Data for user $userId is fresh.")
+      val statsHandler = context.actorOf(StatsHandler.props(userId, database))
+      statsHandler ! FinalStats(Set(), Set())
+      log.info(s"Requesting stats update.")
     }
   }
 }

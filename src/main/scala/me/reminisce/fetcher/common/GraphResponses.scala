@@ -70,7 +70,7 @@ object GraphResponses {
 
   case class Photo(id: String, source: Option[String], created_time: Option[String], tags: Option[Root[List[Tag]]])
 
-  case class Page(id: String, name: Option[String], photos: Option[Root[Photo]])
+  case class Page(id: String, name: Option[String], photos: Option[Root[Photo]], likes: Option[Int], created_time: String)
 
   case class Place(id: Option[String], name: Option[String], location: Option[Location], created_time: Option[String])
 

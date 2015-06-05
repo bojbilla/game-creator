@@ -1,8 +1,8 @@
 package me.reminisce.service.gameboardgen.questiongen
 
-import akka.actor.{ActorRef, Props}
+import akka.actor.Props
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
+import me.reminisce.mongodb.MongoDBEntities.FBPage
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities._
@@ -25,6 +25,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
     case CreateQuestion(userId, itemId) =>
+      import scala.concurrent.ExecutionContext.Implicits.global
       val client = sender()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
       val likesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
@@ -62,24 +63,6 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
           client ! NotEnoughData(s"Page not found. $itemId")
       }
     case x => log.error(s"WhichPageDidYouLike received a unexpected message $x")
-  }
-
-  def fetchLikedPages(pageLikesCollection: BSONCollection, userId: String, client: ActorRef)(f: List[FBPageLike] => Unit): Unit = {
-    val query = BSONDocument("userId" -> userId)
-    pageLikesCollection.find(query).cursor[FBPageLike].collect[List]().onComplete {
-      case Success(list) => f(list)
-      case Failure(e) =>
-        client ! MongoDBError(s"${e.getMessage}")
-    }
-  }
-
-  def fetchPage(pagesCollection: BSONCollection, userId: String, client: ActorRef)(f: Option[FBPage] => Unit): Unit = {
-    val query = BSONDocument("pageId" -> userId)
-    pagesCollection.find(query).one[FBPage].onComplete {
-      case Success(opt) => f(opt)
-      case Failure(e) =>
-        client ! MongoDBError(s"${e.getMessage}")
-    }
   }
 
 }

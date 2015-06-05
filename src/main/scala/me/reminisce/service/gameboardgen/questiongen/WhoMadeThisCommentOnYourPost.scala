@@ -23,6 +23,7 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
     case CreateQuestion(userId, itemId) =>
+      import scala.concurrent.ExecutionContext.Implicits.global
       val client = sender()
       val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
       postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost].onComplete {

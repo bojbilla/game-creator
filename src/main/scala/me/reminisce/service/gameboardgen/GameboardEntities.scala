@@ -16,15 +16,25 @@ object GameboardEntities {
   object SpecificQuestionType extends Enumeration {
     type SpecificQuestionType = Value
     val TLWhenDidYouShareThisPost = Value("TLWhenDidYouShareThisPost")
+    val TLWhenDidYouLikeThisPage = Value("TLWhenDidYouLikeThisPage")
     val GeoWhatCoordinatesWereYouAt = Value("GeoWhatCoordinatesWereYouAt")
     val MCWhoMadeThisCommentOnYourPost = Value("MCWhoMadeThisCommentOnYourPost")
     val MCWhichPageDidYouLike = Value("MCWhichPageDidYouLike")
     val MCWhoLikedYourPost = Value("MCWhoLikedYourPost")
+    val ORDPageLikes = Value("ORDPageLike")
+    val ORDPostCommentsNumber = Value("ORDPostCommentsNumber")
+    val ORDPostLikesNumber = Value("ORDPostLikesNumber")
+    val ORDPostTime = Value("ORDPostTime")
+    val ORDPageLikeTime = Value("ORDPageLikeTime")
   }
 
   object QuestionKind extends Enumeration {
     type QuestionKind = Value
-    val MultipleChoice, Timeline, Geolocation, Misc = Value
+    val MultipleChoice = Value("MultipleChoice")
+    val Timeline = Value("Timeline")
+    val Geolocation = Value("Geolocation")
+    val Order = Value("Order")
+    val Misc = Value("Misc")
   }
 
   object TimeUnit extends Enumeration {
@@ -80,13 +90,23 @@ object GameboardEntities {
                               kind: QuestionKind,
                               `type`: SpecificQuestionType,
                               subject: Option[Subject],
-                              answer: String, // Weird problem with DateTime format !!!
+                              answer: String, // Weird problem with DateTime format serialization
                               min: String,
                               max: String,
                               default: String,
                               unit: TimeUnit,
                               step: Int,
                               threshold: Int) extends GameQuestion(userId, kind, `type`, subject)
+
+  case class OrderQuestion(userId: String,
+                           kind: QuestionKind,
+                           `type`: SpecificQuestionType,
+                           subject: Option[Subject],
+                           choices: List[SubjectWithId],
+                           answer: List[Int]
+                            ) extends GameQuestion(userId, kind, `type`, subject)
+
+  case class SubjectWithId(subject: Subject, uUID: Int)
 
 
   case class Possibility(name: String, imageUrl: Option[String], `type`: String, fbId: Option[String] = None)
