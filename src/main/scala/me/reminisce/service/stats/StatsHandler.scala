@@ -4,6 +4,7 @@ import akka.actor.Props
 import me.reminisce.database.{DatabaseService, MongoDatabaseService}
 import me.reminisce.fetcher.common.GraphResponses.{Page, Post}
 import me.reminisce.mongodb.MongoDBEntities._
+import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.Order
 import me.reminisce.service.stats.StatsDataTypes.{PostGeolocation, _}
 import me.reminisce.service.stats.StatsHandler.{FinalStats, TransientPostsStats}
 import reactivemongo.api.DefaultDB
@@ -270,19 +271,7 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     }
 
 
-    val newDataTypes = newItemsStats.foldLeft(userStats.dataTypeCounts) {
-      case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
-    }
-
-    // One has to be careful as the count for order is just the count of items that have a data type suited for ordering
-    val newQuestionCounts = newItemsStats.foldLeft(userStats.questionCounts) {
-      case (acc, itemStats) =>
-        val kinds = itemStats.dataTypes.flatMap(dType => possibleKind(stringToType(dType)))
-        val listOfCounts = kinds.groupBy(el => el).map(cpl => cpl._1.toString -> cpl._2.size).toList
-        addTypesToMap(listOfCounts, acc)
-    }
-
-    val newUserStats = UserStats(userStats.id, userStats.userId, newDataTypes, newQuestionCounts, newLikers)
+    val newUserStats = userStatsWithNewCounts(newLikers, newItemsStats, userStats)
     val selector = BSONDocument("userId" -> userId)
     userStatsCollection.update(selector, newUserStats, upsert = true)
   }
@@ -330,21 +319,37 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
         itemsStatsCollection.update(selector, itemStats, upsert = true)
     }
 
-    val newDataTypes = newItemsStats.foldLeft(userStats.dataTypeCounts) {
-      case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
-    }
-
-    // One has to be careful as the count for order is just the count of items that have a data type suited for ordering
-    val newQuestionCounts = newItemsStats.foldLeft(userStats.questionCounts) {
-      case (acc, itemStats) =>
-        val kinds = itemStats.dataTypes.flatMap(dType => possibleKind(stringToType(dType)))
-        val listOfCounts = kinds.groupBy(el => el).map(cpl => cpl._1.toString -> cpl._2.size).toList
-        addTypesToMap(listOfCounts, acc)
-    }
-
-    val newUserStats = UserStats(userStats.id, userStats.userId, newDataTypes, newQuestionCounts, newLikers)
+    val newUserStats = userStatsWithNewCounts(newLikers, newItemsStats, userStats)
     val selector = BSONDocument("userId" -> userId)
     userStatsCollection.update(selector, newUserStats, upsert = true)
 
+  }
+
+  def userStatsWithNewCounts(newLikers: Set[FBLike], newItemsStats: List[ItemStats], userStats: UserStats): UserStats = {
+    val newDataTypes = newItemsStats.foldLeft(Map[String,Int]()) {
+      case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
+    }.toList
+
+    // One has to be careful as the count for order is just the count of items that have a data type suited for orderin
+    // Ordering have to be a multiple of 4
+    val newQuestionCounts = newDataTypes.foldLeft(Map[String, Int]()) {
+      case (acc, cpl) =>
+        val kinds = possibleKind(stringToType(cpl._1))
+        val newCounts = kinds.map {
+          kind =>
+            val count = kind match {
+              case Order =>
+                val fourth = cpl._2/4
+                fourth*4
+              case _ =>
+                cpl._2
+            }
+            (kind.toString, count)
+        }
+        addTypesToMap(newCounts, acc)
+    }.toList
+
+    UserStats(userStats.id, userStats.userId, addTypesToMap(newDataTypes, userStats.dataTypeCounts),
+      addTypesToMap(newQuestionCounts, userStats.questionCounts), newLikers)
   }
 }
