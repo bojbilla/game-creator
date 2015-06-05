@@ -97,7 +97,7 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
     case head :: tail =>
       val (current, rest) = pairsKindType.partition(el => (el._1 == head._1) && (el._2 == head._2))
       val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
-      val query = BSONDocument("userId" -> userId, "dataTypes" -> BSONDocument("$in" -> List(head._2.name)))
+      val query = BSONDocument("userId" -> userId, "dataTypes" -> BSONDocument("$in" -> List(head._2.name)), "readForStats" -> true)
       findSome[ItemStats](itemsStatsCollection, query, client) {
         listItemsStats =>
           if (head._1 == Order) {
