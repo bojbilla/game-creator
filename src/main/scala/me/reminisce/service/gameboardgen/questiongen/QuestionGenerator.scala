@@ -1,6 +1,6 @@
 package me.reminisce.service.gameboardgen.questiongen
 
-import akka.actor.{Actor, ActorContext, ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import me.reminisce.mongodb.MongoDBEntities.{FBAttachment, FBPage, FBPageLike, FBPost}
 import me.reminisce.server.domain.RestMessage
 import me.reminisce.service.gameboardgen.GameboardEntities._
@@ -10,7 +10,7 @@ import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 import reactivemongo.core.commands.Count
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.Future
 import scala.util.{Failure, Random, Success}
 
 object QuestionGenerator {

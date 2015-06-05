@@ -1,17 +1,14 @@
 package me.reminisce.service.gameboardgen
 
-import akka.actor.{Actor, ActorContext, ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import me.reminisce.service.gameboardgen.BoardGenerator.FailedBoardGeneration
 import me.reminisce.service.gameboardgen.GameGenerator.InitBoardCreation
-import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.Tile
-import me.reminisce.service.stats.StatsDataTypes.DataType
-import reactivemongo.api.{QueryOpts, DefaultDB}
 import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 import reactivemongo.core.commands.Count
 
-import scala.concurrent.{Future, ExecutionContextExecutor}
 import scala.util.{Failure, Random, Success}
 
 object BoardGenerator {
@@ -120,9 +117,9 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
   }
 
   def findSomeRandom[T](db: DefaultDB,
-                      collection: BSONCollection,
-                      query: BSONDocument, quantity: Int, client: ActorRef)(f: (List[T] => Unit))
-                     (implicit reader: BSONDocumentReader[T]): Unit = {
+                        collection: BSONCollection,
+                        query: BSONDocument, quantity: Int, client: ActorRef)(f: (List[T] => Unit))
+                       (implicit reader: BSONDocumentReader[T]): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val futureCount = db.command(Count(collection.name, Some(query)))
     futureCount.flatMap { count =>

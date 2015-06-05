@@ -15,7 +15,7 @@ import scala.util.{Failure, Success}
 
 object DeletionService {
 
-  case class ClearDatabase(appMode : String) extends RestMessage
+  case class ClearDatabase(appMode: String) extends RestMessage
 
   case class RemoveUser(userId: String) extends RestMessage
 

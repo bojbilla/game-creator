@@ -25,7 +25,7 @@ object Domain {
 
   case class NoContentFound(message: String) extends RestMessage
 
-  case class ActionForbidden(message : String) extends RestMessage
+  case class ActionForbidden(message: String) extends RestMessage
 
   // Exceptions
 

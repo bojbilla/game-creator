@@ -18,7 +18,6 @@ import spray.routing._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.Properties._
 
 object GameCreatorService {
 
@@ -33,9 +32,6 @@ trait GameCreatorServiceActor extends GameCreatorService {
 
 trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor with ActorLogging with Json4sSupport {
   def actorRefFactory: ActorContext
-
-  // Development ? Release ?
-  val appMode = envOrElse("GAME_CREATOR_MODE", "DEV")
 
   val db: DefaultDB
 
@@ -73,7 +69,7 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
         parameters("UNUSED" ? "") {
           //ugly fix
           (UNUSED: String) =>
-            dropDatabase(ClearDatabase(appMode))
+            dropDatabase(ClearDatabase(ApplicationConfiguration.appMode))
         }
       }
     }

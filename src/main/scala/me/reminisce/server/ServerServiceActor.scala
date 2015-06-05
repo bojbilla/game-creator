@@ -1,12 +1,11 @@
 package me.reminisce.server
 
 import akka.actor.{Actor, ActorLogging}
-import me.reminisce.service.GameCreatorServiceActor
+import me.reminisce.service.{ApplicationConfiguration, GameCreatorServiceActor}
 import org.json4s.{DefaultFormats, Formats}
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Properties._
 
 
 class ServerServiceActor extends Actor with GameCreatorServiceActor with ActorLogging {
@@ -15,8 +14,8 @@ class ServerServiceActor extends Actor with GameCreatorServiceActor with ActorLo
   override def receive = runRoute(gameCreatorRoutes)
 
   val driver = new MongoDriver
-  val mongoHost = envOrElse("MONGODB_HOST", Server.hostName)
-  val mongodbName = envOrElse("REMINISCE_MONGO_DB", "mydb")
+  val mongoHost = ApplicationConfiguration.mongoHost
+  val mongodbName = ApplicationConfiguration.mongodbName
   val connection: MongoConnection = driver.connection(List(mongoHost))
   override val db: DefaultDB = connection(mongodbName)
 

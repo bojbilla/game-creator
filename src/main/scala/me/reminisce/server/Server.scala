@@ -4,10 +4,10 @@ import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory
+import me.reminisce.service.ApplicationConfiguration
 import spray.can.Http
 
 import scala.concurrent.ExecutionContext
-import scala.util.Properties._
 
 object Server extends App {
   // we Server an ActorSystem to host our application in
@@ -17,8 +17,8 @@ object Server extends App {
 
   val protocol = "http://"
   //make sure the following env variables are defined on your system
-  val hostName = envOrElse("GAME_CREATOR_HOST", "localhost")
-  val port = envOrElse("GAME_CREATOR_PORT", "9900").toInt
+  val hostName = ApplicationConfiguration.hostName
+  val port = ApplicationConfiguration.serverPort
   // create and start our service actor
   val service = system.actorOf(Props[ServerServiceActor], "server-service")
 

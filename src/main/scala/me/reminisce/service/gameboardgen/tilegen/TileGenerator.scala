@@ -83,24 +83,25 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
         context.actorOf(WhichCoordinatesWereYouAt.props(db))
     }
   }
-/*
-  def createQuestionGenerators(questionType: SpecificQuestionType): ActorRef = {
-    questionType match {
-      case MCWhichPageDidYouLike =>
-        context.actorOf(WhichPageDidYouLike.props(db))
-      case MCWhoLikedYourPost =>
-        context.actorOf(WhoLikedYourPost.props(db))
-      case MCWhoMadeThisCommentOnYourPost =>
-        context.actorOf(WhoMadeThisCommentOnYourPost.props(db))
-      case TLWhenDidYouShareThisPost =>
-        context.actorOf(WhenDidYouShareThisPost.props(db))
-      case GeoWhatCoordinatesWereYouAt =>
-        context.actorOf(WhichCoordinatesWereYouAt.props(db))
-      case _ => log.error("Unknown Question Type")
-        context.actorOf(WhichPageDidYouLike.props(db))
+
+  /*
+    def createQuestionGenerators(questionType: SpecificQuestionType): ActorRef = {
+      questionType match {
+        case MCWhichPageDidYouLike =>
+          context.actorOf(WhichPageDidYouLike.props(db))
+        case MCWhoLikedYourPost =>
+          context.actorOf(WhoLikedYourPost.props(db))
+        case MCWhoMadeThisCommentOnYourPost =>
+          context.actorOf(WhoMadeThisCommentOnYourPost.props(db))
+        case TLWhenDidYouShareThisPost =>
+          context.actorOf(WhenDidYouShareThisPost.props(db))
+        case GeoWhatCoordinatesWereYouAt =>
+          context.actorOf(WhichCoordinatesWereYouAt.props(db))
+        case _ => log.error("Unknown Question Type")
+          context.actorOf(WhichPageDidYouLike.props(db))
+      }
     }
-  }
-*/
+  */
   def awaitingQuestions(client: ActorRef, userId: String, `type`: QuestionKind): Receive = {
     case FinishedQuestionCreation(q) =>
       questions = q :: questions
