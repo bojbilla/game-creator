@@ -106,16 +106,18 @@ object GameboardEntities {
                            answer: List[Int]
                             ) extends GameQuestion(userId, kind, `type`, subject)
 
-  case class SubjectWithId(subject: Subject, uUID: Int)
+  case class SubjectWithId(subject: Subject, uId: Int)
 
 
   case class Possibility(name: String, imageUrl: Option[String], `type`: String, fbId: Option[String] = None)
 
-  case class CoordinatesQuestion(userId: String,
+  case class GeolocationQuestion(userId: String,
                                  kind: QuestionKind,
                                  `type`: SpecificQuestionType,
                                  subject: Option[Subject],
-                                 answer: Location) extends GameQuestion(userId, kind, `type`, subject)
+                                 answer: Location,
+                                 defaultLocation: Location,
+                                 range: Double) extends GameQuestion(userId, kind, `type`, subject)
 
   case class Location(latitude: Double, longitude: Double)
 
