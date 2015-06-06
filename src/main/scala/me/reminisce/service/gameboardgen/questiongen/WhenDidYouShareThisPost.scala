@@ -6,13 +6,13 @@ import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.FBPost
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
-import me.reminisce.service.gameboardgen.GameboardEntities.{TimeUnit, TimelineQuestion}
+import me.reminisce.service.gameboardgen.GameboardEntities.TimelineQuestion
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
-import scala.util.{Failure, Random, Success}
+import scala.util.{Failure, Success}
 
 
 object WhenDidYouShareThisPost {
@@ -21,7 +21,7 @@ object WhenDidYouShareThisPost {
     Props(new WhenDidYouShareThisPost(database))
 }
 
-class WhenDidYouShareThisPost(db: DefaultDB) extends QuestionGenerator {
+class WhenDidYouShareThisPost(db: DefaultDB) extends TimeQuestionGenerator {
   def receive = {
     case CreateQuestion(userId, itemId) =>
       import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,13 +37,9 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends QuestionGenerator {
           val dateString = post.createdTime.get
           val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
           val actualDate = formatter.parseDateTime(dateString)
-          val unit = TimeUnit.Day
+          val (min, max, unit) = generateRange(actualDate)
           val step = 1
-          val threshold = 3
-          val rangeSize = 30
-          val rangeBefore = Random.nextInt(rangeSize)
-          val min = actualDate - rangeBefore.days
-          val max = actualDate + (rangeSize - rangeBefore).days
+          val threshold = 0
           val postSubject = subjectFromPost(post)
           val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouShareThisPost, Some(postSubject),
             actualDate.toString(formatter), min.toString(formatter), max.toString(formatter), min.toString(formatter),

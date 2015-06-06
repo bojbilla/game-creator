@@ -6,13 +6,13 @@ import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
-import me.reminisce.service.gameboardgen.GameboardEntities.{TimeUnit, TimelineQuestion}
+import me.reminisce.service.gameboardgen.GameboardEntities.TimelineQuestion
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
-import scala.util.{Failure, Random, Success}
+import scala.util.{Failure, Success}
 
 
 object WhenDidYouLikeThisPage {
@@ -21,7 +21,7 @@ object WhenDidYouLikeThisPage {
     Props(new WhenDidYouLikeThisPage(database))
 }
 
-class WhenDidYouLikeThisPage(db: DefaultDB) extends QuestionGenerator {
+class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
   def receive = {
     case CreateQuestion(userId, itemId) =>
       import scala.concurrent.ExecutionContext.Implicits.global
@@ -40,13 +40,9 @@ class WhenDidYouLikeThisPage(db: DefaultDB) extends QuestionGenerator {
             case Success(maybePage) =>
               val pageLike = maybePageLike.get
               val actualDate = pageLike.likeTime
-              val unit = TimeUnit.Day
+              val (min, max, unit) = generateRange(actualDate)
               val step = 1
-              val threshold = 3
-              val rangeSize = 30
-              val rangeBefore = Random.nextInt(rangeSize)
-              val min = actualDate - rangeBefore.days
-              val max = actualDate + (rangeSize - rangeBefore).days
+              val threshold = 0
               val pageSubject = subjectFromPage(maybePage.get)
               val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
               val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouLikeThisPage, Some(pageSubject),

@@ -326,7 +326,7 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
   }
 
   def userStatsWithNewCounts(newLikers: Set[FBLike], newItemsStats: List[ItemStats], userStats: UserStats): UserStats = {
-    val newDataTypes = newItemsStats.foldLeft(Map[String,Int]()) {
+    val newDataTypes = newItemsStats.foldLeft(Map[String, Int]()) {
       case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
     }.toList
 
@@ -339,8 +339,8 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
           kind =>
             val count = kind match {
               case Order =>
-                val fourth = cpl._2/4
-                fourth*4
+                val fourth = cpl._2 / 4
+                fourth * 4
               case _ =>
                 cpl._2
             }
