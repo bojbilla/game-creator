@@ -45,6 +45,8 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
 
 
   def getCreatorFromStrategy(strategy: String): ActorRef = strategy match {
+    case "uniform" =>
+      context.actorOf(Props(new UniformBoardGenerator(database, userId)))
     case "choose" =>
       context.actorOf(Props(new StrategyChooser(database, userId)))
     case "random" =>

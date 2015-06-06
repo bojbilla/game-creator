@@ -2,24 +2,39 @@ package me.reminisce.service.gameboardgen
 
 import akka.actor.ActorRef
 import me.reminisce.database.MongoDatabaseService
+import me.reminisce.database.MongoDatabaseService
+import me.reminisce.mongodb.MongoDBEntities.ItemStats
+import me.reminisce.mongodb.MongoDBEntities.UserStats
 import me.reminisce.mongodb.MongoDBEntities.{ItemStats, UserStats}
+import me.reminisce.service.gameboardgen.BoardGenerator.FailedBoardGeneration
+import me.reminisce.service.gameboardgen.BoardGenerator.FinishedBoardGeneration
 import me.reminisce.service.gameboardgen.BoardGenerator.{FailedBoardGeneration, FinishedBoardGeneration}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
+import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
+import me.reminisce.service.gameboardgen.GameboardEntities.Tile
 import me.reminisce.service.gameboardgen.GameboardEntities.Tile
 import me.reminisce.service.gameboardgen.tilegen.TileGenerator
+import me.reminisce.service.gameboardgen.tilegen.TileGenerator
+import me.reminisce.service.gameboardgen.tilegen.TileGenerator.CreateTile
+import me.reminisce.service.gameboardgen.tilegen.TileGenerator.FailedTileCreation
+import me.reminisce.service.gameboardgen.tilegen.TileGenerator.FinishedTileCreation
 import me.reminisce.service.gameboardgen.tilegen.TileGenerator.{CreateTile, FailedTileCreation, FinishedTileCreation}
+import me.reminisce.service.stats.StatsDataTypes.DataType
+import me.reminisce.service.stats.StatsDataTypes.PostWhoLiked
+import me.reminisce.service.stats.StatsDataTypes._
 import me.reminisce.service.stats.StatsDataTypes._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.BSONDocument
 import reactivemongo.bson.{BSONArray, BSONDocument}
 
 import scala.util.Random
 
-object RandomBoardGenerator {
+object UniformBoardGenerator {
 
 }
 
-class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGenerator(database, userId) {
+class UniformBoardGenerator(database: DefaultDB, userId: String) extends BoardGenerator(database, userId) {
 
   var tiles: List[Tile] = List()
 
@@ -30,7 +45,7 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
       case Some(userStats) =>
         generateBoard(userStats, client)
       case None =>
-        generateBoard(client)
+        client ! FailedBoardGeneration(s"Failed to generate board for user $userId : no UserStats.")
     }
   }
 
@@ -66,7 +81,7 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
       val mcCount = normalizedCounts.getOrElse(MultipleChoice.toString, 0)
       val geoCount = normalizedCounts.getOrElse(Geolocation.toString, 0)
 
-      val selectedKinds = drawItemsAtRandomFromBags[QuestionKind](List(tlCount, ordCount, mcCount, geoCount),
+      val selectedKinds = drawUniformelyFromBags[QuestionKind](List(tlCount, ordCount, mcCount, geoCount),
         List(Timeline, Order, MultipleChoice, Geolocation), 27)
 
 
@@ -141,43 +156,5 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
 
   }
 
-  def generateBoard(client: ActorRef): Unit = {
-    // As order cannot be generated only from one question, we exclude the types that only lead to this kind of question
-    // PostWhoLiked is also excluded as it cannot be generated without UserStats (even though this type should not be
-    // marked as available on an item if no UserStats was generated)
-    val excluded = (PostWhoLiked :: possibleTypes(Order).filter(t => possibleKind(t).size == 1)).map(_.name)
-    val selector = BSONDocument("userId" -> userId,
-      "$or" -> BSONArray(
-        BSONDocument("dataCount" -> BSONDocument("$gt" -> excluded.size)),
-        BSONDocument("dataTypes" -> BSONDocument("$nin" -> excluded))))
-    val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
-    findSome[ItemStats](itemsStatsCollection, selector, client) {
-      itemsStatsList =>
-        if (itemsStatsList.length < 27) {
-          client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
-        } else {
-          val shuffledList = Random.shuffle(itemsStatsList).take(27)
-          val tuples = shuffledList.map {
-            is =>
-              val okTypes = is.dataTypes.filterNot(t => excluded.contains(t)).map(stringToType)
-              val chosenType = Random.shuffle(okTypes).head
-              val chosenKind = Random.shuffle(possibleKind(chosenType).filterNot(k => k == Order)).head
-              (chosenKind, chosenType, List((is.itemId, is.itemType)))
-          }
-
-          val tiles = generateTiles(tuples, client)
-          if (tiles.length > 9) {
-            client ! FailedBoardGeneration(s"Too many tiles generated ! (${tiles.length})")
-          }
-          context.become(awaitFeedBack(client))
-          tiles.foreach {
-            tile =>
-              val worker = context.actorOf(TileGenerator.props(database))
-              val req = CreateTile(userId, tile._2, tile._1)
-              worker ! req
-          }
-        }
-    }
-  }
 
 }
