@@ -43,7 +43,7 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
           val defaultLocation = Location(answer.latitude + t * math.sin(theta), answer.longitude + t * math.cos(theta))
           //magic number, around 2 kilometers
           val range = 0.02612831795
-          val gameQuestion = GeolocationQuestion(userId, MultipleChoice, GeoWhatCoordinatesWereYouAt, Some(postSubject),
+          val gameQuestion = GeolocationQuestion(userId, Geolocation, GeoWhatCoordinatesWereYouAt, Some(postSubject),
             answer, defaultLocation, range)
           client ! FinishedQuestionCreation(gameQuestion)
         case Failure(e) =>
