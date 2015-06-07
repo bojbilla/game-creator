@@ -52,7 +52,7 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
       }
     } ~ path("gameboard") {
       get {
-        parameters("user_id", "access_token", "strategy" ? "random") {
+        parameters("user_id", "access_token", "strategy" ? "choose") {
           (userId: String, accessToken: String, strategy: String) =>
             createBoard(CreateBoard(accessToken, strategy), userId)
         }

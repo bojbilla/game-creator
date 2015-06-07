@@ -52,7 +52,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
     case "random" =>
       context.actorOf(Props(new RandomBoardGenerator(database, userId)))
     case any =>
-      context.actorOf(Props(new RandomBoardGenerator(database, userId)))
+      context.actorOf(Props(new StrategyChooser(database, userId)))
   }
 
 
