@@ -326,9 +326,9 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
   }
 
   def userStatsWithNewCounts(newLikers: Set[FBLike], newItemsStats: List[ItemStats], userStats: UserStats): UserStats = {
-    val newDataTypes = newItemsStats.foldLeft(Map[String, Int]()) {
+    val newDataTypes = newItemsStats.foldLeft(userStats.dataTypeCounts) {
       case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
-    }.toList
+    }
 
     // One has to be careful as the count for order is just the count of items that have a data type suited for orderin
     // Ordering have to be a multiple of 4
@@ -347,9 +347,8 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
             (kind.toString, count)
         }
         addTypesToMap(newCounts, acc)
-    }.toList
+    }
 
-    UserStats(userStats.id, userStats.userId, addTypesToMap(newDataTypes, userStats.dataTypeCounts),
-      addTypesToMap(newQuestionCounts, userStats.questionCounts), newLikers)
+    UserStats(userStats.id, userStats.userId, newDataTypes,newQuestionCounts, newLikers)
   }
 }
