@@ -21,7 +21,7 @@ object GameboardEntities {
     val MCWhoMadeThisCommentOnYourPost = Value("MCWhoMadeThisCommentOnYourPost")
     val MCWhichPageDidYouLike = Value("MCWhichPageDidYouLike")
     val MCWhoLikedYourPost = Value("MCWhoLikedYourPost")
-    val ORDPageLikes = Value("ORDPageLike")
+    val ORDPageLikes = Value("ORDPageLikes")
     val ORDPostCommentsNumber = Value("ORDPostCommentsNumber")
     val ORDPostLikesNumber = Value("ORDPostLikesNumber")
     val ORDPostTime = Value("ORDPostTime")
