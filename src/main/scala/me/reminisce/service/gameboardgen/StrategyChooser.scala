@@ -32,7 +32,7 @@ class StrategyChooser(database: DefaultDB, userId: String) extends BoardGenerato
       log.info(s"Random generator chosen for user $userId.")
       context.actorOf(Props(new RandomBoardGenerator(database, userId)))
     case Some(userStats) =>
-      log.info(s"Uniform generator chosen $userId.")
+      log.info(s"Uniform generator chosen for user $userId.")
       context.actorOf(Props(new UniformBoardGenerator(database, userId)))
   }
 
