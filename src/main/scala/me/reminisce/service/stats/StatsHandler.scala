@@ -330,8 +330,8 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
       case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
     }
 
-    // One has to be careful as the count for order is just the count of items that have a data type suited for orderin
-    // Ordering have to be a multiple of 4
+    // One has to be careful as the count for order is just the count of items that have a data type suited for ordering
+    // Ordering have to be a multiple of 4 (at max four items will be used)
     val newQuestionCounts = newDataTypes.foldLeft(Map[String, Int]()) {
       case (acc, cpl) =>
         val kinds = possibleKind(stringToType(cpl._1))
@@ -349,6 +349,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
         addTypesToMap(newCounts, acc)
     }
 
-    UserStats(userStats.id, userStats.userId, newDataTypes,newQuestionCounts, newLikers)
+    UserStats(userStats.id, userStats.userId, newDataTypes, newQuestionCounts, newLikers)
   }
 }

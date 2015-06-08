@@ -27,7 +27,7 @@ abstract class TimeQuestionGenerator extends QuestionGenerator {
       }
 
     //difference because for years, months, weeks etc... it can never be 0 ago
-    val maxStepsForward = List[Int](difference-1, 4).min
+    val maxStepsForward = List[Int](difference - 1, 4).min
     val stepsForward = if (maxStepsForward > 0) Random.nextInt(maxStepsForward) else 0
 
     val min = actualDate - stepSize.multipliedBy(4 - stepsForward)
