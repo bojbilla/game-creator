@@ -29,10 +29,10 @@ class StrategyChooser(database: DefaultDB, userId: String) extends BoardGenerato
 
   def getCreatorFromUserStats(userStatsOpt: Option[UserStats]): ActorRef = userStatsOpt match {
     case None =>
-      log.info("Random generator chosen.")
+      log.info(s"Random generator chosen for user $userId.")
       context.actorOf(Props(new RandomBoardGenerator(database, userId)))
     case Some(userStats) =>
-      log.info("Uniform generator chosen.")
+      log.info(s"Uniform generator chosen $userId.")
       context.actorOf(Props(new UniformBoardGenerator(database, userId)))
   }
 

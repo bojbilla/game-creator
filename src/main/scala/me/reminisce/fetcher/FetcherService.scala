@@ -97,7 +97,7 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
       client ! AlreadyFresh(s"Data for user $userId is fresh.")
       val statsHandler = context.actorOf(StatsHandler.props(userId, database))
       statsHandler ! FinalStats(Set(), Set())
-      log.info(s"Requesting stats update.")
+      log.info(s"Requesting stats update for user $userId.")
     }
   }
 }

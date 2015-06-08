@@ -77,7 +77,7 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
 
 
   def createBoard(message: RestMessage, userId: String): Route = {
-    log.info("Creating game board.")
+    log.info(s"Creating game board for user $userId.")
     val generator = context.actorOf(GameGenerator.props(db, userId))
     ctx => perRequest(ctx, generator, message)
   }

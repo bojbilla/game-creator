@@ -64,7 +64,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
     case FailedBoardGeneration(message) =>
       worker ! PoisonPill
       client ! InternalError(message)
-      log.error(s"An internal error occurred while serving the request.")
+      log.error(s"An internal error occurred while generating the gameboard for user $userId.")
     case Done(message) =>
       fetcherAcked = true
       verifyAndAnswer(client)
