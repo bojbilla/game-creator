@@ -7,4 +7,4 @@ game-creator:
 mongo:
   image: mongo:3.0.6
   volumes:
-    - /data/db:/data/db
+    - ./data/db:/data/db

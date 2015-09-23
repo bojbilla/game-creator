@@ -23,5 +23,6 @@ project/plugins/project/
 .DS-Store
 .DS_Store
 
-#Deployment binary
+#Deployment
 deployment/*.jar
+deployment/data/*
