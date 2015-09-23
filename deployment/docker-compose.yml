@@ -1,0 +1,10 @@
+game-creator:
+  build: .
+  ports:
+    - "9900:9900"
+  links:
+    - mongo
+mongo:
+  image: mongo:3.0.6
+  volumes:
+    - /data/db:/data/db
