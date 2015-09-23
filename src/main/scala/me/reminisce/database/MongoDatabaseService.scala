@@ -78,7 +78,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     import scala.concurrent.ExecutionContext.Implicits.global
     posts.foreach { p =>
       val likes = p.likes.flatMap(root => root.data.map(likes => likes.map(l => FBLike(l.id, l.name))))
-      val like_count = p.likes.flatMap(root => root.summary.map(s => s.total_count))
+      val like_count = Some(likes.getOrElse(List()).length)
       val fbFrom = p.from.map(f => FBFrom(f.id, f.name))
       val fbComments = p.comments.flatMap(root => root.data.map(comments => comments.map { c =>
         FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
@@ -97,7 +97,6 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
       )))
       val fbPost = FBPost(None, userId, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,
         likes, like_count, p.`type`, p.link, fbAttachments, fbComments, fbCommentsCount)
-
       val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
       collection.update(selector, fbPost, upsert = true)
     }
