@@ -11,4 +11,4 @@ ADD game-creator.jar game-creator.jar
 
 EXPOSE 9900
 
-CMD java -Xmx128m -jar game-creator.jar >/var/log/game-creator.log 2>&1
+CMD java -Xmx128m -jar game-creator.jar
