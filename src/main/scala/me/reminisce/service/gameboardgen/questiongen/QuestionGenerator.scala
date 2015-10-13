@@ -25,36 +25,6 @@ object QuestionGenerator {
 
   case class NotEnoughData(message: String)
 
-}
-
-abstract class QuestionGenerator extends Actor with ActorLogging {
-  def getDocuments[T](db: DefaultDB,
-                      collection: BSONCollection,
-                      query: BSONDocument, quantity: Int)
-                     (implicit reader: BSONDocumentReader[T]): Future[List[T]] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    val futureCount = db.command(Count(collection.name, Some(query)))
-    futureCount.flatMap { count =>
-      val skip = if (count - quantity > 0) Random.nextInt(count - quantity) else 0
-      collection.find(query).
-        options(QueryOpts(skipN = skip)).cursor[T].collect[List](quantity)
-
-    }
-  }
-
-  def srcFromAttachments(attachmentOpt: Option[List[FBAttachment]]): Option[String] = {
-    attachmentOpt.flatMap {
-      attachmentList =>
-        attachmentList.head.media.map {
-          m => m.src
-        }
-    }
-  }
-
-  def textFromPost(post: FBPost): String = {
-    post.message.getOrElse("") + "\n" + post.story.getOrElse("")
-  }
-
   def subjectFromPost(post: FBPost): PostSubject = {
     post.`type` match {
       case Some(tpe) =>
@@ -62,8 +32,8 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
           case "photo" =>
             val text = textFromPost(post)
             val imageUrl = srcFromAttachments(post.attachments)
-            val facebook_image_url = post.link
-            ImagePostSubject(text, imageUrl, facebook_image_url)
+            val facebookImageUrl = post.link
+            ImagePostSubject(text, imageUrl, facebookImageUrl)
           case "video" =>
             val text = textFromPost(post)
             val thumbnailUrl = srcFromAttachments(post.attachments)
@@ -84,6 +54,28 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
     }
   }
 
+  def textFromPost(post: FBPost): String = {
+    post.message match {
+      case Some(message) =>
+        message + {
+          post.story match {
+            case Some(story) => "\n" + story
+            case None => ""
+          }
+        }
+      case None => post.story.getOrElse("")
+    }
+  }
+
+  def srcFromAttachments(attachmentOpt: Option[List[FBAttachment]]): Option[String] = {
+    attachmentOpt.flatMap {
+      attachmentList =>
+        attachmentList.head.media.map {
+          m => m.src
+        }
+    }
+  }
+
   def subjectFromPage(page: FBPage): PageSubject = {
     val url = page.photos match {
       case Some(p) => p.source
@@ -91,6 +83,22 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
     }
     val name = page.name.getOrElse("")
     PageSubject(name, page.pageId, url)
+  }
+}
+
+abstract class QuestionGenerator extends Actor with ActorLogging {
+  def getDocuments[T](db: DefaultDB,
+                      collection: BSONCollection,
+                      query: BSONDocument, quantity: Int)
+                     (implicit reader: BSONDocumentReader[T]): Future[List[T]] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val futureCount = db.command(Count(collection.name, Some(query)))
+    futureCount.flatMap { count =>
+      val skip = if (count - quantity > 0) Random.nextInt(count - quantity) else 0
+      collection.find(query).
+        options(QueryOpts(skipN = skip)).cursor[T].collect[List](quantity)
+
+    }
   }
 
   def fetchPosts(postsCollection: BSONCollection, userId: String, postIds: List[String], client: ActorRef)(f: List[FBPost] => Unit): Unit = {

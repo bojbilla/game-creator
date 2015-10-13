@@ -5,6 +5,7 @@ import me.reminisce.database.DeletionService.{ClearDatabase, RemoveExtraLikes, R
 import me.reminisce.database.DeletionWorker.{DeleteSelectorMatch, DeletionResult, DropCollection}
 import me.reminisce.server.domain.Domain.{ActionForbidden, Done, InternalError}
 import me.reminisce.server.domain.RestMessage
+import me.reminisce.service.ApplicationConfiguration
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.MongoDBError
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
@@ -15,7 +16,7 @@ import scala.util.{Failure, Success}
 
 object DeletionService {
 
-  case class ClearDatabase(appMode: String) extends RestMessage
+  case class ClearDatabase() extends RestMessage
 
   case class RemoveUser(userId: String) extends RestMessage
 
@@ -39,16 +40,17 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
       log.info(s"Cleaning likes for user $userId.")
       val client = sender()
       removeExtraLikes(userId, actualLikes, client)
-    case ClearDatabase(appMode) =>
-      if (appMode == "DEV") {
+    case ClearDatabase() =>
+      if (ApplicationConfiguration.appMode == "DEV") {
         log.info(s"Wiping database.")
         val client = sender()
         clearDatabase(client)
       } else {
         sender() ! ActionForbidden("The app is not in development mode.")
       }
-    case _ =>
-      log.error("Deletion service received an unexpected message.")
+    case any =>
+      log.error(s"Deletion service received an unexpected message : $any.")
+      sender() ! ActionForbidden(s"Deletion service received an unexpected message : $any.")
   }
 
   def awaitFeedBack(client: ActorRef): Receive = {

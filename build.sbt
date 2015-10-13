@@ -2,7 +2,9 @@ name := "game_creator"
 
 version := "1.0"
 
-scalaVersion  := "2.10.4"
+scalaVersion  := "2.10.6"
+
+ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) }
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-feature")
 
@@ -20,16 +22,21 @@ libraryDependencies ++= {
     "io.spray"            %   "spray-httpx"   % sprayV,
     "io.spray"            %%  "spray-json"    % "1.2.6",
     "io.spray"            %  "spray-client"   % sprayV,
-    "io.spray"            %   "spray-testkit" % sprayV  % "test",
+    "io.spray"            %   "spray-testkit" % sprayV  % "it, test",
     "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
-    "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
-    "org.scalatest" % "scalatest_2.10" % "2.0" % "test",
+    "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "it, test",
+    "org.scalatest" % "scalatest_2.10" % "2.0" % "it, test",
     "com.github.nscala-time" %% "nscala-time" % "1.4.0",
     "org.json4s"          %% "json4s-native"  % json4sV,
     "org.json4s"          %% "json4s-jackson" % json4sV,
-    "org.json4s"          %% "json4s-ext"     % json4sV
+    "org.json4s"          %% "json4s-ext"     % json4sV,
+    "com.github.simplyscala" %% "scalatest-embedmongo" % "0.2.3-SNAPSHOT"
   )
 }
+
+Defaults.itSettings
+
+lazy val `game-creator` = project.in(file(".")).configs(IntegrationTest)
 
 resolvers ++= Seq("spray" at "http://repo.spray.io/")
 
@@ -41,5 +48,7 @@ resolvers += "Typesafe Simple Repository" at
   "http://repo.typesafe.com/typesafe/simple/maven-releases/"
 
 assemblyJarName in assembly := "game-creator.jar"
+
+coverageHighlighting := false
 
 Revolver.settings

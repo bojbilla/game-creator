@@ -69,7 +69,7 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
         parameters("UNUSED" ? "") {
           //ugly fix
           (UNUSED: String) =>
-            dropDatabase(ClearDatabase(ApplicationConfiguration.appMode))
+            dropDatabase(ClearDatabase())
         }
       }
     }

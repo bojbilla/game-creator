@@ -1,6 +1,7 @@
 package me.reminisce.fetcher.common
 
 import akka.actor.{Actor, ActorLogging}
+import akka.event.Logging
 import me.reminisce.fetcher.FacebookServiceConfig
 import org.json4s.DefaultFormats
 import spray.client.pipelining._
@@ -12,9 +13,8 @@ import scala.concurrent.Future
 
 
 abstract class FBCommunicationManager extends Actor with ActorLogging {
-  implicit def dispatcher = context.dispatcher
 
-  implicit def actorRefFactory = context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val formats = DefaultFormats
 
@@ -31,5 +31,5 @@ abstract class FBCommunicationManager extends Actor with ActorLogging {
       ~> sendReceive
     )
 
-
+  override val log = Logging(context.system, this)
 }

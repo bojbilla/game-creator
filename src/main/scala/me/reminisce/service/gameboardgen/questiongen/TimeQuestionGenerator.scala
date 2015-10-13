@@ -7,7 +7,7 @@ import org.joda.time.{Days, Months, Weeks, Years}
 
 import scala.util.Random
 
-abstract class TimeQuestionGenerator extends QuestionGenerator {
+object TimeQuestionGenerator {
   def generateRange(actualDate: DateTime): (DateTime, DateTime, TimeUnit) = {
     val currentTime = DateTime.now
     val yearsDiff = Years.yearsBetween(actualDate, currentTime).getYears
@@ -15,15 +15,15 @@ abstract class TimeQuestionGenerator extends QuestionGenerator {
     val weeksDiff = Weeks.weeksBetween(actualDate, currentTime).getWeeks
     val daysDiff = Days.daysBetween(actualDate, currentTime).getDays
 
-    val (stepSize, difference) =
+    val (stepSize, difference, unit) =
       if (yearsDiff > 0) {
-        (1.year, yearsDiff)
+        (1.year, yearsDiff, TimeUnit.Year)
       } else if (monthsDiff > 0) {
-        (1.month, monthsDiff)
+        (1.month, monthsDiff, TimeUnit.Month)
       } else if (weeksDiff > 0) {
-        (1.week, weeksDiff)
+        (1.week, weeksDiff, TimeUnit.Week)
       } else {
-        (1.day, daysDiff)
+        (1.day, daysDiff, TimeUnit.Day)
       }
 
     //difference because for years, months, weeks etc... it can never be 0 ago
@@ -32,18 +32,8 @@ abstract class TimeQuestionGenerator extends QuestionGenerator {
 
     val min = actualDate - stepSize.multipliedBy(4 - stepsForward)
     val max = actualDate + stepSize.multipliedBy(stepsForward)
-    (min, max, periodToTimeUnit(stepSize))
-  }
-
-  def periodToTimeUnit(period: Period): TimeUnit = {
-    if (period == 1.year) {
-      TimeUnit.Year
-    } else if (period == 1.month) {
-      TimeUnit.Month
-    } else if (period == 1.week) {
-      TimeUnit.Week
-    } else {
-      TimeUnit.Day
-    }
+    (min, max, unit)
   }
 }
+
+abstract class TimeQuestionGenerator extends QuestionGenerator

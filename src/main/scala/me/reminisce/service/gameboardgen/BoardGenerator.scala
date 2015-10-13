@@ -36,7 +36,7 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
   }
 
   def drawItemsAtRandomFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int = 1): List[T] = {
-    if (quantity > 0) {
+    if (quantity > 0 && bagSizes.sum > 0) {
       // The thresholds define under which threshold a value belongs to a bag
       def findFirstLessOrEqual(bagThresholds: List[Int], bagTypes: List[T], generatedRand: Int): T = bagThresholds match {
         case Nil =>
@@ -67,29 +67,34 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
 
       val totalCount = updatedBagSizes.sum
 
-      val bagThresholds = formThresholds(List(updatedBagSizes.head - 1), updatedBagSizes.tail)
+      if (totalCount > 0) {
 
-      val selectedType = findFirstLessOrEqual(bagThresholds, bagTypes, Random.nextInt(totalCount))
+        val bagThresholds = formThresholds(List(updatedBagSizes.head - 1), updatedBagSizes.tail)
 
-      // we assume all the types are different
-      val typePosition = bagTypes.indexOf(selectedType)
+        val selectedType = findFirstLessOrEqual(bagThresholds, bagTypes, Random.nextInt(totalCount))
 
-      val newSizes = (0 until updatedBagSizes.length).map {
-        i =>
-          if (i == typePosition) {
-            updatedBagSizes(i) - drawnQuantity
-          } else {
-            updatedBagSizes(i)
-          }
-      }.toList
+        // we assume all the types are different
+        val typePosition = bagTypes.indexOf(selectedType)
 
-      selectedType :: drawItemsAtRandomFromBags[T](newSizes, bagTypes, quantity - 1)
+        val newSizes = (0 until updatedBagSizes.length).map {
+          i =>
+            if (i == typePosition) {
+              updatedBagSizes(i) - drawnQuantity
+            } else {
+              updatedBagSizes(i)
+            }
+        }.toList
+
+        selectedType :: drawItemsAtRandomFromBags[T](newSizes, bagTypes, quantity - 1)
+      } else {
+        List()
+      }
     } else {
       List()
     }
   }
 
-  def drawUniformelyFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int): List[T] = {
+  def drawUniformlyFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int): List[T] = {
     if (quantity > 0 && bagSizes.length > 0) {
       val picked = bagTypes.head
       val (newBagSizes, newBagTypes) =
@@ -99,7 +104,7 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
           //it is equal then
           (bagSizes.tail, bagTypes.tail)
         }
-      picked :: drawUniformelyFromBags[T](newBagSizes, newBagTypes, quantity - 1)
+      picked :: drawUniformlyFromBags[T](newBagSizes, newBagTypes, quantity - 1)
     } else {
       List()
     }

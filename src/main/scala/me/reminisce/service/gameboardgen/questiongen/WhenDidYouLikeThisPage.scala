@@ -7,7 +7,8 @@ import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities.TimelineQuestion
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError, NotEnoughData}
+import me.reminisce.service.gameboardgen.questiongen.TimeQuestionGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -36,27 +37,37 @@ class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
           val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
           val pageSelector = BSONDocument("pageId" -> itemId)
 
-          pagesCollection.find(pageSelector).one[FBPage].onComplete {
-            case Success(maybePage) =>
-              val pageLike = maybePageLike.get
-              val actualDate = pageLike.likeTime
-              val (min, max, unit) = generateRange(actualDate)
-              val step = 1
-              val threshold = 0
-              val pageSubject = subjectFromPage(maybePage.get)
-              val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
-              val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouLikeThisPage, Some(pageSubject),
-                actualDate.toString(formatter), min.toString(formatter), max.toString(formatter), min.toString(formatter),
-                unit, step, threshold)
-              client ! FinishedQuestionCreation(tlQuestion)
-
-            case Failure(e) =>
-              client ! MongoDBError(s"${e.getMessage}")
+          maybePageLike match {
+            case Some(pageLike) =>
+              pagesCollection.find(pageSelector).one[FBPage].onComplete {
+                case Success(maybePage) =>
+                  maybePage match {
+                    case Some(page) =>
+                      val actualDate = pageLike.likeTime
+                      val (min, max, unit) = generateRange(actualDate)
+                      val step = 1
+                      val threshold = 0
+                      val pageSubject = QuestionGenerator.subjectFromPage(maybePage.get)
+                      val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
+                      val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouLikeThisPage, Some(pageSubject),
+                        actualDate.toString(formatter), min.toString(formatter), max.toString(formatter), min.toString(formatter),
+                        unit, step, threshold)
+                      client ! FinishedQuestionCreation(tlQuestion)
+                    case None =>
+                      client ! NotEnoughData(s"Page not found : $itemId")
+                  }
+                case Failure(e) =>
+                  client ! MongoDBError(s"${
+                    e.getMessage
+                  }")
+              }
+            case None =>
+              client ! NotEnoughData(s"Pagelike not found : $userId likes $itemId")
           }
-
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")
       }
+
   }
 
 }

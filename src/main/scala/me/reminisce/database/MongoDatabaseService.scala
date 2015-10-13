@@ -30,6 +30,48 @@ object MongoDatabaseService {
 
   case class SaveLastFetchedTime()
 
+  def pageToFBPage(page: Page): FBPage = {
+    val photo = page.photos.flatMap(photoRoot => photoRoot.data.map(photo => photo))
+    val fbPhoto = photo.map { photo =>
+      val tags = photo.tags.flatMap(tagRoot => tagRoot.data).map {
+        tags => tags.map { tag => {
+          FBTag(tag.id, tag.name, tag.created_time, tag.x, tag.y)
+        }
+        }
+      }
+      FBPhoto(photo.id, photo.source, photo.created_time, tags)
+    }
+    FBPage(None, page.id, page.name, fbPhoto, page.likes.getOrElse(0))
+  }
+
+  def pageToFBPageLike(page: Page, userId: String): FBPageLike = {
+    val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
+    val date = formatter.parseDateTime(page.created_time)
+    FBPageLike(None, userId, page.id, date)
+  }
+
+  def postToFBPost(post: Post, userId: String): FBPost = {
+    val likes = post.likes.flatMap(root => root.data.map(likes => likes.map(l => FBLike(l.id, l.name))))
+    val like_count = likes.map(likesList => likesList.length)
+    val fbFrom = post.from.map(f => FBFrom(f.id, f.name))
+    val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
+      FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
+    }))
+    val fbCommentsCount = fbComments.map(commentsList => commentsList.length)
+    val fbAttachments = post.attachments.flatMap(root => root.data.map(attachments => attachments.map {
+      a =>
+        val media = a.media.flatMap(m => m.image.map(image => FBMedia(image.height, image.width, image.src)))
+        FBAttachment(a.description, media = media, `type` = a.`type`)
+    }))
+    val fbPlace: Option[FBPlace] = post.place.flatMap(place => place.name.flatMap(name => place.location.flatMap(
+      location => location.latitude.flatMap(lat => location.longitude.flatMap(
+        long => Some(FBPlace(place.id, name, FBLocation(location.city, location.country,
+          lat, long, location.street, location.zip), place.created_time))
+      ))
+    )))
+    FBPost(None, userId, post.id, post.message, post.story, fbPlace, post.created_time, fbFrom,
+      likes, like_count, post.`type`, post.link, fbAttachments, fbComments, fbCommentsCount)
+  }
 }
 
 class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseService {
@@ -51,25 +93,11 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     val fbPageCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     pages.foreach { p =>
-      val photo = p.photos.flatMap(photoRoot => photoRoot.data.map(photo => photo))
-      val fbPhoto = photo.map { photo =>
-        val tags = photo.tags.flatMap(tagRoot => tagRoot.data).map {
-          tags => tags.map { tag => {
-            FBTag(tag.id, tag.name, tag.created_time, tag.x, tag.y)
-          }
-          }
-        }
-        FBPhoto(photo.id, photo.source, photo.created_time, tags)
-      }
-
       val query = BSONDocument("pageId" -> p.id)
-      fbPageCollection.update(query, FBPage(None, p.id, p.name, fbPhoto, p.likes.get), upsert = true)
-
-      val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
-      val date = formatter.parseDateTime(p.created_time)
+      fbPageCollection.update(query, pageToFBPage(p), upsert = true)
 
       val query2 = BSONDocument("userId" -> userId, "pageId" -> p.id)
-      fbPageLikeCollection.update(query2, FBPageLike(None, userId, p.id, date), upsert = true)
+      fbPageLikeCollection.update(query2, pageToFBPageLike(p, userId), upsert = true)
     }
   }
 
@@ -77,28 +105,8 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
   def saveFBPostToDB(posts: List[Post], collection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     posts.foreach { p =>
-      val likes = p.likes.flatMap(root => root.data.map(likes => likes.map(l => FBLike(l.id, l.name))))
-      val like_count = Some(likes.getOrElse(List()).length)
-      val fbFrom = p.from.map(f => FBFrom(f.id, f.name))
-      val fbComments = p.comments.flatMap(root => root.data.map(comments => comments.map { c =>
-        FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
-      }))
-      val fbCommentsCount = p.comments.flatMap { root => root.summary.map { sum => sum.total_count } }
-      val fbAttachments = p.attachments.flatMap(root => root.data.map(attachments => attachments.map {
-        a =>
-          val media = a.media.flatMap(m => m.image.map(image => FBMedia(image.height, image.width, image.src)))
-          FBAttachment(a.description, media = media, `type` = a.`type`)
-      }))
-      val fbPlace: Option[FBPlace] = p.place.flatMap(place => place.name.flatMap(name => place.location.flatMap(
-        location => location.latitude.flatMap(lat => location.longitude.flatMap(
-          long => Some(FBPlace(place.id, name, FBLocation(location.city, location.country,
-            lat, long, location.street, location.zip), place.created_time))
-        ))
-      )))
-      val fbPost = FBPost(None, userId, p.id, p.message, p.story, fbPlace, p.created_time, fbFrom,
-        likes, like_count, p.`type`, p.link, fbAttachments, fbComments, fbCommentsCount)
       val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
-      collection.update(selector, fbPost, upsert = true)
+      collection.update(selector, postToFBPost(p, userId), upsert = true)
     }
   }
 

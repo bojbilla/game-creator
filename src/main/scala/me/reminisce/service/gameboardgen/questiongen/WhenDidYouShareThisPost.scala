@@ -7,7 +7,8 @@ import me.reminisce.mongodb.MongoDBEntities.FBPost
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities.TimelineQuestion
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError, NotEnoughData}
+import me.reminisce.service.gameboardgen.questiongen.TimeQuestionGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -33,18 +34,22 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends TimeQuestionGenerator {
       val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
       postCollection.find(query).one[FBPost].onComplete {
         case Success(postOpt) =>
-          val post = postOpt.get
-          val dateString = post.createdTime.get
-          val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
-          val actualDate = formatter.parseDateTime(dateString)
-          val (min, max, unit) = generateRange(actualDate)
-          val step = 1
-          val threshold = 0
-          val postSubject = subjectFromPost(post)
-          val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouShareThisPost, Some(postSubject),
-            actualDate.toString(formatter), min.toString(formatter), max.toString(formatter), min.toString(formatter),
-            unit, step, threshold)
-          client ! FinishedQuestionCreation(tlQuestion)
+          postOpt match {
+            case Some(post) =>
+              val dateString = post.createdTime.getOrElse("1970-01-01'T'00:00:00+0000")
+              val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
+              val actualDate = formatter.parseDateTime(dateString)
+              val (min, max, unit) = generateRange(actualDate)
+              val step = 1
+              val threshold = 0
+              val postSubject = QuestionGenerator.subjectFromPost(post)
+              val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouShareThisPost, Some(postSubject),
+                actualDate.toString(formatter), min.toString(formatter), max.toString(formatter), min.toString(formatter),
+                unit, step, threshold)
+              client ! FinishedQuestionCreation(tlQuestion)
+            case None =>
+              client ! NotEnoughData(s"Post not found : $itemId")
+          }
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")
       }

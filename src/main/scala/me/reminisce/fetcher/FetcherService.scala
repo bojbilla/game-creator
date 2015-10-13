@@ -21,6 +21,7 @@ import scala.util.{Failure, Success}
 
 
 object FetcherService {
+  var currentlyFetching: Set[String] = Set()
 
   case class FetchData(userId: String, accessToken: String) extends RestMessage
 
@@ -33,12 +34,14 @@ object FetcherService {
 }
 
 class FetcherService(database: DefaultDB) extends FBCommunicationManager {
-  var currentlyFetching: Set[String] = Set()
+
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   def receive = {
     case FetchData(userId, accessToken) =>
       val client = sender()
-      if (!currentlyFetching.contains(userId)) {
+      if (!FetcherService.currentlyFetching.contains(userId)) {
+        FetcherService.currentlyFetching = FetcherService.currentlyFetching + userId
         val lastFetched = database[BSONCollection](MongoDatabaseService.lastFetchedCollection)
         val query = BSONDocument(
           "userId" -> userId
@@ -61,7 +64,7 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
       val mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
       mongoSaver ! SaveLastFetchedTime
       sender ! PoisonPill
-      currentlyFetching = currentlyFetching - userId
+      FetcherService.currentlyFetching = FetcherService.currentlyFetching - userId
 
     case _ =>
       log.info("Fetcher service Received unexpected message")
@@ -83,18 +86,20 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
             case OK =>
               val fetcher = context.actorOf(FetcherWorker.props(database))
               fetcher ! FetchDataSince(userId, accessToken, lastFetched)
-              currentlyFetching = currentlyFetching + userId
               client ! Done(s"Fetching Data for $userId")
             case _ =>
               log.error(s"Received a fetch request with an invalid token.")
               client ! GraphAPIInvalidToken(s"The specified token is invalid.")
+              FetcherService.currentlyFetching = FetcherService.currentlyFetching - userId
           }
         case Failure(error) =>
           log.error(s"Facebook didn't respond \npath:$checkPath\n  ${error.toString}")
           client ! GraphAPIUnreachable(s"Could not reach Facebook graph API.")
+          FetcherService.currentlyFetching = FetcherService.currentlyFetching - userId
       }
     } else {
       client ! AlreadyFresh(s"Data for user $userId is fresh.")
+      FetcherService.currentlyFetching = FetcherService.currentlyFetching - userId
       val statsHandler = context.actorOf(StatsHandler.props(userId, database))
       statsHandler ! FinalStats(Set(), Set())
       log.info(s"Requesting stats update for user $userId.")

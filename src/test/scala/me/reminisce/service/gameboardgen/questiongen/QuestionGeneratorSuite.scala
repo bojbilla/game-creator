@@ -1,0 +1,172 @@
+package me.reminisce.service.gameboardgen.questiongen
+
+import me.reminisce.mongodb.MongoDBEntities._
+import me.reminisce.service.gameboardgen.GameboardEntities._
+import org.scalatest.FunSuite
+
+
+class QuestionGeneratorSuite extends FunSuite {
+
+  def createTestPost(message: String, story: String, `type`: String,
+                     mediaUrl: Option[String] = None, link: Option[String] = None): FBPost = {
+    val attachments = mediaUrl.map {
+      url => List(FBAttachment(media = Some(FBMedia(1, 1, url))))
+    }
+
+    val messgaeOpt = if (message != "" && message != null) Some(message) else None
+    val storyopt = if (story != "" && story != null) Some(story) else None
+    FBPost(postId = "NONE", userId = "NONE", `type` = Some(`type`),
+      attachments = attachments,
+      message = messgaeOpt,
+      story = storyopt,
+      link = link)
+  }
+
+  test("An image post should become an image subject.") {
+    val postMessage = "TestMessage"
+    val postStory = "Story"
+    val fbImageUrl = "FBImageURL"
+    val imageUrl = "ImageURL"
+    val imagePost = createTestPost(postMessage, postStory, "photo", Some(imageUrl), Some(fbImageUrl))
+    val subject = QuestionGenerator.subjectFromPost(imagePost)
+    subject match {
+      case ImagePostSubject(text, pImageUrl, facebookImageUrl, tpe) =>
+        assert(text == postMessage + "\n" + postStory)
+        assert(tpe == SubjectType.ImagePost)
+        assert(pImageUrl.orNull == imageUrl)
+        assert(facebookImageUrl.orNull == fbImageUrl)
+      case x => fail(s"Wrong subject type extracted : $x.")
+    }
+  }
+
+  test("A video post should become a video subject.") {
+    val postMessage = "TestMessage"
+    val postStory = "Story"
+    val videoUrl = "VideoURL"
+    val thumbnailUrl = "ThumbnailURL"
+    val videoPost = createTestPost(postMessage, postStory, "video", Some(thumbnailUrl), Some(videoUrl))
+    val subject = QuestionGenerator.subjectFromPost(videoPost)
+    subject match {
+      case VideoPostSubject(text, thumbUrl, vidUrl, tpe) =>
+        assert(text == postMessage + "\n" + postStory)
+        assert(tpe == SubjectType.VideoPost)
+        assert(thumbUrl.orNull == thumbnailUrl)
+        assert(vidUrl.orNull == videoUrl)
+      case x => fail(s"Wrong subject type extracted : $x.")
+    }
+  }
+
+  test("A link post should become a link subject.") {
+    val postMessage = "TestMessage"
+    val postStory = "Story"
+    val sharedUrl = "SharedURL"
+    val thumbnailUrl = "ThumbnailURL"
+    val linkPost = createTestPost(postMessage, postStory, "link", Some(thumbnailUrl), Some(sharedUrl))
+    val subject = QuestionGenerator.subjectFromPost(linkPost)
+    subject match {
+      case LinkPostSubject(text, thumbUrl, shrdLink, tpe) =>
+        assert(text == postMessage + "\n" + postStory)
+        assert(tpe == SubjectType.LinkPost)
+        assert(thumbUrl.orNull == thumbnailUrl)
+        assert(shrdLink.orNull == sharedUrl)
+      case x => fail(s"Wrong subject type extracted : $x.")
+    }
+  }
+
+  test("A post that is not a photo, a video or a link should become a text subject.") {
+    val postMessage = "TestMessage"
+    val postStory = "Story"
+
+    // Those two should not matter
+    val sharedUrl = "SharedURL"
+    val thumbnailUrl = "ThumbnailURL"
+    val textPost = createTestPost(postMessage, postStory, "ND", Some(thumbnailUrl), Some(sharedUrl))
+    val subject = QuestionGenerator.subjectFromPost(textPost)
+    subject match {
+      case TextPostSubject(text, tpe) =>
+        assert(text == postMessage + "\n" + postStory)
+        assert(tpe == SubjectType.TextPost)
+      case x => fail(s"Wrong subject type extracted : $x.")
+    }
+  }
+
+  test("Text post with no type.") {
+    val postMessage = "TestMessage"
+    val postStory = "Story"
+
+    val textPost = FBPost(postId = "NONE", userId = "NONE", message = Some(postMessage), story = Some(postStory), attachments = None)
+    val subject = QuestionGenerator.subjectFromPost(textPost)
+    subject match {
+      case TextPostSubject(text, tpe) =>
+        assert(text == postMessage + "\n" + postStory)
+        assert(tpe == SubjectType.TextPost)
+      case x => fail(s"Wrong subject type extracted : $x.")
+    }
+  }
+
+  test("Extracting text from post.") {
+    val postMessage = "TestMessage"
+    val postStory = "Story"
+
+    val testPostStoryMessage = createTestPost(postMessage, postStory, "ND")
+    val storyMessage = QuestionGenerator.textFromPost(testPostStoryMessage)
+    assert(storyMessage == postMessage + "\n" + postStory)
+
+    val testPostStoryOnly = createTestPost("", postStory, "ND")
+    val storyOnly = QuestionGenerator.textFromPost(testPostStoryOnly)
+    assert(storyOnly == postStory)
+
+    val testPostMessgaeOnly = createTestPost(postMessage, "", "ND")
+    val messageOnly = QuestionGenerator.textFromPost(testPostMessgaeOnly)
+    assert(messageOnly == postMessage)
+
+    val testPostNoText = createTestPost("", "", "ND")
+    val noText = QuestionGenerator.textFromPost(testPostNoText)
+    assert(noText == "")
+  }
+
+  test("Extracting src from FBAttachments.") {
+    val noneAttachments = None
+    assert(QuestionGenerator.srcFromAttachments(noneAttachments) == None)
+
+    val source = "Source"
+
+    val attachment1 = FBAttachment(media = Some(FBMedia(1, 1, source)))
+    val attachment2 = FBAttachment(media = None)
+    val list1 = List(attachment1, attachment2)
+    val list2 = List(attachment2, attachment1)
+
+    assert(QuestionGenerator.srcFromAttachments(Some(list1)) == Some(source))
+    assert(QuestionGenerator.srcFromAttachments(Some(list2)) == None)
+  }
+
+  test("Extracting subject from a page.") {
+    val pageNoPhotoNoName = FBPage(id = None, pageId = "PageId", name = None, photos = None, likesNumber = 0)
+
+    val subjectNoPhotoNoName = QuestionGenerator.subjectFromPage(pageNoPhotoNoName)
+
+    assert(subjectNoPhotoNoName.`type` == SubjectType.PageSubject)
+    assert(subjectNoPhotoNoName.name == "")
+    assert(subjectNoPhotoNoName.pageId == "PageId")
+    assert(subjectNoPhotoNoName.photoUrl == None)
+
+    val fbPhotoNoSource = FBPhoto(id = "", source = None, createdTime = None, tags = None)
+    val pageNoPhotoSource = FBPage(None, "PageId", Some("PageName"), photos = Some(fbPhotoNoSource), 0)
+
+    val subjectNoPhotoSource = QuestionGenerator.subjectFromPage(pageNoPhotoSource)
+
+    assert(subjectNoPhotoSource.`type` == SubjectType.PageSubject)
+    assert(subjectNoPhotoSource.name == "PageName")
+    assert(subjectNoPhotoSource.pageId == "PageId")
+    assert(subjectNoPhotoSource.photoUrl == None)
+
+    val fbPhoto = FBPhoto(id = "", source = Some("PhotoUrl"), createdTime = None, tags = None)
+    val fbPage = FBPage(None, "PageId", Some("PageName"), photos = Some(fbPhoto), 0)
+    val subject = QuestionGenerator.subjectFromPage(fbPage)
+
+    assert(subject.`type` == SubjectType.PageSubject)
+    assert(subject.name == "PageName")
+    assert(subject.pageId == "PageId")
+    assert(subject.photoUrl == Some("PhotoUrl"))
+  }
+}

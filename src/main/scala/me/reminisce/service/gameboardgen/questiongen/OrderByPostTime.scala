@@ -33,7 +33,7 @@ class OrderByPostTime(db: DefaultDB) extends OrderQuestionGenerator {
                 val date = formatter.parseDateTime(post.createdTime.get)
                 date.getMillis
             }.map(subjectFromPost)
-            val (subjectsWithId, answer) = generateSubjectsWithId(ordered)
+            val (subjectsWithId, answer) = OrderQuestionGenerator.generateSubjectsWithId(ordered)
             val gameQuestion = OrderQuestion(userId, Order, ORDPostTime, None, subjectsWithId, answer)
             client ! FinishedQuestionCreation(gameQuestion)
           }

@@ -69,7 +69,7 @@ class UniformBoardGenerator(database: DefaultDB, userId: String) extends BoardGe
       val mcCount = normalizedCounts.getOrElse(MultipleChoice.toString, 0)
       val geoCount = normalizedCounts.getOrElse(Geolocation.toString, 0)
 
-      val selectedKinds = drawUniformelyFromBags[QuestionKind](List(tlCount, ordCount, mcCount, geoCount),
+      val selectedKinds = drawUniformlyFromBags[QuestionKind](List(tlCount, ordCount, mcCount, geoCount),
         List(Timeline, Order, MultipleChoice, Geolocation), 27)
 
 

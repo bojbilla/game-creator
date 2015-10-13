@@ -27,7 +27,7 @@ class OrderByPageLikes(db: DefaultDB) extends OrderQuestionGenerator {
             client ! NotEnoughData(s"Not enough pages in list.")
           } else {
             val ordered = pageList.take(itemsToOrder).sortBy(_.likesNumber).map(subjectFromPage)
-            val (subjectsWithId, answer) = generateSubjectsWithId(ordered)
+            val (subjectsWithId, answer) = OrderQuestionGenerator.generateSubjectsWithId(ordered)
             val gameQuestion = OrderQuestion(userId, Order, ORDPageLikes, None, subjectsWithId, answer)
             client ! FinishedQuestionCreation(gameQuestion)
           }

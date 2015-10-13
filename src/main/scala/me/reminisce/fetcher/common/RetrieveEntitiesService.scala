@@ -52,6 +52,9 @@ object RetrieveEntitiesService {
 }
 
 class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: Manifest[T]) extends FBCommunicationManager {
+
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   def receive = {
     case RetrieveEntities(params) =>
       val originalSender = sender()

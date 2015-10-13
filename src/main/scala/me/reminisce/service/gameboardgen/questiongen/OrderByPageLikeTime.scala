@@ -36,7 +36,7 @@ class OrderByPageLikeTime(db: DefaultDB) extends OrderQuestionGenerator {
                     p => (p, pageLikes.filter(pl => pl.pageId == p.pageId).head.likeTime)
                   }
                   val ordered = timedPages.take(itemsToOrder).sortBy(_._2.getMillis).map(cpl => subjectFromPage(cpl._1))
-                  val (subjectsWithId, answer) = generateSubjectsWithId(ordered)
+                  val (subjectsWithId, answer) = OrderQuestionGenerator.generateSubjectsWithId(ordered)
                   val gameQuestion = OrderQuestion(userId, Order, ORDPageLikeTime, None, subjectsWithId, answer)
                   client ! FinishedQuestionCreation(gameQuestion)
                 }
