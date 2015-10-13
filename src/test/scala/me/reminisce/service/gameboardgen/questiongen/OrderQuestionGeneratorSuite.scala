@@ -14,10 +14,10 @@ class OrderQuestionGeneratorSuite extends FunSuite {
   }
 
   test("List of subjects to SubjectWithIds.") {
-    val subject1 = TextPostSubject("Salmon.")
-    val subject2 = TextPostSubject("Banana.")
-    val subject3 = TextPostSubject("Orange.")
-    val subject4 = TextPostSubject("Tuna.")
+    val subject1 = TextPostSubject("Salmon.", from = None)
+    val subject2 = TextPostSubject("Banana.", from = None)
+    val subject3 = TextPostSubject("Orange.", from = None)
+    val subject4 = TextPostSubject("Tuna.", from = None)
 
     val listOfSubjects = List(subject1, subject2, subject3, subject4)
 

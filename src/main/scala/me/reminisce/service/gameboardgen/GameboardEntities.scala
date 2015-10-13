@@ -1,5 +1,6 @@
 package me.reminisce.service.gameboardgen
 
+import me.reminisce.mongodb.MongoDBEntities.FBFrom
 import me.reminisce.server.domain.RestMessage
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.QuestionKind
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType.SpecificQuestionType
@@ -57,22 +58,26 @@ object GameboardEntities {
 
   abstract sealed class Subject(`type`: SubjectType)
 
-  abstract sealed class PostSubject(`type`: SubjectType, text: String) extends Subject(`type`)
+  abstract sealed class PostSubject(`type`: SubjectType, text: String, from: Option[FBFrom]) extends Subject(`type`)
 
   case class PageSubject(name: String, pageId: String,
                          photoUrl: Option[String],
                          `type`: SubjectType = SubjectType.PageSubject) extends Subject(`type`)
 
-  case class TextPostSubject(text: String, `type`: SubjectType = SubjectType.TextPost) extends PostSubject(`type`, text)
+  case class TextPostSubject(text: String, `type`: SubjectType = SubjectType.TextPost,
+                             from: Option[FBFrom]) extends PostSubject(`type`, text, from)
 
   case class ImagePostSubject(text: String, imageUrl: Option[String], facebookImageUrl: Option[String],
-                              `type`: SubjectType = SubjectType.ImagePost) extends PostSubject(`type`, text)
+                              `type`: SubjectType = SubjectType.ImagePost,
+                              from: Option[FBFrom]) extends PostSubject(`type`, text, from)
 
   case class VideoPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String],
-                              `type`: SubjectType = SubjectType.VideoPost) extends PostSubject(`type`, text)
+                              `type`: SubjectType = SubjectType.VideoPost,
+                              from: Option[FBFrom]) extends PostSubject(`type`, text, from)
 
   case class LinkPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String],
-                             `type`: SubjectType = SubjectType.LinkPost) extends PostSubject(`type`, text)
+                             `type`: SubjectType = SubjectType.LinkPost,
+                             from: Option[FBFrom]) extends PostSubject(`type`, text, from)
 
   case class CommentSubject(comment: String, post: PostSubject, `type`: SubjectType = SubjectType.CommentSubject) extends Subject(`type`)
 

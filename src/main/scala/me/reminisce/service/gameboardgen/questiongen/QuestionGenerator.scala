@@ -33,24 +33,24 @@ object QuestionGenerator {
             val text = textFromPost(post)
             val imageUrl = srcFromAttachments(post.attachments)
             val facebookImageUrl = post.link
-            ImagePostSubject(text, imageUrl, facebookImageUrl)
+            ImagePostSubject(text, imageUrl, facebookImageUrl, from = post.from)
           case "video" =>
             val text = textFromPost(post)
             val thumbnailUrl = srcFromAttachments(post.attachments)
             val url = post.link
-            VideoPostSubject(text, thumbnailUrl, url)
+            VideoPostSubject(text, thumbnailUrl, url, from = post.from)
           case "link" =>
             val text = textFromPost(post)
             val thumbnailUrl = srcFromAttachments(post.attachments)
             val url = post.link
-            LinkPostSubject(text, thumbnailUrl, url)
+            LinkPostSubject(text, thumbnailUrl, url, from = post.from)
           case _ =>
             val text = textFromPost(post)
-            TextPostSubject(text)
+            TextPostSubject(text, from = post.from)
         }
       case None =>
         val text = textFromPost(post)
-        TextPostSubject(text)
+        TextPostSubject(text, from = post.from)
     }
   }
 

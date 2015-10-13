@@ -30,7 +30,7 @@ class QuestionGeneratorSuite extends FunSuite {
     val imagePost = createTestPost(postMessage, postStory, "photo", Some(imageUrl), Some(fbImageUrl))
     val subject = QuestionGenerator.subjectFromPost(imagePost)
     subject match {
-      case ImagePostSubject(text, pImageUrl, facebookImageUrl, tpe) =>
+      case ImagePostSubject(text, pImageUrl, facebookImageUrl, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
         assert(tpe == SubjectType.ImagePost)
         assert(pImageUrl.orNull == imageUrl)
@@ -47,7 +47,7 @@ class QuestionGeneratorSuite extends FunSuite {
     val videoPost = createTestPost(postMessage, postStory, "video", Some(thumbnailUrl), Some(videoUrl))
     val subject = QuestionGenerator.subjectFromPost(videoPost)
     subject match {
-      case VideoPostSubject(text, thumbUrl, vidUrl, tpe) =>
+      case VideoPostSubject(text, thumbUrl, vidUrl, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
         assert(tpe == SubjectType.VideoPost)
         assert(thumbUrl.orNull == thumbnailUrl)
@@ -64,7 +64,7 @@ class QuestionGeneratorSuite extends FunSuite {
     val linkPost = createTestPost(postMessage, postStory, "link", Some(thumbnailUrl), Some(sharedUrl))
     val subject = QuestionGenerator.subjectFromPost(linkPost)
     subject match {
-      case LinkPostSubject(text, thumbUrl, shrdLink, tpe) =>
+      case LinkPostSubject(text, thumbUrl, shrdLink, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
         assert(tpe == SubjectType.LinkPost)
         assert(thumbUrl.orNull == thumbnailUrl)
@@ -83,7 +83,7 @@ class QuestionGeneratorSuite extends FunSuite {
     val textPost = createTestPost(postMessage, postStory, "ND", Some(thumbnailUrl), Some(sharedUrl))
     val subject = QuestionGenerator.subjectFromPost(textPost)
     subject match {
-      case TextPostSubject(text, tpe) =>
+      case TextPostSubject(text, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
         assert(tpe == SubjectType.TextPost)
       case x => fail(s"Wrong subject type extracted : $x.")
@@ -97,7 +97,7 @@ class QuestionGeneratorSuite extends FunSuite {
     val textPost = FBPost(postId = "NONE", userId = "NONE", message = Some(postMessage), story = Some(postStory), attachments = None)
     val subject = QuestionGenerator.subjectFromPost(textPost)
     subject match {
-      case TextPostSubject(text, tpe) =>
+      case TextPostSubject(text, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
         assert(tpe == SubjectType.TextPost)
       case x => fail(s"Wrong subject type extracted : $x.")
