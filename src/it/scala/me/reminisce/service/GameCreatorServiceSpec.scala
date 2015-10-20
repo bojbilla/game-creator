@@ -24,7 +24,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.util.Properties._
 
-class GameCreatorServiceSuite extends TestKit(ActorSystem("GameCreatorSpec")) with MongoEmbedDatabase
+class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) with MongoEmbedDatabase
 with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
 
   import scala.concurrent.ExecutionContext.Implicits.global
