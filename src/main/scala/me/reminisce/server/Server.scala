@@ -1,5 +1,7 @@
 package me.reminisce.server
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import com.github.nscala_time.time.Imports._
@@ -8,6 +10,7 @@ import me.reminisce.service.ApplicationConfiguration
 import spray.can.Http
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 
 object Server extends App {
   // we Server an ActorSystem to host our application in
@@ -27,6 +30,12 @@ object Server extends App {
 
   //  implicit val timeout = Timeout(5.seconds)
   // start a new HTTP server on port 9900 with our service actor as the handler
-
   IO(Http) ! Http.Bind(service, interface = hostName, port = port)
+
+  // This allows to gracefully shutdown the server
+  sys.addShutdownHook {
+    println("System is shutting down...")
+    IO(Http) ! Http.Unbind(Duration(10, TimeUnit.SECONDS))
+    system.shutdown()
+  }
 }
