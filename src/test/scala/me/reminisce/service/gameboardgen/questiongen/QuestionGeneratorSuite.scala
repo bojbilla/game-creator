@@ -8,7 +8,7 @@ import org.scalatest.FunSuite
 class QuestionGeneratorSuite extends FunSuite {
 
   def createTestPost(message: String, story: String, `type`: String,
-                     mediaUrl: Option[String] = None, link: Option[String] = None): FBPost = {
+                     mediaUrl: Option[String] = None, link: Option[String] = None, from: Option[FBFrom] = None): FBPost = {
     val attachments = mediaUrl.map {
       url => List(FBAttachment(media = Some(FBMedia(1, 1, url))))
     }
@@ -19,7 +19,9 @@ class QuestionGeneratorSuite extends FunSuite {
       attachments = attachments,
       message = messgaeOpt,
       story = storyopt,
-      link = link)
+      link = link,
+      from = from
+    )
   }
 
   test("An image post should become an image subject.") {
@@ -101,6 +103,23 @@ class QuestionGeneratorSuite extends FunSuite {
         assert(text == postMessage + "\n" + postStory)
         assert(tpe == SubjectType.TextPost)
       case x => fail(s"Wrong subject type extracted : $x.")
+    }
+  }
+
+  test("From is correctly extracted.") {
+    val fromId = "FromId"
+    val fromName = "FromName"
+    val from = FBFrom(fromId, fromName)
+    val post = createTestPost("", "", "", from = Some(from))
+
+    val subject = QuestionGenerator.subjectFromPost(post)
+
+    subject match {
+      case TextPostSubject(text, tpe, frm) =>
+        assert(frm.isDefined)
+        assert(frm.get.userId == fromId)
+        assert(frm.get.userName == fromName)
+      case x => fail(s"Wrong subject extracted : $x.")
     }
   }
 

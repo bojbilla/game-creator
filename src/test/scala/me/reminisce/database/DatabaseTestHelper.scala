@@ -11,7 +11,7 @@ object DatabaseTestHelper {
         this.wait()
       }
       val newPort = if (portsInUse.isEmpty) {
-        27017
+        28000 // does not conflict with live mongo instances
       } else {
         portsInUse.max + 1
       }
