@@ -50,5 +50,5 @@ resolvers += "Typesafe Simple Repository" at
 assemblyJarName in assembly := "game-creator.jar"
 
 coverageHighlighting := false
-
+parallelExecution in Test := false
 Revolver.settings
