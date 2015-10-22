@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.service.gameboardgen.GameboardEntities.{CommentSubject, MultipleChoiceQuestion, TextPostSubject}
@@ -15,7 +15,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester {
+class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -26,8 +26,9 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester {
       val itemId = "This post does not exist"
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Post not found : $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
     }
 
 
@@ -41,8 +42,9 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester {
       Await.result(postsCollection.update(postSelector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Post has no comment : $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Post has no comment : $itemId"))
     }
 
     "not create question when there is not enough comment for post." in {
@@ -59,8 +61,9 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester {
       Await.result(postsCollection.update(postSelector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Post has not enough comments : $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Post has not enough comments : $itemId"))
     }
 
     "create a valid question when the data is correctly setup." in {
@@ -82,9 +85,10 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester {
       Await.result(postsCollection.update(postSelector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
 
-      val finishedCreation = receiveOne(Duration(10, TimeUnit.SECONDS))
+      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
       assert(finishedCreation != null)
       assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
 

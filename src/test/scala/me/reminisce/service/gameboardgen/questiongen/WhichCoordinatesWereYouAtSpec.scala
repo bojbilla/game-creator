@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities.{FBLocation, FBPlace, FBPost}
 import me.reminisce.service.gameboardgen.GameboardEntities.{GeolocationQuestion, TextPostSubject}
@@ -15,7 +15,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhichCoordinatesWereYouAtSpec extends DatabaseTester {
+class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWereYouAtSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -26,8 +26,9 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester {
       val itemId = "This post does not exist"
 
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Post not found : $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
     }
 
     "not create question when there is no location." in {
@@ -40,8 +41,9 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester {
       Await.result(postsCollection.update(selector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Post has no place : $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Post has no place : $itemId"))
     }
 
     "create a valid question when the post and place is there." in {
@@ -60,9 +62,10 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester {
       Await.result(postsCollection.update(selector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
 
-      val finishedCreation = receiveOne(Duration(10, TimeUnit.SECONDS))
+      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
       assert(finishedCreation != null)
       assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
 

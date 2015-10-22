@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestProbe}
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities.FBPost
@@ -16,7 +16,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhenDidYouShareThisPostSpec extends DatabaseTester {
+class WhenDidYouShareThisPostSpec extends DatabaseTester("WhenDidYouShareThisPostSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -27,8 +27,9 @@ class WhenDidYouShareThisPostSpec extends DatabaseTester {
       val itemId = "This post does not exist"
 
       val actorRef = TestActorRef(WhenDidYouShareThisPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Post not found : $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
     }
 
     "create a valid question when the post is there." in {
@@ -45,9 +46,10 @@ class WhenDidYouShareThisPostSpec extends DatabaseTester {
       Await.result(postsCollection.update(selector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhenDidYouShareThisPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
 
-      val finishedCreation = receiveOne(Duration(10, TimeUnit.SECONDS))
+      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
       assert(finishedCreation != null)
       assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
 

@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, TextPostSubject}
@@ -15,7 +15,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhoLikedYourPostSpec extends DatabaseTester {
+class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -26,8 +26,9 @@ class WhoLikedYourPostSpec extends DatabaseTester {
       val itemId = "This post does not exist"
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Strangely there is no userStats."))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Strangely there is no userStats."))
     }
 
     "not create question when there is no post." in {
@@ -40,8 +41,9 @@ class WhoLikedYourPostSpec extends DatabaseTester {
       Await.result(userStatsCollection.update(selector, userStats, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Post not found : $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
     }
 
     "not create question when there is no likes for post." in {
@@ -60,8 +62,9 @@ class WhoLikedYourPostSpec extends DatabaseTester {
       Await.result(postsCollection.update(postSelector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"No likes on post : $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"No likes on post : $itemId"))
     }
 
     "not create question when there is not enough non-likers for post." in {
@@ -83,8 +86,9 @@ class WhoLikedYourPostSpec extends DatabaseTester {
       Await.result(postsCollection.update(postSelector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Not enough non likers for post $itemId and user $userId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Not enough non likers for post $itemId and user $userId"))
     }
 
     "create a valid question when the data is correctly setup." in {
@@ -111,9 +115,10 @@ class WhoLikedYourPostSpec extends DatabaseTester {
       Await.result(postsCollection.update(postSelector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
 
-      val finishedCreation = receiveOne(Duration(10, TimeUnit.SECONDS))
+      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
       assert(finishedCreation != null)
       assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
 

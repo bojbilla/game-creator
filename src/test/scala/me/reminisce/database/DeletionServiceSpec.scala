@@ -2,7 +2,7 @@ package me.reminisce.database
 
 import java.util.concurrent.TimeUnit
 
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.DeletionService.{ClearDatabase, RemoveExtraLikes, RemoveUser}
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.server.domain.Domain.{ActionForbidden, Done}
@@ -16,7 +16,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class DeletionServiceSpec extends DatabaseTester {
+class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -32,25 +32,28 @@ class DeletionServiceSpec extends DatabaseTester {
 
       Await.result(collection.update(selector, update, upsert = true), Duration(10, TimeUnit.SECONDS))
       val actorRef = TestActorRef(new DeletionService(db))
-      actorRef ! RemoveUser(userId)
-      expectMsg(Done("Deletion performed without error."))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, RemoveUser(userId))
+      testProbe.expectMsg(Done("Deletion performed without error."))
     }
 
     "delete extra likes without error." in {
       val userId = "TestUserDeletionService"
       val likes = Set("likedThis", "andThis")
       val actorRef = TestActorRef(new DeletionService(db))
-      actorRef ! RemoveExtraLikes(userId, likes)
-      expectMsg(Done("Deletion performed without error."))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, RemoveExtraLikes(userId, likes))
+      testProbe.expectMsg(Done("Deletion performed without error."))
     }
 
     "clear database only in dev mode." in {
       val actorRef = TestActorRef(new DeletionService(db))
-      actorRef ! ClearDatabase()
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, ClearDatabase())
       if (ApplicationConfiguration.appMode == "DEV") {
-        expectMsg(Done("Deletion performed without error."))
+        testProbe.expectMsg(Done("Deletion performed without error."))
       } else {
-        expectMsg(ActionForbidden("The app is not in development mode."))
+        testProbe.expectMsg(ActionForbidden("The app is not in development mode."))
       }
     }
   }

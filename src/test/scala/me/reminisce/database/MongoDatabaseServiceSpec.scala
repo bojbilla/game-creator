@@ -14,11 +14,11 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class MongoDatabaseServiceSpec extends DatabaseTester {
+class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val attemptsPermitted = 10
+  val attemptsPermitted = 15
 
   "MongoDatabaseService" must {
     "save post to database." in {

@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
 import me.reminisce.service.gameboardgen.GameboardEntities.MultipleChoiceQuestion
@@ -16,7 +16,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhichPageDidYouLikeSpec extends DatabaseTester {
+class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -27,8 +27,9 @@ class WhichPageDidYouLikeSpec extends DatabaseTester {
       val itemId = "This user does not exist"
 
       val actorRef = TestActorRef(WhichPageDidYouLike.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Page not found. $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Page not found. $itemId"))
     }
 
     "create a valid question when the data is there." in {
@@ -57,9 +58,10 @@ class WhichPageDidYouLikeSpec extends DatabaseTester {
       Await.result(pageLikesCollection.update(selector, pageLike, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhichPageDidYouLike.props(db))
-      actorRef ! CreateQuestion(userId, itemIds.head)
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemIds.head))
 
-      val finishedCreation = receiveOne(Duration(10, TimeUnit.SECONDS))
+      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
       assert(finishedCreation != null)
       assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
 

@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestProbe}
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
@@ -17,7 +17,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhenDidYouLikeThisPageSpec extends DatabaseTester {
+class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -28,8 +28,9 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester {
       val itemId = "This page does not exist"
 
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Pagelike not found : $userId likes $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Pagelike not found : $userId likes $itemId"))
     }
 
     "not create question when there is no page." in {
@@ -42,8 +43,9 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester {
       Await.result(pageLikesCollection.update(selectorLike, pageLike, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
-      expectMsg(NotEnoughData(s"Page not found : $itemId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.expectMsg(NotEnoughData(s"Page not found : $itemId"))
     }
 
     "create a valid question when the data is there." in {
@@ -62,9 +64,10 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester {
       Await.result(pageLikesCollection.update(selectorLike, pageLike, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
-      actorRef ! CreateQuestion(userId, itemId)
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestion(userId, itemId))
 
-      val finishedCreation = receiveOne(Duration(10, TimeUnit.SECONDS))
+      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
       assert(finishedCreation != null)
       assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
 

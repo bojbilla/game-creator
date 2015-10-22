@@ -2,7 +2,7 @@ package me.reminisce.fetcher
 
 import java.util.concurrent.TimeUnit
 
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.mongodb.MongoDBEntities._
@@ -16,7 +16,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class FetcherServiceSpec extends DatabaseTester {
+class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -28,8 +28,9 @@ class FetcherServiceSpec extends DatabaseTester {
       actorRef ! FetchData(userId, "NAN")
       actorRef.suspend()
       val actorRef2 = TestActorRef(FetcherService.props(db))
-      actorRef2 ! FetchData(userId, "NAN")
-      expectMsg(TooManyRequests(s"Already fetching for user $userId"))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef2, FetchData(userId, "NAN"))
+      testProbe.expectMsg(TooManyRequests(s"Already fetching for user $userId"))
       FetcherService.currentlyFetching = Set()
     }
 
@@ -42,9 +43,10 @@ class FetcherServiceSpec extends DatabaseTester {
       val update = BSONDocument("userId" -> userId, "date" -> time)
 
       Await.result(collection.update(selector, update, upsert = true), Duration(10, TimeUnit.SECONDS))
+      val testProbe = TestProbe()
       val actorRef = TestActorRef(new FetcherService(db))
-      actorRef ! FetchData(userId, "NAN")
-      expectMsg(AlreadyFresh(s"Data for user $userId is fresh."))
+      testProbe.send(actorRef, FetchData(userId, "NAN"))
+      testProbe.expectMsg(AlreadyFresh(s"Data for user $userId is fresh."))
     }
 
   }

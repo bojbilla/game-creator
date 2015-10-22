@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.testkit.TestActorRef
+import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities.FBPost
 import me.reminisce.service.gameboardgen.GameboardEntities.{OrderQuestion, TextPostSubject}
@@ -15,7 +15,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class OrderByPostLikesNumberSpec extends DatabaseTester {
+class OrderByPostLikesNumberSpec extends DatabaseTester("OrderByPostLikesNumberSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -26,8 +26,9 @@ class OrderByPostLikesNumberSpec extends DatabaseTester {
       val itemIds = List("This user does not exist")
 
       val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
-      actorRef ! CreateQuestionWithMultipleItems(userId, itemIds)
-      expectMsg(NotEnoughData(s"Not enough posts in list."))
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
+      testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
     }
 
     "create a valid question when the data is there." in {
@@ -51,9 +52,10 @@ class OrderByPostLikesNumberSpec extends DatabaseTester {
       }
 
       val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
-      actorRef ! CreateQuestionWithMultipleItems(userId, itemIds)
+      val testProbe = TestProbe()
+      testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
 
-      val finishedCreation = receiveOne(Duration(10, TimeUnit.SECONDS))
+      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
       assert(finishedCreation != null)
       assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
 
