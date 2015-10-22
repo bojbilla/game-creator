@@ -2,44 +2,24 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
-import akka.testkit.{TestActorRef, ImplicitSender, TestKit}
-import com.github.simplyscala.{MongodProps, MongoEmbedDatabase}
-import com.typesafe.config.ConfigFactory
-import me.reminisce.database.{MongoDatabaseService, DatabaseTestHelper}
+import akka.testkit.TestActorRef
+import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities._
-import me.reminisce.service.gameboardgen.GameboardEntities.{CommentSubject, TextPostSubject, MultipleChoiceQuestion}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{FinishedQuestionCreation, NotEnoughData, CreateQuestion}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import reactivemongo.api.MongoDriver
+import me.reminisce.service.gameboardgen.GameboardEntities.{CommentSubject, MultipleChoiceQuestion, TextPostSubject}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
+import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class WhoMadeThisCommentOnYourPostSpec extends TestKit(ActorSystem("WhoMadeThisCommentOnYourPostSpec", ConfigFactory.parseString("akka.loglevel = OFF")))
-with MongoEmbedDatabase with ImplicitSender
-with WordSpecLike with Matchers with BeforeAndAfterAll {
+@DoNotDiscover
+class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  var port = DatabaseTestHelper.getNewPort
-  var mongoProps: MongodProps = mongoStart(port = port)
-  val driver = new MongoDriver
-  val connection = driver.connection(s"localhost:$port" :: Nil)
-  val db = connection("mydb")
-
   val userId = "TestUserWhoMadeThisCommentOnYourPost"
-
-
-  override def afterAll() {
-    TestKit.shutdownActorSystem(system)
-    db.drop()
-    mongoStop(mongoProps)
-    driver.system.shutdown()
-    DatabaseTestHelper.releasePort(port)
-  }
 
   "WhoMadeThisCommentOnYourPost" must {
     "not create question when there is no post" in {

@@ -2,46 +2,26 @@ package me.reminisce.database
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
-import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
-import com.typesafe.config.ConfigFactory
+import akka.testkit.TestActorRef
 import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SaveLastFetchedTime}
 import me.reminisce.mongodb.MongoDBEntities._
 import org.joda.time.DateTime
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import reactivemongo.api.MongoDriver
+import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class MongoDatabaseServiceSpec extends TestKit(ActorSystem("DeletionServiceSpec", ConfigFactory.parseString("akka.loglevel = OFF")))
-with MongoEmbedDatabase with ImplicitSender
-with WordSpecLike with Matchers with BeforeAndAfterAll {
+@DoNotDiscover
+class MongoDatabaseServiceSpec extends DatabaseTester {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val port = DatabaseTestHelper.getNewPort
-  var mongoProps: MongodProps = mongoStart(port = port)
-  val driver = new MongoDriver
   val attemptsPermitted = 10
-  val connection = driver.connection(s"localhost:$port" :: Nil)
-  val db = connection("mydb")
-
-
-  override def afterAll() {
-    TestKit.shutdownActorSystem(system)
-    db.drop()
-    mongoStop(mongoProps)
-    driver.system.shutdown()
-    DatabaseTestHelper.releasePort(port)
-  }
 
   "MongoDatabaseService" must {
     "save post to database." in {
-
       val userId = PostTestsData.userId
       val post = PostTestsData.post
 
@@ -66,6 +46,7 @@ with WordSpecLike with Matchers with BeforeAndAfterAll {
         Thread.sleep(200)
       }
       assert(fbPost.get.postId == postId)
+
     }
 
     "save page to database." in {

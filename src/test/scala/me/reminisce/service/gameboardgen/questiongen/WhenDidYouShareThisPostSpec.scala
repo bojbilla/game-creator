@@ -2,45 +2,25 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
+import akka.testkit.TestActorRef
 import com.github.nscala_time.time.Imports._
-import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
-import com.typesafe.config.ConfigFactory
-import me.reminisce.database.{DatabaseTestHelper, MongoDatabaseService}
+import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities.FBPost
 import me.reminisce.service.gameboardgen.GameboardEntities.{TextPostSubject, TimelineQuestion}
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import reactivemongo.api.MongoDriver
+import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class WhenDidYouShareThisPostSpec extends TestKit(ActorSystem("WhenDidYouShareThisPostSpec", ConfigFactory.parseString("akka.loglevel = OFF")))
-with MongoEmbedDatabase with ImplicitSender
-with WordSpecLike with Matchers with BeforeAndAfterAll {
+@DoNotDiscover
+class WhenDidYouShareThisPostSpec extends DatabaseTester {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  var port = DatabaseTestHelper.getNewPort
-  var mongoProps: MongodProps = mongoStart(port = port)
-  val driver = new MongoDriver
-  val connection = driver.connection(s"localhost:$port" :: Nil)
-  val db = connection("mydb")
-
   val userId = "TestUserWhenDidYouShareThisPost"
-
-
-  override def afterAll() {
-    TestKit.shutdownActorSystem(system)
-    db.drop()
-    mongoStop(mongoProps)
-    driver.system.shutdown()
-    DatabaseTestHelper.releasePort(port)
-  }
 
   "WhenDidYouShareThisPost" must {
     "not create question when there is no post." in {

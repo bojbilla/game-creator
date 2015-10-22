@@ -2,44 +2,24 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
-import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
-import com.typesafe.config.ConfigFactory
-import me.reminisce.database.{DatabaseTestHelper, MongoDatabaseService}
+import akka.testkit.TestActorRef
+import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, TextPostSubject}
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import reactivemongo.api.MongoDriver
+import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class WhoLikedYourPostSpec extends TestKit(ActorSystem("WhoLikedYourPostSpec", ConfigFactory.parseString("akka.loglevel = OFF")))
-with MongoEmbedDatabase with ImplicitSender
-with WordSpecLike with Matchers with BeforeAndAfterAll {
+@DoNotDiscover
+class WhoLikedYourPostSpec extends DatabaseTester {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  var port = DatabaseTestHelper.getNewPort
-  var mongoProps: MongodProps = mongoStart(port = port)
-  val driver = new MongoDriver
-  val connection = driver.connection(s"localhost:$port" :: Nil)
-  val db = connection("mydb")
-
   val userId = "TestUserWhoLikedYourPost"
-
-
-  override def afterAll() {
-    TestKit.shutdownActorSystem(system)
-    db.drop()
-    mongoStop(mongoProps)
-    driver.system.shutdown()
-    DatabaseTestHelper.releasePort(port)
-  }
 
   "WhoLikedYourPost" must {
     "not create question when there is no user statistics." in {
