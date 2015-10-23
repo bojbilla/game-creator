@@ -5,6 +5,7 @@ import me.reminisce.database.DeletionService.RemoveExtraLikes
 import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
 import me.reminisce.database.{DeletionService, MongoDatabaseService}
 import me.reminisce.fetcher.FetcherService.{FetchDataSince, FinishedFetching}
+import me.reminisce.fetcher.FetcherWorker._
 import me.reminisce.fetcher.common.FBSimpleParameters
 import me.reminisce.fetcher.common.GraphResponses.Post
 import me.reminisce.fetcher.common.RetrieveEntitiesService.RetrieveEntities
@@ -21,6 +22,10 @@ import reactivemongo.api.DefaultDB
 object FetcherWorker {
   def props(database: DefaultDB): Props =
     Props(new FetcherWorker(database))
+
+  def prunePosts(posts: Vector[Post]): Vector[Post] = {
+    posts.filter(p => p.message.exists(_.nonEmpty) || p.story.exists(_.nonEmpty))
+  }
 }
 
 class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
@@ -128,10 +133,6 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
   def statsHandler(userId: String): ActorRef = {
     context.actorOf(StatsHandler.props(userId, database))
-  }
-
-  def prunePosts(posts: Vector[Post]): Vector[Post] = {
-    posts.filter(p => p.message.exists(_.nonEmpty) || p.story.exists(_.nonEmpty))
   }
 
 }

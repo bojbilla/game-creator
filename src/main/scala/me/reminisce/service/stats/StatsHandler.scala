@@ -2,16 +2,17 @@ package me.reminisce.service.stats
 
 import akka.actor.Props
 import me.reminisce.database.{DatabaseService, MongoDatabaseService}
-import me.reminisce.fetcher.common.GraphResponses.{Page, Post}
+import me.reminisce.fetcher.common.GraphResponses.Post
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.Order
 import me.reminisce.service.stats.StatsDataTypes.{PostGeolocation, _}
-import me.reminisce.service.stats.StatsHandler.{FinalStats, TransientPostsStats}
+import me.reminisce.service.stats.StatsHandler.{FinalStats, TransientPostsStats, _}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 import reactivemongo.core.commands.Count
 
+import scala.annotation.tailrec
 import scala.util.{Failure, Success}
 
 object StatsHandler {
@@ -22,6 +23,86 @@ object StatsHandler {
 
   def props(userId: String, db: DefaultDB): Props =
     Props(new StatsHandler(userId, db))
+
+  private def addTypeToMap(typeAndCount: (String, Int), oldMap: Map[String, Int]): Map[String, Int] = {
+    if (oldMap.contains(typeAndCount._1)) {
+      oldMap.updated(typeAndCount._1, oldMap(typeAndCount._1) + typeAndCount._2)
+    } else {
+      oldMap.updated(typeAndCount._1, typeAndCount._2)
+    }
+  }
+
+  @tailrec
+  def addTypesToMap(typesAndCounts: List[(String, Int)], oldMap: Map[String, Int]): Map[String, Int] = {
+    typesAndCounts match {
+      case Nil => oldMap
+      case x :: xs => addTypesToMap(xs, addTypeToMap(x, oldMap))
+    }
+  }
+
+  // This method is meant to be used to compute transient stats on posts
+  def availableDataTypes(post: Post): List[DataType] = {
+    List(hasTimeData(post), hasGeolocationData(post), hasWhoCommentedData(post),
+      hasCommentNumber(post), hasLikeNumber(post)).flatten
+  }
+
+  private def hasTimeData(post: Post): Option[DataType] = {
+    if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) && post.created_time.nonEmpty)
+      Some(Time)
+    else
+      None
+  }
+
+  private def hasGeolocationData(post: Post): Option[DataType] = {
+    post.place.flatMap(place => place.location.flatMap(
+      location => location.latitude.flatMap(lat => location.longitude.map(
+        long => PostGeolocation
+      ))
+    ))
+  }
+
+  private def hasWhoCommentedData(post: Post): Option[DataType] = {
+    val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
+      FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
+    }))
+    if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) && fbComments.nonEmpty) {
+      val fromSet = fbComments.get.map {
+        comm => comm.from
+      }.toSet
+      if (fromSet.size > 3) {
+        Some(PostWhoCommented)
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
+  private def hasCommentNumber(post: Post): Option[DataType] = {
+    val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
+      FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
+    }))
+    if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) && fbComments.nonEmpty) {
+      if (fbComments.get.size > 3) {
+        Some(PostCommentsNumber)
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
+  private def hasLikeNumber(post: Post): Option[DataType] = {
+    val likeCount = post.likes.flatMap(root => root.summary.map(s => s.total_count)).getOrElse(0)
+    if (likeCount > 0) {
+      Some(LikeNumber)
+    } else {
+      None
+    }
+  }
+
 }
 
 class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
@@ -49,95 +130,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
   }
 
 
-  def addTypeToMap(typeAndCount: (String, Int), oldMap: Map[String, Int]): Map[String, Int] = {
-    if (oldMap.contains(typeAndCount._1)) {
-      oldMap.updated(typeAndCount._1, oldMap(typeAndCount._1) + typeAndCount._2)
-    } else {
-      oldMap.updated(typeAndCount._1, typeAndCount._2)
-    }
-  }
-
-  def addTypesToMap(typesAndCounts: List[(String, Int)], oldMap: Map[String, Int]): Map[String, Int] = {
-    typesAndCounts match {
-      case Nil => oldMap
-      case x :: xs => addTypesToMap(xs, addTypeToMap(x, oldMap))
-    }
-  }
-
-  // This method is meant to be used to compute transient stats on posts
-  def availableDataTypes(post: Post): List[DataType] = {
-    List(hasTimeData(post), hasGeolocationData(post), hasWhoCommentedData(post),
-      hasCommentNumber(post), hasLikeNumber(post)).flatten
-  }
-
-  def hasTimeData(post: Post): Option[DataType] = {
-    if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) && post.created_time.nonEmpty)
-      Some(Time)
-    else
-      None
-  }
-
-  def hasGeolocationData(post: Post): Option[DataType] = {
-    post.place.flatMap(place => place.location.flatMap(
-      location => location.latitude.flatMap(lat => location.longitude.map(
-        long => PostGeolocation
-      ))
-    ))
-  }
-
-  def hasWhoCommentedData(post: Post): Option[DataType] = {
-    val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
-      FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
-    }))
-    if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) && fbComments.nonEmpty) {
-      val fromSet = fbComments.get.map {
-        comm => comm.from
-      }.toSet
-      if (fromSet.size > 3) {
-        Some(PostWhoCommented)
-      } else {
-        None
-      }
-    } else {
-      None
-    }
-  }
-
-  def hasCommentNumber(post: Post): Option[DataType] = {
-    val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
-      FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
-    }))
-    if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) && fbComments.nonEmpty) {
-      if (fbComments.get.size > 3) {
-        Some(PostCommentsNumber)
-      } else {
-        None
-      }
-    } else {
-      None
-    }
-  }
-
-  def hasLikeNumber(post: Post): Option[DataType] = {
-    val likeCount = post.likes.flatMap(root => root.summary.map(s => s.total_count)).getOrElse(0)
-    if (likeCount > 0) {
-      Some(LikeNumber)
-    } else {
-      None
-    }
-  }
-
-  def hasLikeNumber(page: Page): Option[DataType] = {
-    if (page.likes.getOrElse(0) > 0) {
-      Some(LikeNumber)
-    } else {
-      None
-    }
-  }
-
-  def hasLikedTime(page: Page): Option[DataType] = {
-    Some(Time)
-  }
 
   def saveTransientPostsStats(fbPosts: List[Post], itemsStatsCollection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
