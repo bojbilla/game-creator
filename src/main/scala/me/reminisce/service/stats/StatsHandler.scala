@@ -2,7 +2,7 @@ package me.reminisce.service.stats
 
 import akka.actor.Props
 import me.reminisce.database.{DatabaseService, MongoDatabaseService}
-import me.reminisce.fetcher.common.GraphResponses.Post
+import me.reminisce.fetcher.common.GraphResponses.{Like, Post}
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.Order
 import me.reminisce.service.stats.StatsDataTypes.{PostGeolocation, _}
@@ -95,7 +95,7 @@ object StatsHandler {
   }
 
   private def hasLikeNumber(post: Post): Option[DataType] = {
-    val likeCount = post.likes.flatMap(root => root.summary.map(s => s.total_count)).getOrElse(0)
+    val likeCount = post.likes.flatMap(root => root.data).getOrElse(List()).size
     if (likeCount > 0) {
       Some(LikeNumber)
     } else {
