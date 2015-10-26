@@ -44,8 +44,7 @@ resolvers ++= Seq("snapshots", "releases").map(Resolver.sonatypeRepo)
 
 resolvers ++= Seq("Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/")
 
-resolvers += "Typesafe Simple Repository" at
-  "http://repo.typesafe.com/typesafe/simple/maven-releases/"
+resolvers ++= Seq("Typesafe repository releases" at "http://repo.typesafe.com/typesafe/releases/")
 
 assemblyJarName in assembly := "game-creator.jar"
 
