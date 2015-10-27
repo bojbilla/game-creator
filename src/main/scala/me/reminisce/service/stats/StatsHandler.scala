@@ -2,9 +2,10 @@ package me.reminisce.service.stats
 
 import akka.actor.Props
 import me.reminisce.database.{DatabaseService, MongoDatabaseService}
-import me.reminisce.fetcher.common.GraphResponses.{Like, Post}
+import me.reminisce.fetcher.common.GraphResponses.Post
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.Order
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerationConfig
 import me.reminisce.service.stats.StatsDataTypes.{PostGeolocation, _}
 import me.reminisce.service.stats.StatsHandler.{FinalStats, TransientPostsStats, _}
 import reactivemongo.api.DefaultDB
@@ -103,6 +104,43 @@ object StatsHandler {
     }
   }
 
+  def getItemStats(userId: String, itemId: String, itemType: String, itemsStats: List[ItemStats]): ItemStats = {
+    itemsStats.filter(is => is.userId == userId && is.itemId == itemId) match {
+      case Nil =>
+        ItemStats(None, userId, itemId, itemType, List(), 0)
+      case head :: tail =>
+        //Normally only one match is possible
+        head
+    }
+  }
+
+  def userStatsWithNewCounts(newLikers: Set[FBLike], newItemsStats: List[ItemStats], userStats: UserStats): UserStats = {
+    val newDataTypes = newItemsStats.foldLeft(userStats.dataTypeCounts) {
+      case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
+    }
+
+    // One has to be careful as the count for order is just the count of items that have a data type suited for ordering
+    // Ordering have to be a multiple of the number of items to order
+    val newQuestionCounts: Map[String, Int] = newDataTypes.foldLeft(Map[String, Int]()) {
+      case (acc, cpl) =>
+        val kinds = possibleKind(stringToType(cpl._1))
+        val newCounts = kinds.map {
+          kind =>
+            val count = kind match {
+              case Order =>
+                val excess = cpl._2 % QuestionGenerationConfig.orderingItemsNumber
+                cpl._2 - excess
+              case _ =>
+                cpl._2
+            }
+            (kind.toString, count)
+        }
+        addTypesToMap(newCounts, acc)
+    }
+
+    UserStats(userStats.id, userStats.userId, newDataTypes, newQuestionCounts, newLikers)
+  }
+
 }
 
 class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
@@ -128,7 +166,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     case any =>
       log.error("StatsHandler received unhandled message : " + any)
   }
-
 
 
   def saveTransientPostsStats(fbPosts: List[Post], itemsStatsCollection: BSONCollection): Unit = {
@@ -197,16 +234,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     }
   }
 
-  def getItemStats(userId: String, itemId: String, itemType: String, itemsStats: List[ItemStats]): ItemStats = {
-    itemsStats.filter(is => is.userId == userId && is.itemId == itemId) match {
-      case Nil =>
-        ItemStats(None, userId, itemId, itemType, List(), 0)
-      case head :: tail =>
-        //Normally only one match is possible
-        head
-    }
-  }
-
   def finalizeStats(fbPosts: List[FBPost], fbPages: List[FBPage], unlikedPagesCount: Int, userStats: UserStats,
                     itemsStats: List[ItemStats], itemsStatsCollection: BSONCollection,
                     userStatsCollection: BSONCollection): Unit = {
@@ -262,7 +289,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
         itemsStatsCollection.update(selector, itemStats, upsert = true)
     }
 
-
     val newUserStats = userStatsWithNewCounts(newLikers, newItemsStats, userStats)
     val selector = BSONDocument("userId" -> userId)
     userStatsCollection.update(selector, newUserStats, upsert = true)
@@ -315,32 +341,5 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     val selector = BSONDocument("userId" -> userId)
     userStatsCollection.update(selector, newUserStats, upsert = true)
 
-  }
-
-  def userStatsWithNewCounts(newLikers: Set[FBLike], newItemsStats: List[ItemStats], userStats: UserStats): UserStats = {
-    val newDataTypes = newItemsStats.foldLeft(userStats.dataTypeCounts) {
-      case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
-    }
-
-    // One has to be careful as the count for order is just the count of items that have a data type suited for ordering
-    // Ordering have to be a multiple of 4 (at max four items will be used)
-    val newQuestionCounts = newDataTypes.foldLeft(Map[String, Int]()) {
-      case (acc, cpl) =>
-        val kinds = possibleKind(stringToType(cpl._1))
-        val newCounts = kinds.map {
-          kind =>
-            val count = kind match {
-              case Order =>
-                val fourth = cpl._2 / 4
-                fourth * 4
-              case _ =>
-                cpl._2
-            }
-            (kind.toString, count)
-        }
-        addTypesToMap(newCounts, acc)
-    }
-
-    UserStats(userStats.id, userStats.userId, newDataTypes, newQuestionCounts, newLikers)
   }
 }
