@@ -2,7 +2,10 @@ package me.reminisce.service.stats
 
 import com.github.nscala_time.time.Imports._
 import me.reminisce.fetcher.common.GraphResponses._
-import me.reminisce.mongodb.MongoDBEntities.FBComment
+import me.reminisce.mongodb.MongoDBEntities.{FBLike, ItemStats, UserStats}
+import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerationConfig
+import me.reminisce.service.stats.StatsDataTypes.{PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoLiked}
 import org.joda.time.DateTime
 import org.scalatest.FunSuite
 
@@ -68,7 +71,7 @@ class StatsHandlerSuite extends FunSuite {
     assert(StatsHandler.availableDataTypes(p1).isEmpty)
 
     val l1 = Location(city = None, country = None, latitude = None, longitude = None, street = None,
-    zip = None)
+      zip = None)
     val pl2 = Place(id = None, name = None, location = Some(l1), created_time = None)
     val p2 = Post("id", from = None, message = None, story = None, place = Some(pl2),
       likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
@@ -98,7 +101,7 @@ class StatsHandlerSuite extends FunSuite {
     assert(dataTypes.head == StatsDataTypes.PostGeolocation)
   }
 
-  test("WhoCommented and CommentsNumber data types."){
+  test("WhoCommented and CommentsNumber data types.") {
     val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(!StatsHandler.availableDataTypes(p1).contains(StatsDataTypes.PostWhoCommented))
@@ -133,7 +136,81 @@ class StatsHandlerSuite extends FunSuite {
     val like1 = Like("1", "")
     val likes1 = Root[List[Like]](data = Some(List(like1)), paging = None, summary = None)
     val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = Some(likes1),
-    `type` = None, link = None, created_time = None, attachments = None, comments = None)
+      `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(StatsHandler.availableDataTypes(p2).contains(StatsDataTypes.LikeNumber))
   }
+
+  test("Extract item stats from list of items stats.") {
+    val itemsNumber = 10
+    val users = (0 until itemsNumber).map {
+      nb => s"User$nb"
+    }
+    val items = (0 until itemsNumber).map {
+      nb => s"Item$nb"
+    }
+    val types = (0 until itemsNumber).map {
+      nb => s"Type$nb"
+    }
+    val dataTypes = (0 until itemsNumber).map {
+      nb => (0 to nb).map(nbb => s"dType$nbb").toList // no empty list here (usage of to)
+    }
+    val counts = 1 to itemsNumber //No count equal to 0
+    val stats = (0 until itemsNumber).map {
+        nb => ItemStats(None, users(nb), items(nb), types(nb), dataTypes(nb), counts(nb), readForStats = true)
+      }.toList
+
+    val empty = StatsHandler.getItemStats("Ha", "He", "Hi", stats)
+    assert(empty.userId == "Ha")
+    assert(empty.itemId == "He")
+    assert(empty.itemType == "Hi")
+    assert(empty.dataTypes.isEmpty)
+    assert(empty.dataCount == 0)
+
+    val findThis = itemsNumber / 2
+    val foundIt = StatsHandler.getItemStats(users(findThis), items(findThis), types(findThis), stats)
+    assert(foundIt.userId == users(findThis))
+    assert(foundIt.itemId == items(findThis))
+    assert(foundIt.itemType == types(findThis))
+    assert(foundIt.dataTypes == dataTypes(findThis))
+    assert(foundIt.dataCount == counts(findThis))
+  }
+
+  test("Add new counts to user stats.") {
+    val userId = "UserId"
+    val oldLikers = (1 to 10).map(nb => FBLike(s"user$nb", s"name$nb")).toSet
+    val newLikers = (11 to 20).map(nb => FBLike(s"user$nb", s"name$nb")).toSet
+    assert(oldLikers != newLikers)
+
+    val oldDataTypes = Map((PostGeolocation.name, 2), (PostWhoCommented.name, 4), (PostWhoLiked.name, 13)) // linked with below counts
+    val newDataTypes = List((PostWhoLiked.name, 7), (PostCommentsNumber.name, 17)) // prime number is important to test the rounding
+    val newItemsStats = newDataTypes.flatMap {
+        cpl => (1 to cpl._2).map {
+          _ => ItemStats(userId = userId, itemId = s"item$userId", itemType = "Post", dataTypes = List(cpl._1), dataCount = 1)
+        }
+      }
+
+    val expectedOrderCount = 17 - (17 % QuestionGenerationConfig.orderingItemsNumber)
+
+    val oldQuestionCounts = Map((Geolocation.toString, 2), (MultipleChoice.toString, 17))
+
+    val userStats = UserStats(userId = userId, dataTypeCounts = oldDataTypes, questionCounts = oldQuestionCounts,
+      likers = oldLikers)
+
+    val newUserStats = StatsHandler.userStatsWithNewCounts(newLikers, newItemsStats, userStats)
+
+    assert(userStats.userId == newUserStats.userId)
+    assert(newUserStats.likers == newLikers)
+
+    assert(newUserStats.dataTypeCounts.size == userStats.dataTypeCounts.size + 1)
+    assert(newUserStats.dataTypeCounts.getOrElse(PostGeolocation.name, 0) == 2)
+    assert(newUserStats.dataTypeCounts.getOrElse(PostWhoCommented.name, 0) == 4)
+    assert(newUserStats.dataTypeCounts.getOrElse(PostWhoLiked.name, 0) == 20)
+    assert(newUserStats.dataTypeCounts.getOrElse(PostCommentsNumber.name, 0) == 17)
+
+    assert(newUserStats.questionCounts.size == userStats.questionCounts.size + 1)
+    assert(newUserStats.questionCounts.getOrElse(Geolocation.toString, 0) == 2)
+    assert(newUserStats.questionCounts.getOrElse(MultipleChoice.toString, 0) == 24)
+    assert(newUserStats.questionCounts.getOrElse(Order.toString, 0) == expectedOrderCount)
+  }
+
 }
