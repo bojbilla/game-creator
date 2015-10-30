@@ -187,49 +187,36 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     if ((fbPagesIds ++ fbPostsIds).length > 0) {
       val postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> fbPostsIds))
       val postsCursor = postCollection.find(postSelector).cursor[FBPost]
-      postsCursor.collect[List](fbPostsIds.length, stopOnError = true).onComplete {
-        case Success(fbPosts: List[FBPost]) =>
-          val pageSelector = BSONDocument("pageId" -> BSONDocument("$in" -> fbPagesIds))
-          val pagesCursor = pagesCollection.find(pageSelector).cursor[FBPage]
-          pagesCursor.collect[List](fbPagesIds.length, stopOnError = true).onComplete {
-            case Success(fbPages: List[FBPage]) =>
-              // we do not need to have the old items stats for pages as they are fully re-generated
-              val itemStatsSelector = BSONDocument("userId" -> userId, "itemId" -> BSONDocument("$in" -> fbPostsIds))
-              val itemsStatsCursor = itemsStatsCollection.find(itemStatsSelector).cursor[ItemStats]
-              itemsStatsCursor.collect[List](fbPostsIds.length, stopOnError = true).onComplete {
-                case Success(itemsStats: List[ItemStats]) =>
-                  val queryNotLiked = BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$nin" -> fbPagesIds))
-                  db.command(Count(MongoDatabaseService.fbPageLikesCollection, Some(queryNotLiked))).onComplete {
-                    case Success(count: Int) =>
-                      finalizeStats(fbPosts, fbPages, count, userStats, itemsStats, itemsStatsCollection, userStatsCollection)
-                    case Failure(e) =>
-                      log.error(s"Could not reach database : $e")
-                  }
-                case Failure(e) =>
-                  log.error(s"Could not reach database : $e")
-              }
-            case Failure(e) =>
-              log.error(s"Could not reach database : $e")
-          }
-        case Failure(e) =>
+      (for {
+        fbPosts <- postsCursor.collect[List](fbPostsIds.length, stopOnError = true)
+
+        pageSelector = BSONDocument("pageId" -> BSONDocument("$in" -> fbPagesIds))
+        pagesCursor = pagesCollection.find(pageSelector).cursor[FBPage]
+        fbPages <- pagesCursor.collect[List](fbPagesIds.length, stopOnError = true)
+
+        itemStatsSelector = BSONDocument("userId" -> userId, "itemId" -> BSONDocument("$in" -> fbPostsIds))
+        itemsStatsCursor = itemsStatsCollection.find(itemStatsSelector).cursor[ItemStats]
+        itemsStats <- itemsStatsCursor.collect[List](fbPostsIds.length, stopOnError = true)
+
+        queryNotLiked = BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$nin" -> fbPagesIds))
+        count <- db.command(Count(MongoDatabaseService.fbPageLikesCollection, Some(queryNotLiked)))
+      } yield finalizeStats(fbPosts, fbPages, count, userStats, itemsStats, itemsStatsCollection, userStatsCollection)
+        ) onFailure {
+        case e =>
           log.error(s"Could not reach database : $e")
       }
     } else {
       val selectOldItems = BSONDocument("userId" -> userId, "readForStats" -> false)
       val itemsStatsCursor = itemsStatsCollection.find(selectOldItems).cursor[ItemStats]
-      itemsStatsCursor.collect[List](stopOnError = true).onComplete {
-        case Success(itemsStats: List[ItemStats]) =>
-          if (itemsStats.length > 0) {
-            val postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> itemsStats.map(is => is.itemId)))
-            val postsCursor = postCollection.find(postSelector).cursor[FBPost]
-            postsCursor.collect[List](itemsStats.length, stopOnError = true).onComplete {
-              case Success(fbPosts: List[FBPost]) =>
-                dealWithOldStats(fbPosts, itemsStats, userStats, itemsStatsCollection, userStatsCollection)
-              case Failure(e) =>
-                log.error(s"Could not reach database : $e")
-            }
-          }
-        case Failure(e) =>
+      (for {
+        itemsStats <- itemsStatsCursor.collect[List](stopOnError = true)
+
+        postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> itemsStats.map(is => is.itemId)))
+        postsCursor = postCollection.find(postSelector).cursor[FBPost]
+        fbPosts <- postsCursor.collect[List](itemsStats.length, stopOnError = true) if itemsStats.length > 0
+      } yield dealWithOldStats(fbPosts, itemsStats, userStats, itemsStatsCollection, userStatsCollection)
+        ) onFailure {
+        case e =>
           log.error(s"Could not reach database : $e")
       }
     }
