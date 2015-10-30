@@ -193,9 +193,10 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
           val pagesCursor = pagesCollection.find(pageSelector).cursor[FBPage]
           pagesCursor.collect[List](fbPagesIds.length, stopOnError = true).onComplete {
             case Success(fbPages: List[FBPage]) =>
-              val itemStatsSelector = BSONDocument("userId" -> userId, "itemId" -> BSONDocument("$in" -> (fbPostsIds ++ fbPagesIds)))
+              // we do not need to have the old items stats for pages as they are fully re-generated
+              val itemStatsSelector = BSONDocument("userId" -> userId, "itemId" -> BSONDocument("$in" -> fbPostsIds))
               val itemsStatsCursor = itemsStatsCollection.find(itemStatsSelector).cursor[ItemStats]
-              itemsStatsCursor.collect[List](fbPagesIds.length + fbPostsIds.length, stopOnError = true).onComplete {
+              itemsStatsCursor.collect[List](fbPostsIds.length, stopOnError = true).onComplete {
                 case Success(itemsStats: List[ItemStats]) =>
                   val queryNotLiked = BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$nin" -> fbPagesIds))
                   db.command(Count(MongoDatabaseService.fbPageLikesCollection, Some(queryNotLiked))).onComplete {

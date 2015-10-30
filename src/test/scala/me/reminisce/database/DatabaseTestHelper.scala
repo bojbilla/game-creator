@@ -73,7 +73,7 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
   }
 }
 
-abstract class DatabaseTester(actorSystemName: String) extends TestKit(ActorSystem(actorSystemName, ConfigFactory.parseString("akka.loglevel = OFF")))
+abstract class DatabaseTester(actorSystemName: String) extends TestKit(ActorSystem(actorSystemName, ConfigFactory.parseString("akka.loglevel = ERROR")))
 with ImplicitSender
 with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
 
