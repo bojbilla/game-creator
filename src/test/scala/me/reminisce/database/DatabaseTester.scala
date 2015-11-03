@@ -28,6 +28,7 @@ with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
 
   override def afterEach(): Unit = {
     db.drop()
+    Thread.sleep(100)
   }
 
   def waitAttempts[T](operation: Awaitable[Option[T]], value: Option[T] = None, attempts: Int = 0)
