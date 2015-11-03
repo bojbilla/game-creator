@@ -91,25 +91,26 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
 
       val itemId = "Fresh post for this test"
 
-      val likers = (0 until 4).map {
+      val likers = (0 until 6).map {
         i =>
           val likerId = s"LikerId$i"
           val likerName = s"LikerName$i"
           FBLike(likerId, likerName)
       }.toList
 
-      val userStats = UserStats(userId = userId, likers = likers.toSet)
+      val freshUser = userId + "Fresh"
+      val userStats = UserStats(userId = freshUser, likers = likers.toSet)
       Await.result(userStatsCollection.save(userStats, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val message = "Who liked this ?"
-      val fbPost = FBPost(postId = itemId, userId = userId, likes = Some(List(likers.head)), message = Some(message))
+      val fbPost = FBPost(postId = itemId, userId = freshUser, likes = Some(List(likers.head)), message = Some(message))
       Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
-      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+      testProbe.send(actorRef, CreateQuestion(freshUser, itemId))
 
       val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
       assert(finishedCreation != null)

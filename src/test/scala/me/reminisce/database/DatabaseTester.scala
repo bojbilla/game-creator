@@ -25,10 +25,11 @@ with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
 
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
+    db.drop()
   }
 
   override def afterEach(): Unit = {
-    db.drop()
+    //db.drop()
   }
 
   def waitAttempts[T](operation: Awaitable[Option[T]], value: Option[T] = None, attempts: Int = 0)
