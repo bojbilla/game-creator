@@ -82,7 +82,7 @@ abstract class DatabaseTester(actorSystemName: String) extends TestKit(ActorSyst
 with ImplicitSender
 with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
 
-  val attemptsPermitted = 15
+  val attemptsPermitted = 20
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
