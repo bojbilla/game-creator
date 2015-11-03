@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, Props}
 import me.reminisce.fetcher.common.GraphResponses.{Paging, Root}
 import me.reminisce.fetcher.common.RetrieveEntitiesService._
 import me.reminisce.server.domain.RestMessage
+import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods._
 import spray.client.pipelining._
 import spray.http.StatusCodes._
@@ -41,7 +42,7 @@ object RetrieveEntitiesService {
 
   private case class GetEntities[A](client: ActorRef,
                                     path: String,
-                                    minimal: Int,
+                                    minimum: Int,
                                     count: Int = 0)
 
 
@@ -76,76 +77,61 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
 
   def retrieveEntities(): Receive = {
     case GetEntities(client, path, minimum, count) =>
-      log.debug(s"Retriever path: $path")
-      val responseF = pipelineRawJson(Get(path))
-      responseF.onComplete {
-        case Success(r) =>
-          r.status match {
-            case OK =>
-              val json = parse(r.entity.asString)
-              val root = json.extract[Root[List[T]]] match {
-                case Root(None, _, _) =>
-                  val root = json.extract[Root[T]]
-                  root.data match {
-                    case Some(data) => Root(Option(List(data)), root.paging)
-                    case None => Root(None, root.paging)
-                  }
-                case _@result => result
-              }
+      handleGetEntities(client, path, minimum, count)
+    case NotEnoughRetrieved(client, paging, minimum, count, entities: Vector[T]) =>
+      handleNotEnough(client, paging, minimum, count, entities)
+  }
 
-              val single = root match {
-                case Root(None, _, _) =>
-                  try {
-                    Some(json.extract[T])
-                  } catch {
-                    case e: Exception =>
-                      None
-                  }
-                case _ => None
-              }
-              var newEntities: Vector[T] = Vector.empty
 
-              //As facebooks response isn't well structured, there are multiple ways the a potential
-              //usable object can be constructed
-              single match {
-                case None =>
-                  newEntities = filter(root.data.getOrElse(List[T]()).toVector)
-                case Some(entity) =>
-                  newEntities = filter(Vector(entity))
-              }
+  private def handleGetEntities(client: ActorRef, path: String, minimum: Int, count: Int = 0): Unit = {
+    log.debug(s"Retriever path: $path")
+    val responseF = pipelineRawJson(Get(path))
+    responseF.onComplete {
+      case Success(r) =>
+        r.status match {
+          case OK =>
+            val json = parse(r.entity.asString)
+            val root = rootFromJson(json)
 
-              val newCount = count + newEntities.length
-              if (newCount < minimum || minimum == 0) {
-                self ! NotEnoughRetrieved(client, root.paging, minimum, newCount, newEntities)
-              } else {
-                client ! FinishedRetrievingEntities[T](newEntities)
-              }
-            case BadRequest => log.error(s"Facebook gave bad request for path: $path")
-              client ! NotEnoughFound(Vector[T]())
-            case _ =>
-              client ! NotEnoughFound(Vector[T]())
-              log.error(s"Can't retrieve entities due to unknown error ${r.status}")
-          }
-        case Failure(error) =>
-          log.error(s"Facebook didn't respond \npath:$path\n  ${error.toString}")
-          client ! NotEnoughFound(Vector[T]())
-          context.become(receive)
-      }
-    case NotEnoughRetrieved(client, paging, minimum, count, entities) =>
-      paging match {
-        case Some(p) => p.next match {
-          case Some(next) =>
-            self ! GetEntities(client, next, minimum, count)
-            client ! PartialResult(entities)
-          case None =>
-            if (minimum == 0) {
-              client ! FinishedRetrievingEntities(entities)
-            } else {
-              log.info(s"Not enough found end of paging")
-              client ! NotEnoughFound(entities)
+            val single = singleFromRoot(root, json)
+            var newEntities: Vector[T] = Vector.empty
+
+            //As facebooks response isn't well structured, there are multiple ways the a potential
+            //usable object can be constructed
+            single match {
+              case None =>
+                newEntities = filter(root.data.getOrElse(List[T]()).toVector)
+              case Some(entity) =>
+                newEntities = filter(Vector(entity))
             }
-            context.become(receive)
+
+            val newCount = count + newEntities.length
+            if (newCount < minimum || minimum == 0) {
+              self ! NotEnoughRetrieved(client, root.paging, minimum, newCount, newEntities)
+            } else {
+              client ! FinishedRetrievingEntities[T](newEntities)
+            }
+          case BadRequest => log.error(s"Facebook gave bad request for path: $path")
+            client ! NotEnoughFound(Vector[T]())
+          case _ =>
+            client ! NotEnoughFound(Vector[T]())
+            log.error(s"Can't retrieve entities due to unknown error ${r.status}")
         }
+      case Failure(error) =>
+        log.error(s"Facebook didn't respond \npath:$path\n  ${error.toString}")
+        client ! NotEnoughFound(Vector[T]())
+        context.become(receive)
+    }
+  }
+
+
+  private def handleNotEnough(client: ActorRef, paging: Option[Paging], minimum: Int, count: Int = 0,
+                              entities: Vector[T]): Unit = {
+    paging match {
+      case Some(p) => p.next match {
+        case Some(next) =>
+          self ! GetEntities(client, next, minimum, count)
+          client ! PartialResult(entities)
         case None =>
           if (minimum == 0) {
             client ! FinishedRetrievingEntities(entities)
@@ -155,7 +141,40 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
           }
           context.become(receive)
       }
+      case None =>
+        if (minimum == 0) {
+          client ! FinishedRetrievingEntities(entities)
+        } else {
+          log.info(s"Not enough found end of paging")
+          client ! NotEnoughFound(entities)
+        }
+        context.become(receive)
+    }
   }
+
+  private def rootFromJson(json: JValue): Root[_ <: List[T]] = json.extract[Root[List[T]]] match {
+    case Root(None, _, _) =>
+      val root = json.extract[Root[T]]
+      root.data match {
+        case Some(data) => Root(Option(List(data)), root.paging)
+        case None => Root(None, root.paging)
+      }
+    case _@result => result
+  }
+
+  private def singleFromRoot(root: Root[_ <: List[T]], json: JValue): Option[T] = root match {
+    case Root(None, _, _) =>
+      try {
+        Some(json.extract[T])
+      } catch {
+        case e: Exception =>
+          None
+      }
+    case _ => None
+  }
+
+  var newEntities: Vector[T] = Vector.empty
+
 
 }
 
