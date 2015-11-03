@@ -2,7 +2,7 @@ package me.reminisce.service.gameboardgen
 
 import akka.actor.{ActorRef, Props}
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.mongodb.MongoDBEntities.UserStats
+import me.reminisce.mongodb.StatsEntities.UserStats
 import me.reminisce.service.gameboardgen.BoardGenerator.{FailedBoardGeneration, FinishedBoardGeneration}
 import me.reminisce.service.gameboardgen.GameGenerator.InitBoardCreation
 import reactivemongo.api.DefaultDB

@@ -7,6 +7,7 @@ import com.github.nscala_time.time.Imports._
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.fetcher.common.GraphResponses._
 import me.reminisce.mongodb.MongoDBEntities._
+import me.reminisce.mongodb.StatsEntities.{UserStats, ItemStats}
 import me.reminisce.service.stats.StatsHandler.{FinalStats, TransientPostsStats}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
@@ -21,8 +22,6 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-
-  val attemptsPermitted = 15
 
   "StatsHandler" must {
     "Save \"on the fly\" stats." in {
@@ -152,25 +151,6 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
       Thread.sleep(200)
     }
 
-    /*
-    val test = fbPosts.foldLeft(Set[FBLike]()) {
-      (acc: Set[FBLike], post: FBPost) => {
-        post.likes match {
-          case Some(likes) => acc ++ likes.toSet
-          case None => acc
-        }
-      }
-    } ++ StatsTestData.sampleUserStats.likers
-
-    //assert(userStats.get.likers == test)
-    //println(StatsTestData.sampleUserStats.likers)
-    println(userStats.get.likers)
-    //println(test)
-
-    val userStatsTest = UserStats(None,"TestUserStatsHandlerSpec",
-      Map("LikeNumber" -> 11, "PostWhoCommented" -> 1, "PostGeolocation" -> 1, "Time" -> 11, "PostCommentsNumber" -> 1),
-      Map("Order" -> 18, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 11),Set(FBLike("2","me2"), FBLike("3","me3")))
-    */
     val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",
       Map("LikeNumber" -> 22, "PostWhoLiked" -> 1, "PostWhoCommented" -> 2, "PostGeolocation" -> 2, "Time" -> 22,
         "PostCommentsNumber" -> 2), Map("Order" -> 42, "MultipleChoice" -> 3, "Geolocation" -> 2, "Timeline" -> 22),

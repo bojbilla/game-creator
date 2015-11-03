@@ -43,10 +43,16 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       val update = BSONDocument("userId" -> userId, "date" -> time)
 
       Await.result(collection.update(selector, update, upsert = true), Duration(10, TimeUnit.SECONDS))
-      val testProbe = TestProbe()
-      val actorRef = TestActorRef(FetcherService.props(db))
-      testProbe.send(actorRef, FetchData(userId, "NAN"))
-      testProbe.expectMsg(AlreadyFresh(s"Data for user $userId is fresh."))
+      val testInsert = waitAttempts[LastFetched](collection.find(selector).one[LastFetched])(_.date == time)
+      testInsert match {
+        case Some(lastFetched) =>
+          val testProbe = TestProbe()
+          val actorRef = TestActorRef(FetcherService.props(db))
+          testProbe.send(actorRef, FetchData(userId, "NAN"))
+          testProbe.expectMsg(AlreadyFresh(s"Data for user $userId is fresh."))
+        case None =>
+          fail("Insertion of lastfeched failed.")
+      }
     }
 
   }

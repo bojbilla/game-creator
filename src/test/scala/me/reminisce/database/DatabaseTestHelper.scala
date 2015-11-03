@@ -1,5 +1,7 @@
 package me.reminisce.database
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
 import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
@@ -7,6 +9,9 @@ import com.typesafe.config.ConfigFactory
 import me.reminisce.TestsConfig
 import org.scalatest._
 import reactivemongo.api.{DefaultDB, MongoDriver}
+
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Awaitable}
 
 object DatabaseTestHelper extends MongoEmbedDatabase {
 
@@ -77,6 +82,8 @@ abstract class DatabaseTester(actorSystemName: String) extends TestKit(ActorSyst
 with ImplicitSender
 with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
 
+  val attemptsPermitted = 15
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val db = DatabaseTestHelper.getDb
@@ -87,5 +94,23 @@ with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
 
   override def afterEach(): Unit = {
     db.drop()
+  }
+
+  def waitAttempts[T](operation: Awaitable[Option[T]], value: Option[T] = None, attempts: Int = 0)
+                     (check: T => Boolean): Option[T] = value match {
+    case None =>
+      if (attempts < attemptsPermitted) {
+        val newValue = Await.result(operation, Duration(10, TimeUnit.SECONDS))
+        waitAttempts[T](operation, newValue, attempts + 1)(check)
+      } else {
+        None
+      }
+    case Some(result) =>
+      if (check(result)) {
+        Some(result)
+      } else {
+        val newValue = Await.result(operation, Duration(10, TimeUnit.SECONDS))
+        waitAttempts[T](operation, newValue, attempts + 1)(check)
+      }
   }
 }

@@ -2,7 +2,8 @@ package me.reminisce.service.stats
 
 import com.github.nscala_time.time.Imports._
 import me.reminisce.fetcher.common.GraphResponses._
-import me.reminisce.mongodb.MongoDBEntities.{FBLike, ItemStats, UserStats}
+import me.reminisce.mongodb.MongoDBEntities.FBLike
+import me.reminisce.mongodb.StatsEntities.{UserStats, ItemStats}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerationConfig
 import me.reminisce.service.stats.StatsDataTypes.{PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoLiked}

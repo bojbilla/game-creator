@@ -2,7 +2,8 @@ package me.reminisce.service.gameboardgen.questiongen
 
 import akka.actor.Props
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.mongodb.MongoDBEntities.{FBPost, UserStats}
+import me.reminisce.mongodb.MongoDBEntities.FBPost
+import me.reminisce.mongodb.StatsEntities.UserStats
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.MultipleChoice
 import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType.MCWhoLikedYourPost
 import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, Possibility}

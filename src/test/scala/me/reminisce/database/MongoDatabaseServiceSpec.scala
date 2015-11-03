@@ -18,8 +18,6 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val attemptsPermitted = 15
-
   "MongoDatabaseService" must {
     "save post to database." in {
       val userId = PostTestsData.userId

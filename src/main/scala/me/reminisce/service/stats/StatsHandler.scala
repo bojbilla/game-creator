@@ -4,6 +4,7 @@ import akka.actor.Props
 import me.reminisce.database.{DatabaseService, MongoDatabaseService}
 import me.reminisce.fetcher.common.GraphResponses.Post
 import me.reminisce.mongodb.MongoDBEntities._
+import me.reminisce.mongodb.StatsEntities.{ItemStats, UserStats}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.Order
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerationConfig
 import me.reminisce.service.stats.StatsDataTypes.{PostGeolocation, _}

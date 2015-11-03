@@ -1,6 +1,7 @@
 package me.reminisce.mongodb
 
 import com.github.nscala_time.time.Imports._
+import me.reminisce.mongodb.MongoDBEntities.FBLike
 import reactivemongo.bson._
 
 object MongoDBEntities {
@@ -114,6 +115,9 @@ object MongoDBEntities {
     implicit val fbPostFormat = Macros.handler[FBPost]
   }
 
+}
+
+object StatsEntities {
   case class UserStats(id: Option[BSONObjectID] = None,
                        userId: String,
                        dataTypeCounts: Map[String, Int] = Map(),
@@ -151,6 +155,8 @@ object MongoDBEntities {
 
     implicit val mapStringIntReader = getMapStringIntReader
 
+    implicit val fbLikeFormat = MongoDBEntities.FBLike.fbLikeFormat
+
     implicit val userStatsFormat = Macros.handler[UserStats]
   }
 
@@ -176,5 +182,4 @@ object MongoDBEntities {
   object ItemStats {
     implicit val itemStatsFormat = Macros.handler[ItemStats]
   }
-
 }

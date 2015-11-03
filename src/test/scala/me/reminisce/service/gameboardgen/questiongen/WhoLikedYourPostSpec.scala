@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.mongodb.MongoDBEntities._
+import me.reminisce.mongodb.StatsEntities.UserStats
 import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, TextPostSubject}
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
 import org.scalatest.DoNotDiscover
