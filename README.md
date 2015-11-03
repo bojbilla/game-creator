@@ -1,7 +1,8 @@
 
-##game-creator
+##Game Creator for reminisce.me
 
-The game-creator stores the data obtained by the fetcher and will use the obtained data to create a game board. On a request from the backend, the Game-Creator will try as hard as it can to create a board with the available data.
+[![Codacy Badge](https://api.codacy.com/project/badge/grade/a1618ddd953a48339f3b9765e9e9ebd5)](https://www.codacy.com/app/pirroh/game-creator)
 
+The game-creator fetches the user data from Facebook, and uses the obtained data to create a game board.
 
 For futher details please refer to the [wiki](https://github.com/reminisceme/game-creator/wiki)
