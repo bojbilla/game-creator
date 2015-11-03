@@ -11,6 +11,7 @@ import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 import reactivemongo.core.commands.Count
 
+import scala.annotation.tailrec
 import scala.util.{Failure, Random, Success}
 
 object BoardGenerator {
@@ -37,25 +38,6 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
 
   def drawItemsAtRandomFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int = 1): List[T] = {
     if (quantity > 0 && bagSizes.sum > 0) {
-      // The thresholds define under which threshold a value belongs to a bag
-      def findFirstLessOrEqual(bagThresholds: List[Int], bagTypes: List[T], generatedRand: Int): T = bagThresholds match {
-        case Nil =>
-          throw new IndexOutOfBoundsException
-        case head :: tail =>
-          if (generatedRand <= head)
-            bagTypes.head
-          else
-            findFirstLessOrEqual(bagThresholds.tail, bagTypes.tail, generatedRand)
-      }
-
-      def formThresholds(acc: List[Int], sizes: List[Int]): List[Int] = sizes match {
-        case Nil =>
-          acc
-        case head :: tail =>
-          val newAcc = acc ++ List(acc.last + head)
-          formThresholds(newAcc, tail)
-      }
-
       val updatedBagSizes = bagSizes.map {
         s =>
           if (s >= drawnQuantity) {
@@ -64,16 +46,11 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
             0
           }
       }
-
       val totalCount = updatedBagSizes.sum
 
       if (totalCount > 0) {
-
         val bagThresholds = formThresholds(List(updatedBagSizes.head - 1), updatedBagSizes.tail)
-
         val selectedType = findFirstLessOrEqual(bagThresholds, bagTypes, Random.nextInt(totalCount))
-
-        // we assume all the types are different
         val typePosition = bagTypes.indexOf(selectedType)
 
         val newSizes = (0 until updatedBagSizes.length).map {
@@ -92,6 +69,27 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     } else {
       List()
     }
+  }
+
+  @tailrec
+  private def findFirstLessOrEqual[T](bagThresholds: List[Int], bagTypes: List[T], generatedRand: Int): T = bagThresholds match {
+    case Nil =>
+      throw new IndexOutOfBoundsException
+    case head :: tail =>
+      if (generatedRand <= head)
+        bagTypes.head
+      else
+        findFirstLessOrEqual(bagThresholds.tail, bagTypes.tail, generatedRand)
+  }
+
+  // The thresholds define under which threshold a value belongs to a bag
+  @tailrec
+  private def formThresholds(acc: List[Int], sizes: List[Int]): List[Int] = sizes match {
+    case Nil =>
+      acc
+    case head :: tail =>
+      val newAcc = acc ++ List(acc.last + head)
+      formThresholds(newAcc, tail)
   }
 
   def drawUniformlyFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int): List[T] = {

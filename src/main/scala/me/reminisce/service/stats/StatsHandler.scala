@@ -180,9 +180,9 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
 
   }
 
-  def finalizeStats(fbPostsIds: List[String], fbPagesIds: List[String], userStats: UserStats,
-                    postCollection: BSONCollection, pagesCollection: BSONCollection, userStatsCollection: BSONCollection,
-                    itemsStatsCollection: BSONCollection): Unit = {
+  private def finalizeStats(fbPostsIds: List[String], fbPagesIds: List[String], userStats: UserStats,
+                            postCollection: BSONCollection, pagesCollection: BSONCollection, userStatsCollection: BSONCollection,
+                            itemsStatsCollection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
     if ((fbPagesIds ++ fbPostsIds).length > 0) {
       val postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> fbPostsIds))
@@ -199,8 +199,8 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
         itemsStats <- itemsStatsCursor.collect[List](fbPostsIds.length, stopOnError = true)
 
         queryNotLiked = BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$nin" -> fbPagesIds))
-        count <- db.command(Count(MongoDatabaseService.fbPageLikesCollection, Some(queryNotLiked)))
-      } yield finalizeStats(fbPosts, fbPages, count, userStats, itemsStats, itemsStatsCollection, userStatsCollection)
+        notLikedPagesCount <- db.command(Count(MongoDatabaseService.fbPageLikesCollection, Some(queryNotLiked)))
+      } yield finalizeStats(fbPosts, fbPages, notLikedPagesCount, userStats, itemsStats, itemsStatsCollection, userStatsCollection)
         ) onFailure {
         case e =>
           log.error(s"Could not reach database : $e")
@@ -222,45 +222,16 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     }
   }
 
-  def finalizeStats(fbPosts: List[FBPost], fbPages: List[FBPage], unlikedPagesCount: Int, userStats: UserStats,
-                    itemsStats: List[ItemStats], itemsStatsCollection: BSONCollection,
-                    userStatsCollection: BSONCollection): Unit = {
+  private def finalizeStats(fbPosts: List[FBPost], fbPages: List[FBPage], notLikedPagesCount: Int, userStats: UserStats,
+                            itemsStats: List[ItemStats], itemsStatsCollection: BSONCollection,
+                            userStatsCollection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val newLikers = fbPosts.foldLeft(Set[FBLike]()) {
-      (acc: Set[FBLike], post: FBPost) => {
-        post.likes match {
-          case Some(likes) => acc ++ likes.toSet
-          case None => acc
-        }
-      }
-    } ++ userStats.likers
+    val newLikers = accumulateLikes(fbPosts) ++ userStats.likers
 
-    val updatedPosts: List[ItemStats] = fbPosts.flatMap {
-      fbPost =>
-        val likeNumber = fbPost.likesCount.getOrElse(0)
-        if (newLikers.size - likeNumber >= 3 && likeNumber > 0) {
-          val oldItemStat = getItemStats(userId, fbPost.postId, "Post", itemsStats)
-          val newDataListing = oldItemStat.dataTypes.toSet + PostWhoLiked.name
-          Some(ItemStats(None, userId, oldItemStat.itemId, "Post", newDataListing.toList, newDataListing.size))
-        } else {
-          None
-        }
-    }
+    val updatedPosts: List[ItemStats] = updatePostsStats(fbPosts, newLikers, itemsStats)
 
-    val updatedPages: List[ItemStats] = {
-      val newDataListing =
-        if (unlikedPagesCount >= 3) {
-          List(Time.name, LikeNumber.name, PageWhichLiked.name)
-        } else {
-          List(Time.name, LikeNumber.name)
-        }
-      fbPages.map {
-        fbPage =>
-          ItemStats(None, userId, fbPage.pageId, "Page", newDataListing, newDataListing.size)
-      }
-
-    }
+    val updatedPages: List[ItemStats] = updatePagesStats(fbPages, notLikedPagesCount)
 
     val untouchedPosts = itemsStats.filterNot(
       is => updatedPosts.exists(ui => ui.userId == is.userId && ui.itemId == is.itemId)
@@ -284,30 +255,13 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
 
   // The stats in question can only be posts. Pages are only generated with the read flag to true as those items are
   // only generated during stats finalization.
-  def dealWithOldStats(fbPosts: List[FBPost], itemsStats: List[ItemStats], userStats: UserStats,
-                       itemsStatsCollection: BSONCollection, userStatsCollection: BSONCollection): Unit = {
+  private def dealWithOldStats(fbPosts: List[FBPost], itemsStats: List[ItemStats], userStats: UserStats,
+                               itemsStatsCollection: BSONCollection, userStatsCollection: BSONCollection): Unit = {
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    val newLikers = fbPosts.foldLeft(Set[FBLike]()) {
-      (acc: Set[FBLike], post: FBPost) => {
-        post.likes match {
-          case Some(likes) => acc ++ likes.toSet
-          case None => acc
-        }
-      }
-    } ++ userStats.likers
+    val newLikers = accumulateLikes(fbPosts) ++ userStats.likers
 
-    val updatedPosts: List[ItemStats] = fbPosts.flatMap {
-      fbPost =>
-        val likeNumber = fbPost.likesCount.getOrElse(0)
-        if (newLikers.size - likeNumber >= 3 && likeNumber > 0) {
-          val oldItemStat = getItemStats(userId, fbPost.postId, "Post", itemsStats)
-          val newDataListing = oldItemStat.dataTypes.toSet + PostWhoLiked.name
-          Some(ItemStats(None, userId, oldItemStat.itemId, "Post", newDataListing.toList, newDataListing.size))
-        } else {
-          None
-        }
-    }
+    val updatedPosts: List[ItemStats] = updatePostsStats(fbPosts, newLikers, itemsStats)
 
 
     val untouchedPosts = itemsStats.filterNot(
@@ -329,5 +283,44 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     val selector = BSONDocument("userId" -> userId)
     userStatsCollection.update(selector, newUserStats, upsert = true)
 
+  }
+
+  private def accumulateLikes(fbPosts: List[FBPost]): Set[FBLike] = {
+    fbPosts.foldLeft(Set[FBLike]()) {
+      (acc: Set[FBLike], post: FBPost) => {
+        post.likes match {
+          case Some(likes) => acc ++ likes.toSet
+          case None => acc
+        }
+      }
+    }
+  }
+
+  private def updatePostsStats(fbPosts: List[FBPost], likers: Set[FBLike],
+                               itemsStats: List[ItemStats]): List[ItemStats] = {
+    fbPosts.flatMap {
+      fbPost =>
+        val likeNumber = fbPost.likesCount.getOrElse(0)
+        if (likers.size - likeNumber >= 3 && likeNumber > 0) {
+          val oldItemStat = getItemStats(userId, fbPost.postId, "Post", itemsStats)
+          val newDataListing = oldItemStat.dataTypes.toSet + PostWhoLiked.name
+          Some(ItemStats(None, userId, oldItemStat.itemId, "Post", newDataListing.toList, newDataListing.size))
+        } else {
+          None
+        }
+    }
+  }
+
+  private def updatePagesStats(fbPages: List[FBPage], notLikedPagesCount: Int): List[ItemStats] = {
+    val newDataListing =
+      if (notLikedPagesCount >= 3) {
+        List(Time.name, LikeNumber.name, PageWhichLiked.name)
+      } else {
+        List(Time.name, LikeNumber.name)
+      }
+    fbPages.map {
+      fbPage =>
+        ItemStats(None, userId, fbPage.pageId, "Page", newDataListing, newDataListing.size)
+    }
   }
 }
