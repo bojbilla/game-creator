@@ -20,10 +20,9 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val userId = "TestUserFetcherService"
-
   "FetcherService" must {
     "not fetch when a concurrent fetch has been issued." in {
+      val userId = "TestUserFetcherService1"
       val actorRef = TestActorRef(FetcherService.props(db))
       actorRef ! FetchData(userId, "NAN")
       actorRef.suspend()
@@ -35,6 +34,7 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
     }
 
     "not fetch when the data is already fresh." in {
+      val userId = "TestUserFetcherService2"
       val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
 
       val time = DateTime.now
@@ -44,7 +44,7 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
 
       Await.result(collection.update(selector, update, upsert = true), Duration(10, TimeUnit.SECONDS))
       val testProbe = TestProbe()
-      val actorRef = TestActorRef(new FetcherService(db))
+      val actorRef = TestActorRef(FetcherService.props(db))
       testProbe.send(actorRef, FetchData(userId, "NAN"))
       testProbe.expectMsg(AlreadyFresh(s"Data for user $userId is fresh."))
     }
