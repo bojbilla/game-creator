@@ -11,7 +11,6 @@ import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQu
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -34,9 +33,8 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
     }
 
     "not create question when there is no page." in {
-      val itemId = "This oage does not exist"
+      val itemId = "This page does not exist"
 
-      val selectorLike = BSONDocument("userId" -> userId, "pageId" -> itemId)
       val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
       val likedTime = DateTime.now
       val pageLike = FBPageLike(None, userId, itemId, likedTime)
@@ -53,11 +51,9 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
 
       val itemId = s"PageId"
 
-      val selectorPage = BSONDocument("pageId" -> itemId)
       val page = FBPage(None, itemId, Some(s"Cool page with id ID"), None, 1)
       Await.result(pagesCollection.save(page, safeLastError), Duration(10, TimeUnit.SECONDS))
 
-      val selectorLike = BSONDocument("userId" -> userId, "pageId" -> itemId)
       val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
       val likedTime = DateTime.now
       val pageLike = FBPageLike(None, userId, itemId, likedTime)

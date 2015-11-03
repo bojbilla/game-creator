@@ -26,7 +26,6 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
 
       val userId = "TestUser"
       val time = DateTime.now
-      val selector = BSONDocument("userId" -> userId)
 
       val update = BSONDocument("userId" -> userId, "date" -> time)
 

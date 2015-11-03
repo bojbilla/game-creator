@@ -10,7 +10,6 @@ import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuesti
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -38,7 +37,6 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val itemId = "This post does not exist"
 
       val userStats = UserStats(userId = userId)
-      val selector = BSONDocument("userId" -> userId)
       Await.result(userStatsCollection.save(userStats, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
@@ -53,13 +51,11 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val itemId = "This post does exist"
 
       val userStats = UserStats(userId = userId)
-      val userStatsSelector = BSONDocument("userId" -> userId)
       Await.result(userStatsCollection.save(userStats, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val fbPost = FBPost(postId = itemId, userId = userId)
-      val postSelector = BSONDocument("userId" -> userId, "postId" -> itemId)
       Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
@@ -74,7 +70,6 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val itemId = "This post does exist"
 
       val userStats = UserStats(userId = userId)
-      val userStatsSelector = BSONDocument("userId" -> userId)
       Await.result(userStatsCollection.save(userStats, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
@@ -83,7 +78,6 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val likerName = "LikerName"
       val like = FBLike(likerId, likerName)
       val fbPost = FBPost(postId = itemId, userId = userId, likes = Some(List(like)))
-      val postSelector = BSONDocument("userId" -> userId, "postId" -> itemId)
       Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
@@ -105,14 +99,12 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       }.toList
 
       val userStats = UserStats(userId = userId, likers = likers.toSet)
-      val userStatsSelector = BSONDocument("userId" -> userId)
       Await.result(userStatsCollection.save(userStats, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val message = "Who liked this ?"
       val fbPost = FBPost(postId = itemId, userId = userId, likes = Some(List(likers.head)), message = Some(message))
-      val postSelector = BSONDocument("userId" -> userId, "postId" -> itemId)
       Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
@@ -134,6 +126,6 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       assert(subject.asInstanceOf[TextPostSubject].text == fbPost.message.getOrElse(""))
       assert(choices(answer).name == likers.head.userName)
     }
-  }
 
+  }
 }

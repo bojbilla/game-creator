@@ -10,7 +10,6 @@ import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQu
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -48,11 +47,9 @@ class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") 
 
       (0 until pagesNumber) foreach {
         case nb =>
-          val selector = BSONDocument("pageId" -> itemIds(nb))
           Await.result(pagesCollection.save(pages(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
       }
 
-      val selector = BSONDocument("userId" -> userId, "pageId" -> itemIds.head)
       val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
       val pageLike = FBPageLike(None, userId, itemIds.head, DateTime.now)
       Await.result(pageLikesCollection.save(pageLike, safeLastError), Duration(10, TimeUnit.SECONDS))

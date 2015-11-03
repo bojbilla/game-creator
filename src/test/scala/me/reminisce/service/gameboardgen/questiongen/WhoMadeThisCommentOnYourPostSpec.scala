@@ -9,7 +9,6 @@ import me.reminisce.service.gameboardgen.GameboardEntities.{CommentSubject, Mult
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -38,7 +37,6 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val fbPost = FBPost(postId = itemId, userId = userId)
-      val postSelector = BSONDocument("userId" -> userId, "postId" -> itemId)
       Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
@@ -57,7 +55,6 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val from = FBFrom(fromId, fromName)
       val comment = FBComment("commentId", from, 0, "hello")
       val fbPost = FBPost(postId = itemId, userId = userId, comments = Some(List(comment)))
-      val postSelector = BSONDocument("userId" -> userId, "postId" -> itemId)
       Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
@@ -81,7 +78,6 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
 
       val message = "Who liked this ?"
       val fbPost = FBPost(postId = itemId, userId = userId, comments = Some(comments), message = Some(message))
-      val postSelector = BSONDocument("userId" -> userId, "postId" -> itemId)
       Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))

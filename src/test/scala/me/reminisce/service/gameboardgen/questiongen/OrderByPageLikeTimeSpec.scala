@@ -10,7 +10,6 @@ import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQu
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -54,13 +53,11 @@ class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") 
 
       (0 until pagesNumber) foreach {
         case nb =>
-          val selector = BSONDocument("pageId" -> itemIds(nb))
           Await.result(pagesCollection.save(pages(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
       }
 
       (0 until pagesNumber) foreach {
         case nb =>
-          val selector = BSONDocument("userId" -> userId, "pageId" -> itemIds(nb))
           Await.result(pageLikesCollection.save(pageLikes(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
       }
 

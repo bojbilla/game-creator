@@ -38,7 +38,6 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
 
       val time = DateTime.now
-      val selector = BSONDocument("userId" -> userId)
 
       val update = BSONDocument("userId" -> userId, "date" -> time)
 
