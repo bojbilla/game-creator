@@ -109,7 +109,7 @@ object GameboardEntities {
                            subject: Option[Subject],
                            choices: List[SubjectWithId],
                            answer: List[Int]
-                            ) extends GameQuestion(userId, kind, `type`, subject)
+                          ) extends GameQuestion(userId, kind, `type`, subject)
 
   case class SubjectWithId(subject: Subject, uId: Int)
 

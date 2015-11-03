@@ -30,7 +30,7 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
 
       val update = BSONDocument("userId" -> userId, "date" -> time)
 
-      Await.result(collection.update(selector, update, upsert = true), Duration(10, TimeUnit.SECONDS))
+      Await.result(collection.save(update, safeLastError), Duration(10, TimeUnit.SECONDS))
       val actorRef = TestActorRef(DeletionService.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, RemoveUser(userId))

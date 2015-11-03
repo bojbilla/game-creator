@@ -43,7 +43,7 @@ class WhenDidYouShareThisPostSpec extends DatabaseTester("WhenDidYouShareThisPos
       val postedTime = DateTime.now.toString(formatter)
       val fbPost = FBPost(postId = itemId, userId = userId, attachments = None, message = Some(postMessage),
         createdTime = Some(postedTime))
-      Await.result(postsCollection.update(selector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhenDidYouShareThisPost.props(db))
       val testProbe = TestProbe()

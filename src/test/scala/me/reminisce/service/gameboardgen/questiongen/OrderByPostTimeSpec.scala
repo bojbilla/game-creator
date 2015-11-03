@@ -52,7 +52,7 @@ class OrderByPostTimeSpec extends DatabaseTester("OrderByPostTimeSpec") {
       (0 until postsNumber) foreach {
         case nb =>
           val selector = BSONDocument("userId" -> userId, "postId" -> itemIds(nb))
-          Await.result(postsCollection.update(selector, posts(nb), upsert = true), Duration(10, TimeUnit.SECONDS))
+          Await.result(postsCollection.save(posts(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
       }
 
       val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))

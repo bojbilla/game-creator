@@ -24,7 +24,7 @@ object GraphResponses {
                   created_time: Option[String],
                   attachments: Option[Root[List[Attachment]]],
                   comments: Option[Root[List[Comment]]]
-                   )
+                 )
 
   case class PostsList(posts: List[Post]) extends RestMessage
 

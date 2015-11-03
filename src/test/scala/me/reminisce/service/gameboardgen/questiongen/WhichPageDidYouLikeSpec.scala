@@ -49,13 +49,13 @@ class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") 
       (0 until pagesNumber) foreach {
         case nb =>
           val selector = BSONDocument("pageId" -> itemIds(nb))
-          Await.result(pagesCollection.update(selector, pages(nb), upsert = true), Duration(10, TimeUnit.SECONDS))
+          Await.result(pagesCollection.save(pages(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
       }
 
       val selector = BSONDocument("userId" -> userId, "pageId" -> itemIds.head)
       val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
       val pageLike = FBPageLike(None, userId, itemIds.head, DateTime.now)
-      Await.result(pageLikesCollection.update(selector, pageLike, upsert = true), Duration(10, TimeUnit.SECONDS))
+      Await.result(pageLikesCollection.save(pageLike, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhichPageDidYouLike.props(db))
       val testProbe = TestProbe()

@@ -39,7 +39,7 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
 
       val fbPost = FBPost(postId = itemId, userId = userId)
       val postSelector = BSONDocument("userId" -> userId, "postId" -> itemId)
-      Await.result(postsCollection.update(postSelector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()
@@ -58,7 +58,7 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val comment = FBComment("commentId", from, 0, "hello")
       val fbPost = FBPost(postId = itemId, userId = userId, comments = Some(List(comment)))
       val postSelector = BSONDocument("userId" -> userId, "postId" -> itemId)
-      Await.result(postsCollection.update(postSelector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()
@@ -82,7 +82,7 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val message = "Who liked this ?"
       val fbPost = FBPost(postId = itemId, userId = userId, comments = Some(comments), message = Some(message))
       val postSelector = BSONDocument("userId" -> userId, "postId" -> itemId)
-      Await.result(postsCollection.update(postSelector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()

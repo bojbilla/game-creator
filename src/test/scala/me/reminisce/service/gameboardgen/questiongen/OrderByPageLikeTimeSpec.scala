@@ -55,13 +55,13 @@ class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") 
       (0 until pagesNumber) foreach {
         case nb =>
           val selector = BSONDocument("pageId" -> itemIds(nb))
-          Await.result(pagesCollection.update(selector, pages(nb), upsert = true), Duration(10, TimeUnit.SECONDS))
+          Await.result(pagesCollection.save(pages(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
       }
 
       (0 until pagesNumber) foreach {
         case nb =>
           val selector = BSONDocument("userId" -> userId, "pageId" -> itemIds(nb))
-          Await.result(pageLikesCollection.update(selector, pageLikes(nb), upsert = true), Duration(10, TimeUnit.SECONDS))
+          Await.result(pageLikesCollection.save(pageLikes(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
       }
 
       val actorRef = TestActorRef(OrderByPageLikeTime.props(db))
