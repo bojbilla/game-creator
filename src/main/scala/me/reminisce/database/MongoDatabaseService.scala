@@ -20,7 +20,7 @@ object MongoDatabaseService {
   val postQuestionsCollection = "postQuestions"
   val itemsStatsCollection = "itemsStats"
 
-  val safeLastError = new GetLastError(fsync = true)
+  val safeLastError = new GetLastError(j = true)
 
   def props(userId: String, db: DefaultDB): Props =
     Props(new MongoDatabaseService(userId, db))
