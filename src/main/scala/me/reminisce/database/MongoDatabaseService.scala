@@ -7,7 +7,7 @@ import me.reminisce.fetcher.common.GraphResponses.{Page, Post}
 import me.reminisce.mongodb.MongoDBEntities._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
+import reactivemongo.bson.{BSONInteger, BSONDocument}
 import reactivemongo.core.commands.GetLastError
 
 object MongoDatabaseService {
@@ -20,7 +20,7 @@ object MongoDatabaseService {
   val postQuestionsCollection = "postQuestions"
   val itemsStatsCollection = "itemsStats"
 
-  val safeLastError = new GetLastError(j = true)
+  val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
 
   def props(userId: String, db: DefaultDB): Props =
     Props(new MongoDatabaseService(userId, db))

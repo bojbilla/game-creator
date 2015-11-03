@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, WordSpecLike}
+import reactivemongo.bson.{BSONInteger, BSONString, BSONValue}
 import reactivemongo.core.commands.GetLastError
 
 import scala.concurrent.duration.Duration
@@ -20,7 +21,7 @@ with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val db = DatabaseTestHelper.getDb
-  val safeLastError = new GetLastError(j = true)
+  val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
 
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
