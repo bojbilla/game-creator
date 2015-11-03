@@ -28,7 +28,7 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Strangely there is no userStats."))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "not create question when there is no post." in {
@@ -43,7 +43,7 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "not create question when there is no likes for post." in {
@@ -64,7 +64,7 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"No likes on post : $itemId"))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "not create question when there is not enough non-likers for post." in {
@@ -88,7 +88,7 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Not enough non likers for post $itemId and user $userId"))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "create a valid question when the data is correctly setup." in {
