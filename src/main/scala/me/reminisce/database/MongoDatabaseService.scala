@@ -7,7 +7,8 @@ import me.reminisce.fetcher.common.GraphResponses.{Page, Post}
 import me.reminisce.mongodb.MongoDBEntities._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
+import reactivemongo.bson.{BSONInteger, BSONDocument}
+import reactivemongo.core.commands.GetLastError
 
 object MongoDatabaseService {
   val fbPagesCollection = "fbPages"
@@ -18,6 +19,8 @@ object MongoDatabaseService {
   val userStatisticsCollection = "userStatistics"
   val postQuestionsCollection = "postQuestions"
   val itemsStatsCollection = "itemsStats"
+
+  val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
 
   def props(userId: String, db: DefaultDB): Props =
     Props(new MongoDatabaseService(userId, db))
@@ -94,10 +97,10 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     pages.foreach { p =>
       val query = BSONDocument("pageId" -> p.id)
-      fbPageCollection.update(query, pageToFBPage(p), upsert = true)
+      fbPageCollection.update(query, pageToFBPage(p), safeLastError, upsert = true)
 
       val query2 = BSONDocument("userId" -> userId, "pageId" -> p.id)
-      fbPageLikeCollection.update(query2, pageToFBPageLike(p, userId), upsert = true)
+      fbPageLikeCollection.update(query2, pageToFBPageLike(p, userId), safeLastError, upsert = true)
     }
   }
 
@@ -106,7 +109,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     import scala.concurrent.ExecutionContext.Implicits.global
     posts.foreach { p =>
       val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
-      collection.update(selector, postToFBPost(p, userId), upsert = true)
+      collection.update(selector, postToFBPost(p, userId), safeLastError, upsert = true)
     }
   }
 
@@ -118,7 +121,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
 
     val update = BSONDocument("userId" -> userId, "date" -> time)
 
-    collection.update(selector, update, upsert = true)
+    collection.update(selector, update, safeLastError, upsert = true)
   }
 
 }

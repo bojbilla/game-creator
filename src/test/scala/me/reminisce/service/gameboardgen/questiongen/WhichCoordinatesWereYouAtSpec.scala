@@ -9,7 +9,6 @@ import me.reminisce.service.gameboardgen.GameboardEntities.{GeolocationQuestion,
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -37,8 +36,7 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val itemId = "This post does not exist"
 
       val fbPost = FBPost(postId = itemId, userId = userId)
-      val selector = BSONDocument("userId" -> userId, "postId" -> itemId)
-      Await.result(postsCollection.update(selector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
       val testProbe = TestProbe()
@@ -57,9 +55,8 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val longitude = 45.13
       val location = FBLocation(None, None, latitude = latitude, longitude = longitude, None, None)
       val place = FBPlace(None, name = "SuperPlace", location = location, None)
-      val selector = BSONDocument("userId" -> userId, "pageId" -> itemId)
       val fbPost = FBPost(postId = itemId, userId = userId, message = Some(postMessage), place = Some(place))
-      Await.result(postsCollection.update(selector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
       val testProbe = TestProbe()

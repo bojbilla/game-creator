@@ -9,7 +9,6 @@ import me.reminisce.service.gameboardgen.GameboardEntities.{OrderQuestion, PageS
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestionWithMultipleItems, FinishedQuestionCreation, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -47,8 +46,7 @@ class OrderByPageLikesSpec extends DatabaseTester("OrderByPageLikesSpec") {
 
       (0 until pagesNumber) foreach {
         case nb =>
-          val selector = BSONDocument("pageId" -> itemIds(nb))
-          Await.result(pagesCollection.update(selector, pages(nb), upsert = true), Duration(10, TimeUnit.SECONDS))
+          Await.result(pagesCollection.save(pages(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
       }
 
       val actorRef = TestActorRef(OrderByPageLikes.props(db))

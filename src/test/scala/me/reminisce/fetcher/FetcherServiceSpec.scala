@@ -6,7 +6,7 @@ import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.mongodb.MongoDBEntities._
-import me.reminisce.server.domain.Domain.{AlreadyFresh, TooManyRequests}
+import me.reminisce.server.domain.Domain.{AlreadyFresh, GraphAPIInvalidToken, GraphAPIUnreachable, TooManyRequests}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
@@ -38,21 +38,16 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
 
       val time = DateTime.now
-      val selector = BSONDocument("userId" -> userId)
 
       val update = BSONDocument("userId" -> userId, "date" -> time)
 
-      Await.result(collection.update(selector, update, upsert = true), Duration(10, TimeUnit.SECONDS))
-      val testInsert = waitAttempts[LastFetched](collection.find(selector).one[LastFetched])(_.date == time)
-      testInsert match {
-        case Some(lastFetched) =>
-          val testProbe = TestProbe()
-          val actorRef = TestActorRef(FetcherService.props(db))
-          testProbe.send(actorRef, FetchData(userId, "NAN"))
-          testProbe.expectMsg(AlreadyFresh(s"Data for user $userId is fresh."))
-        case None =>
-          fail("Insertion of lastfeched failed.")
-      }
+      Await.result(collection.save(update, safeLastError), Duration(10, TimeUnit.SECONDS))
+      val testProbe = TestProbe()
+      val actorRef = TestActorRef(FetcherService.props(db))
+      testProbe.send(actorRef, FetchData(userId, "NAN"))
+      testProbe.expectMsgAnyOf(AlreadyFresh(s"Data for user $userId is fresh."),
+        GraphAPIInvalidToken(s"The specified token is invalid."),
+        GraphAPIUnreachable(s"Could not reach Facebook graph API."))
     }
 
   }

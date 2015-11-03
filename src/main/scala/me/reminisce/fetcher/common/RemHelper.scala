@@ -22,7 +22,7 @@ object RemHelper {
 
   def createResponseLog(response: HttpResponse): String = {
     s"""|Response for GET request
-       |status : ${response.status.value}
+        |status : ${response.status.value}
         |headers: ${response.headers.mkString("\n  ", "\n  ", "")}
         |body   : ${response.entity.asString}""".stripMargin
 

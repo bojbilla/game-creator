@@ -10,7 +10,6 @@ import me.reminisce.service.gameboardgen.GameboardEntities.{TextPostSubject, Tim
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -38,12 +37,11 @@ class WhenDidYouShareThisPostSpec extends DatabaseTester("WhenDidYouShareThisPos
       val itemId = "PostId"
       val postMessage = "Awesome Message"
 
-      val selector = BSONDocument("userId" -> userId, "pageId" -> itemId)
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
       val postedTime = DateTime.now.toString(formatter)
       val fbPost = FBPost(postId = itemId, userId = userId, attachments = None, message = Some(postMessage),
         createdTime = Some(postedTime))
-      Await.result(postsCollection.update(selector, fbPost, upsert = true), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhenDidYouShareThisPost.props(db))
       val testProbe = TestProbe()

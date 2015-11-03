@@ -10,7 +10,6 @@ import me.reminisce.service.gameboardgen.GameboardEntities.{OrderQuestion, TextP
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestionWithMultipleItems, FinishedQuestionCreation, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -51,8 +50,7 @@ class OrderByPostTimeSpec extends DatabaseTester("OrderByPostTimeSpec") {
 
       (0 until postsNumber) foreach {
         case nb =>
-          val selector = BSONDocument("userId" -> userId, "postId" -> itemIds(nb))
-          Await.result(postsCollection.update(selector, posts(nb), upsert = true), Duration(10, TimeUnit.SECONDS))
+          Await.result(postsCollection.save(posts(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
       }
 
       val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
