@@ -29,7 +29,7 @@ class OrderByPostTimeSpec extends DatabaseTester("OrderByPostTimeSpec") {
       val actorRef = TestActorRef(OrderByPostTime.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "create a valid question when the data is there." in {

@@ -30,7 +30,7 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Pagelike not found : $userId likes $itemId"))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "not create question when there is no page." in {
@@ -45,7 +45,7 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Page not found : $itemId"))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "create a valid question when the data is there." in {

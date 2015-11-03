@@ -28,7 +28,7 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "not create question when there is no location." in {
@@ -43,7 +43,7 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Post has no place : $itemId"))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "create a valid question when the post and place is there." in {

@@ -29,7 +29,7 @@ class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") 
       val actorRef = TestActorRef(WhichPageDidYouLike.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Page not found. $itemId"))
+      testProbe.expectMsgType[NotEnoughData]
     }
 
     "create a valid question when the data is there." in {
