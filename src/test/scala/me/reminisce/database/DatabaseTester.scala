@@ -14,7 +14,7 @@ import scala.concurrent.{Await, Awaitable}
 
 abstract class DatabaseTester(actorSystemName: String) extends TestKit(ActorSystem(actorSystemName, ConfigFactory.parseString("akka.loglevel = ERROR")))
 with ImplicitSender
-with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
+with WordSpecLike with BeforeAndAfterAll {
 
   val attemptsPermitted = 20
 
@@ -25,10 +25,6 @@ with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
 
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
-    db.drop()
-  }
-
-  override def afterEach(): Unit = {
     //db.drop()
   }
 

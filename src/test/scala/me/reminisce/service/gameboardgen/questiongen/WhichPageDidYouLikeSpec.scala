@@ -72,11 +72,6 @@ class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") 
       }
       val answer = question.asInstanceOf[MultipleChoiceQuestion].answer
 
-      pages.foreach {
-        pge =>
-          assert(possibilitiesIds.contains(pge.pageId))
-      }
-
       assert(possibilitiesIds(answer) == pages.head.pageId)
     }
   }
