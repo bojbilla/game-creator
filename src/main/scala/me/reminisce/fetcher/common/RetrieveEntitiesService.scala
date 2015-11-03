@@ -94,15 +94,11 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
             val root = rootFromJson(json)
 
             val single = singleFromRoot(root, json)
-            var newEntities: Vector[T] = Vector.empty
-
-            //As facebooks response isn't well structured, there are multiple ways the a potential
-            //usable object can be constructed
-            single match {
+            val newEntities: Vector[T] = single match {
               case None =>
-                newEntities = filter(root.data.getOrElse(List[T]()).toVector)
+                filter(root.data.getOrElse(List[T]()).toVector)
               case Some(entity) =>
-                newEntities = filter(Vector(entity))
+                filter(Vector(entity))
             }
 
             val newCount = count + newEntities.length
@@ -172,9 +168,6 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
       }
     case _ => None
   }
-
-  var newEntities: Vector[T] = Vector.empty
-
 
 }
 
