@@ -118,6 +118,7 @@ object MongoDBEntities {
 }
 
 object StatsEntities {
+
   case class UserStats(id: Option[BSONObjectID] = None,
                        userId: String,
                        dataTypeCounts: Map[String, Int] = Map(),
@@ -182,4 +183,5 @@ object StatsEntities {
   object ItemStats {
     implicit val itemStatsFormat = Macros.handler[ItemStats]
   }
+
 }

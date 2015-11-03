@@ -14,7 +14,7 @@ case class FBParameters(access_token: Option[String] = None,
                         redirect: Boolean = false) {
 
   def params: Map[String, String] = {
-    var map =
+    val map =
       Map(RemHelper.since -> (since.getMillis / 1000).toString,
         RemHelper.until -> (until.getMillis / 1000).toString,
         RemHelper.offset -> offset.toString,
@@ -22,10 +22,9 @@ case class FBParameters(access_token: Option[String] = None,
         RemHelper.redirect -> redirect.toString
       )
     access_token match {
-      case Some(access) => map += RemHelper.accessTokenParam -> access
-      case None =>
+      case Some(access) => map + (RemHelper.accessTokenParam -> access)
+      case None => map
     }
-    map
   }
 }
 

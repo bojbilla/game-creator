@@ -7,7 +7,7 @@ import com.github.nscala_time.time.Imports._
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.fetcher.common.GraphResponses._
 import me.reminisce.mongodb.MongoDBEntities._
-import me.reminisce.mongodb.StatsEntities.{UserStats, ItemStats}
+import me.reminisce.mongodb.StatsEntities.{ItemStats, UserStats}
 import me.reminisce.service.stats.StatsHandler.{FinalStats, TransientPostsStats}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover

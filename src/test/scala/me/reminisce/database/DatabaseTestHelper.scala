@@ -100,6 +100,7 @@ with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
                      (check: T => Boolean): Option[T] = value match {
     case None =>
       if (attempts < attemptsPermitted) {
+        Thread.sleep(200)
         val newValue = Await.result(operation, Duration(10, TimeUnit.SECONDS))
         waitAttempts[T](operation, newValue, attempts + 1)(check)
       } else {
@@ -109,6 +110,7 @@ with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
       if (check(result)) {
         Some(result)
       } else {
+        Thread.sleep(200)
         val newValue = Await.result(operation, Duration(10, TimeUnit.SECONDS))
         waitAttempts[T](operation, newValue, attempts + 1)(check)
       }

@@ -6,7 +6,7 @@ import akka.actor._
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
 import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
 import me.reminisce.database.MongoDatabaseService
-import me.reminisce.mongodb.MongoDBEntities.UserStats
+import me.reminisce.mongodb.StatsEntities.UserStats
 import me.reminisce.server.ServerServiceActor
 import me.reminisce.service.TestHelpers._
 import org.json4s.jackson.JsonMethods._

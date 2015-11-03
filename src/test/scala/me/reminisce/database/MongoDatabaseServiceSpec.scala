@@ -1,7 +1,5 @@
 package me.reminisce.database
 
-import java.util.concurrent.TimeUnit
-
 import akka.testkit.TestActorRef
 import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SaveLastFetchedTime}
 import me.reminisce.mongodb.MongoDBEntities._
@@ -9,9 +7,6 @@ import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
-
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 
 @DoNotDiscover
 class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec") {
@@ -33,17 +28,11 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
 
       val selector = BSONDocument("userId" -> userId, "postId" -> postId)
 
-      var fbPost: Option[FBPost] = None
-      var attempts = 0
-      while (fbPost.isEmpty) {
-        if (attempts > attemptsPermitted) {
+      waitAttempts[FBPost](collection.find(selector).one[FBPost])(_ => true) match {
+        case Some(fbPost) => assert(fbPost.postId == postId)
+        case None =>
           fail("Too many attempts at retrieving post, maybe not saved.")
-        }
-        fbPost = Await.result(collection.find(selector).one[FBPost], Duration(10, TimeUnit.SECONDS))
-        attempts += 1
-        Thread.sleep(200)
       }
-      assert(fbPost.get.postId == postId)
 
     }
 
@@ -61,35 +50,24 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
 
       val selectorPage = BSONDocument("pageId" -> pageId)
 
-      var attempts = 0
-      var fbPage: Option[FBPage] = None
-      while (fbPage.isEmpty) {
-        if (attempts > attemptsPermitted) {
+      waitAttempts[FBPage](collectionPages.find(selectorPage).one[FBPage])(_ => true) match {
+        case Some(fbPage) =>
+          assert(fbPage.pageId == pageId)
+        case None =>
           fail("Too many attempts at retrieving page, maybe not saved.")
-        }
-        fbPage = Await.result(collectionPages.find(selectorPage).one[FBPage], Duration(10, TimeUnit.SECONDS))
-        attempts += 1
-        Thread.sleep(200)
       }
-      assert(fbPage.get.pageId == pageId)
 
       val collectionPageLikes = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
 
       val selectorLikes = BSONDocument("userId" -> userId, "pageId" -> pageId)
 
-      attempts = 0
-      var fBPageLike: Option[FBPageLike] = None
-      while (fBPageLike.isEmpty) {
-        if (attempts > attemptsPermitted) {
+      waitAttempts[FBPageLike](collectionPageLikes.find(selectorLikes).one[FBPageLike])(_ => true) match {
+        case Some(fBPageLike) =>
+          assert(fBPageLike.pageId == pageId)
+          assert(fBPageLike.userId == userId)
+        case None =>
           fail("Too many attempts at retrieving page like, maybe not saved.")
-        }
-        fBPageLike = Await.result(collectionPageLikes.find(selectorLikes).one[FBPageLike], Duration(10, TimeUnit.SECONDS))
-        attempts += 1
-        Thread.sleep(200)
       }
-
-      assert(fBPageLike.get.pageId == pageId)
-      assert(fBPageLike.get.userId == userId)
     }
 
     "save last fetched time to database." in {
@@ -105,18 +83,13 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
 
       val selector = BSONDocument("userId" -> userId)
 
-      var fbLastFetched: Option[LastFetched] = None
-      var attempts = 0
-      while (fbLastFetched.isEmpty) {
-        if (attempts > attemptsPermitted) {
-          fail(s"Too many attempts ($attempts) at retrieving last fetched time, maybe not saved.")
-        }
-        fbLastFetched = Await.result(collection.find(selector).one[LastFetched], Duration(10, TimeUnit.SECONDS))
-        attempts += 1
-        Thread.sleep(200)
+      waitAttempts[LastFetched](collection.find(selector).one[LastFetched])(_ => true) match {
+        case Some(fbLastFetched) =>
+          assert(fbLastFetched.userId == userId)
+          assert(fbLastFetched.date.isAfter(now.getMillis))
+        case None =>
+          fail(s"Too many attempts (${attemptsPermitted + 1}) at retrieving last fetched time, maybe not saved.")
       }
-      assert(fbLastFetched.get.userId == userId)
-      assert(fbLastFetched.get.date.isAfter(now.getMillis))
     }
   }
 }
