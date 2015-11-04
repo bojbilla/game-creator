@@ -6,7 +6,7 @@ import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.mongodb.MongoDBEntities._
-import me.reminisce.server.domain.Domain.{AlreadyFresh, GraphAPIInvalidToken, GraphAPIUnreachable, TooManyRequests}
+import me.reminisce.server.domain.Domain.{AlreadyFresh, TooManyRequests}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection

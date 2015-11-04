@@ -32,6 +32,7 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
       waitAttempts[FBPost](collection.find(selector).one[FBPost])(_ => true) match {
         case Some(fbPost) => assert(fbPost.postId == postId)
         case None =>
+          println("Test fails NOOOOOOOOOOWWWWWWW")
           fail("Too many attempts at retrieving post, maybe not saved.")
       }
     }
@@ -55,6 +56,7 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
         case Some(fbPage) =>
           assert(fbPage.pageId == pageId)
         case None =>
+          println("Test fails NOOOOOOOOOOWWWWWWW")
           fail("Too many attempts at retrieving page, maybe not saved.")
       }
 
@@ -67,6 +69,7 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
           assert(fBPageLike.pageId == pageId)
           assert(fBPageLike.userId == userId)
         case None =>
+          println("Test fails NOOOOOOOOOOWWWWWWW")
           fail("Too many attempts at retrieving page like, maybe not saved.")
       }
     }
@@ -90,6 +93,7 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
           assert(fbLastFetched.userId == userId)
           assert(fbLastFetched.date.isAfter(now.getMillis) || fbLastFetched.date == now)
         case None =>
+          println("Test fails NOOOOOOOOOOWWWWWWW")
           fail(s"Too many attempts (${attemptsPermitted + 1}) at retrieving last fetched time, maybe not saved.")
       }
     }

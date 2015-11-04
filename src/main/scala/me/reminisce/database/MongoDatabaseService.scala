@@ -7,8 +7,10 @@ import me.reminisce.fetcher.common.GraphResponses.{Page, Post}
 import me.reminisce.mongodb.MongoDBEntities._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.{BSONInteger, BSONDocument}
+import reactivemongo.bson.{BSONDocument, BSONInteger}
 import reactivemongo.core.commands.GetLastError
+
+import scala.util.{Failure, Success}
 
 object MongoDatabaseService {
   val fbPagesCollection = "fbPages"
@@ -97,10 +99,16 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     pages.foreach { p =>
       val query = BSONDocument("pageId" -> p.id)
-      fbPageCollection.update(query, pageToFBPage(p), safeLastError, upsert = true)
+      fbPageCollection.update(query, pageToFBPage(p), safeLastError, upsert = true).onComplete {
+        case Success(le) => log.error(s"TEST DEBUG PRINT : finished with success : $le")
+        case Failure(e) => log.error(s"TEST DEBUG PRINT : finished with error : $e")
+      }
 
       val query2 = BSONDocument("userId" -> userId, "pageId" -> p.id)
-      fbPageLikeCollection.update(query2, pageToFBPageLike(p, userId), safeLastError, upsert = true)
+      fbPageLikeCollection.update(query2, pageToFBPageLike(p, userId), safeLastError, upsert = true).onComplete {
+        case Success(le) => log.error(s"TEST DEBUG PRINT : finished with success : $le")
+        case Failure(e) => log.error(s"TEST DEBUG PRINT : finished with error : $e")
+      }
     }
   }
 
@@ -109,19 +117,24 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     import scala.concurrent.ExecutionContext.Implicits.global
     posts.foreach { p =>
       val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
-      collection.update(selector, postToFBPost(p, userId), safeLastError, upsert = true)
+      collection.update(selector, postToFBPost(p, userId), safeLastError, upsert = true).onComplete {
+        case Success(le) => log.error(s"TEST DEBUG PRINT : finished with success : $le")
+        case Failure(e) => log.error(s"TEST DEBUG PRINT : finished with error : $e")
+      }
     }
   }
 
   def saveLastFetchTime(collection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
-
     val time = DateTime.now
     val selector = BSONDocument("userId" -> userId)
 
     val update = BSONDocument("userId" -> userId, "date" -> time)
 
-    collection.update(selector, update, safeLastError, upsert = true)
+    collection.update(selector, update, safeLastError, upsert = true).onComplete {
+      case Success(le) => log.error(s"TEST DEBUG PRINT : finished with success : $le")
+      case Failure(e) => log.error(s"TEST DEBUG PRINT : finished with error : $e")
+    }
   }
 
 }
