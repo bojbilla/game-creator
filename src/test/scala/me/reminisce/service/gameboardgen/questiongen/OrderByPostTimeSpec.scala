@@ -23,15 +23,17 @@ class OrderByPostTimeSpec extends DatabaseTester("OrderByPostTimeSpec") {
 
   "OrderByPostTime" must {
     "not create question when there is not enough data." in {
+      val db = newDb()
       val itemIds = List("This user does not exist")
 
       val actorRef = TestActorRef(OrderByPostTime.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
     }
 
     "create a valid question when the data is there." in {
+      val db = newDb()
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val postsNumber = QuestionGenerationConfig.orderingItemsNumber

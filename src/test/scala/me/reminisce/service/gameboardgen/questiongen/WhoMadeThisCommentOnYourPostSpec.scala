@@ -22,16 +22,18 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
 
   "WhoMadeThisCommentOnYourPost" must {
     "not create question when there is no post" in {
+      val db = newDb()
       val itemId = "This post does not exist"
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
     }
 
 
     "not create question when there is no comment for post." in {
+      val db = newDb()
       val itemId = "This post does exist"
 
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
@@ -42,10 +44,11 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Post has no comment : $itemId"))
     }
 
     "not create question when there is not enough comment for post." in {
+      val db = newDb()
       val itemId = "This post does exist"
 
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
@@ -60,10 +63,11 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Post has not enough comments : $itemId"))
     }
 
     "create a valid question when the data is correctly setup." in {
+      val db = newDb()
       val itemId = "Fresh post for this test"
 
       val comments = (0 until 4).map {

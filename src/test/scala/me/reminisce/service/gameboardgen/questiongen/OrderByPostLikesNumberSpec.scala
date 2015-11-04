@@ -22,15 +22,17 @@ class OrderByPostLikesNumberSpec extends DatabaseTester("OrderByPostLikesNumberS
 
   "OrderByPostLikesNumber" must {
     "not create question when there is not enough data." in {
+      val db = newDb()
       val itemIds = List("This user does not exist")
 
       val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
     }
 
     "create a valid question when the data is there." in {
+      val db = newDb()
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val postsNumber = QuestionGenerationConfig.orderingItemsNumber
@@ -70,6 +72,7 @@ class OrderByPostLikesNumberSpec extends DatabaseTester("OrderByPostLikesNumberS
           assert(subject.isInstanceOf[TextPostSubject])
           assert(subject.asInstanceOf[TextPostSubject].text == posts(nb).message.getOrElse(""))
       }
+
     }
   }
 

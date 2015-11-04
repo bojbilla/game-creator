@@ -23,15 +23,17 @@ class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") 
 
   "OrderByPageLikeTime" must {
     "not create question when there is not enough data." in {
+      val db = newDb()
       val itemIds = List("This user does not exist")
 
       val actorRef = TestActorRef(OrderByPageLikeTime.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Did not find enough page-likes."))
     }
 
     "create a valid question when the data is there." in {
+      val db = newDb()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
       val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
 

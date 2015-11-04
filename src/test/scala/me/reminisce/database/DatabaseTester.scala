@@ -5,8 +5,9 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, WordSpecLike}
-import reactivemongo.bson.{BSONInteger, BSONString, BSONValue}
+import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
+import reactivemongo.api.DefaultDB
+import reactivemongo.bson.BSONInteger
 import reactivemongo.core.commands.GetLastError
 
 import scala.concurrent.duration.Duration
@@ -20,12 +21,21 @@ with WordSpecLike with BeforeAndAfterAll {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val db = DatabaseTestHelper.getDb
   val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
+
+  var dbs = Set[DefaultDB]()
 
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
-    //db.drop()
+    dbs.foreach(_.drop())
+  }
+
+  protected def newDb(): DefaultDB = {
+    val dbId = DatabaseTestHelper.getDBId
+    val connection = DatabaseTestHelper.getConnection
+    val db = connection(s"DB$dbId")
+    dbs = dbs + db
+    db
   }
 
   def waitAttempts[T](operation: Awaitable[Option[T]], value: Option[T] = None, attempts: Int = 0)

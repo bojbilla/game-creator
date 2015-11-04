@@ -6,7 +6,7 @@ import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.fetcher.FetcherService.FetchData
 import me.reminisce.mongodb.MongoDBEntities._
-import me.reminisce.server.domain.Domain.{AlreadyFresh, GraphAPIInvalidToken, GraphAPIUnreachable, TooManyRequests}
+import me.reminisce.server.domain.Domain.{AlreadyFresh, TooManyRequests}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
@@ -22,6 +22,7 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
 
   "FetcherService" must {
     "not fetch when a concurrent fetch has been issued." in {
+      val db = newDb()
       val userId = "TestUserFetcherService1"
       val actorRef = TestActorRef(FetcherService.props(db))
       actorRef ! FetchData(userId, "NAN")
@@ -34,6 +35,7 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
     }
 
     "not fetch when the data is already fresh." in {
+      val db = newDb()
       val userId = "TestUserFetcherService2"
       val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
 
@@ -45,9 +47,7 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       val testProbe = TestProbe()
       val actorRef = TestActorRef(FetcherService.props(db))
       testProbe.send(actorRef, FetchData(userId, "NAN"))
-      testProbe.expectMsgAnyOf(AlreadyFresh(s"Data for user $userId is fresh."),
-        GraphAPIInvalidToken(s"The specified token is invalid."),
-        GraphAPIUnreachable(s"Could not reach Facebook graph API."))
+      testProbe.expectMsg(AlreadyFresh(s"Data for user $userId is fresh."))
     }
 
   }

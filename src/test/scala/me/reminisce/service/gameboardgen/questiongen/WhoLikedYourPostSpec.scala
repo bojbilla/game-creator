@@ -23,15 +23,17 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
 
   "WhoLikedYourPost" must {
     "not create question when there is no user statistics." in {
+      val db = newDb()
       val itemId = "This post does not exist"
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Strangely there is no userStats."))
     }
 
     "not create question when there is no post." in {
+      val db = newDb()
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
       val itemId = "This post does not exist"
@@ -42,10 +44,11 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
     }
 
     "not create question when there is no likes for post." in {
+      val db = newDb()
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
       val itemId = "This post does exist"
@@ -61,10 +64,11 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"No likes on post : $itemId"))
     }
 
     "not create question when there is not enough non-likers for post." in {
+      val db = newDb()
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
       val itemId = "This post does exist"
@@ -83,10 +87,11 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Not enough non likers for post $itemId and user $userId"))
     }
 
     "create a valid question when the data is correctly setup." in {
+      val db = newDb()
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
       val itemId = "Fresh post for this test"

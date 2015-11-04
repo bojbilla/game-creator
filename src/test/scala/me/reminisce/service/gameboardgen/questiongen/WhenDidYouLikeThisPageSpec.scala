@@ -24,15 +24,17 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
 
   "WhenDidYouLikeThisPage" must {
     "not create question when there is no like." in {
+      val db = newDb()
       val itemId = "This page does not exist"
 
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Pagelike not found : $userId likes $itemId"))
     }
 
     "not create question when there is no page." in {
+      val db = newDb()
       val itemId = "This page does not exist"
 
       val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
@@ -43,10 +45,11 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Page not found : $itemId"))
     }
 
     "create a valid question when the data is there." in {
+      val db = newDb()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
 
       val itemId = s"PageId"

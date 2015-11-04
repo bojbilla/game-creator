@@ -15,7 +15,7 @@ class DatabaseTests extends Suites(new OrderByPageLikesSpec, new OrderByPageLike
 with BeforeAndAfterAll {
 
   override def afterAll() = {
-    DatabaseTestHelper.closeDb()
+    DatabaseTestHelper.closeConnection()
   }
 
 }

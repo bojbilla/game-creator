@@ -23,15 +23,17 @@ class WhenDidYouShareThisPostSpec extends DatabaseTester("WhenDidYouShareThisPos
 
   "WhenDidYouShareThisPost" must {
     "not create question when there is no post." in {
+      val db = newDb()
       val itemId = "This post does not exist"
 
       val actorRef = TestActorRef(WhenDidYouShareThisPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
     }
 
     "create a valid question when the post is there." in {
+      val db = newDb()
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val itemId = "PostId"

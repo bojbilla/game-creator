@@ -22,6 +22,7 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
 
   "DeletionService" must {
     "delete user without error." in {
+      val db = newDb()
       val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
 
       val userId = "TestUser"
@@ -37,6 +38,7 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
     }
 
     "delete extra likes without error." in {
+      val db = newDb()
       val userId = "TestUserDeletionService"
       val likes = Set("likedThis", "andThis")
       val actorRef = TestActorRef(DeletionService.props(db))
@@ -46,6 +48,7 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
     }
 
     "clear database only in dev mode." in {
+      val db = newDb()
       val actorRef = TestActorRef(DeletionService.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, ClearDatabase())
