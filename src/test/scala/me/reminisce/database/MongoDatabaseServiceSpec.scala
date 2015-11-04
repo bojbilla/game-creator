@@ -19,7 +19,7 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
       val userId = PostTestsData.userId
       val post = PostTestsData.post
 
-      val dbService = TestActorRef(new MongoDatabaseService(userId, db))
+      val dbService = TestActorRef(MongoDatabaseService.props(userId, db))
 
       dbService ! SaveFBPost(List(post))
 
@@ -34,7 +34,6 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
         case None =>
           fail("Too many attempts at retrieving post, maybe not saved.")
       }
-      db.drop()
     }
 
     "save page to database." in {
@@ -42,7 +41,7 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
       val userId = PageTestsData.userId
       val page = PageTestsData.page
 
-      val dbService = TestActorRef(new MongoDatabaseService(userId, db))
+      val dbService = TestActorRef(MongoDatabaseService.props(userId, db))
 
       dbService ! SaveFBPage(List(page))
 
@@ -70,16 +69,15 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
         case None =>
           fail("Too many attempts at retrieving page like, maybe not saved.")
       }
-      db.drop()
     }
 
     "save last fetched time to database." in {
       val db = newDb()
       val now = DateTime.now
 
-      val userId = "UserId"
+      val userId = "MongoDatabaseServiceSpecUser"
 
-      val dbService = TestActorRef(new MongoDatabaseService(userId, db))
+      val dbService = TestActorRef(MongoDatabaseService.props(userId, db))
 
       dbService ! SaveLastFetchedTime
 
@@ -90,11 +88,10 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
       waitAttempts[LastFetched](collection.find(selector).one[LastFetched])(_ => true) match {
         case Some(fbLastFetched) =>
           assert(fbLastFetched.userId == userId)
-          assert(fbLastFetched.date.isAfter(now.getMillis))
+          assert(fbLastFetched.date.isAfter(now.getMillis) || fbLastFetched.date == now)
         case None =>
           fail(s"Too many attempts (${attemptsPermitted + 1}) at retrieving last fetched time, maybe not saved.")
       }
-      db.drop()
     }
   }
 }

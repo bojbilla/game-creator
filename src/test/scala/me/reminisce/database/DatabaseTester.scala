@@ -23,16 +23,19 @@ with WordSpecLike with BeforeAndAfterAll {
 
   val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
 
+  var dbs = Set[DefaultDB]()
+
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
+    dbs.foreach(_.drop())
   }
 
   protected def newDb(): DefaultDB = {
     val dbId = DatabaseTestHelper.getDBId
-    println(s"#######################################")
-    println(s"############### DB$dbId ##################")
-    println(s"#######################################")
-    DatabaseTestHelper.getConnection(s"DB$dbId")
+    val connection = DatabaseTestHelper.getConnection
+    val db = connection(s"DB$dbId")
+    dbs = dbs + db
+    db
   }
 
   def waitAttempts[T](operation: Awaitable[Option[T]], value: Option[T] = None, attempts: Int = 0)

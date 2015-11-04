@@ -29,7 +29,6 @@ class OrderByPostLikesNumberSpec extends DatabaseTester("OrderByPostLikesNumberS
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
       testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
-      db.drop()
     }
 
     "create a valid question when the data is there." in {
@@ -74,7 +73,6 @@ class OrderByPostLikesNumberSpec extends DatabaseTester("OrderByPostLikesNumberS
           assert(subject.asInstanceOf[TextPostSubject].text == posts(nb).message.getOrElse(""))
       }
 
-      db.drop()
     }
   }
 

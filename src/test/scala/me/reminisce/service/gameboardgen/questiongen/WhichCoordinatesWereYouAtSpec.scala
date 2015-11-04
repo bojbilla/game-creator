@@ -29,7 +29,6 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
-      db.drop()
     }
 
     "not create question when there is no location." in {
@@ -45,7 +44,6 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Post has no place : $itemId"))
-      db.drop()
     }
 
     "create a valid question when the post and place is there." in {
@@ -83,7 +81,6 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
 
       assert(answer.latitude == latitude)
       assert(answer.longitude == longitude)
-      db.drop()
     }
   }
 

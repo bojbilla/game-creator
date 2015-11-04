@@ -29,7 +29,6 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
-      db.drop()
     }
 
 
@@ -46,7 +45,6 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Post has no comment : $itemId"))
-      db.drop()
     }
 
     "not create question when there is not enough comment for post." in {
@@ -66,7 +64,6 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Post has not enough comments : $itemId"))
-      db.drop()
     }
 
     "create a valid question when the data is correctly setup." in {
@@ -110,7 +107,6 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       chosenComments.foreach {
         c => assert(originalComments.contains(c))
       }
-      db.drop()
     }
   }
 

@@ -30,7 +30,6 @@ class WhenDidYouShareThisPostSpec extends DatabaseTester("WhenDidYouShareThisPos
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
-      db.drop()
     }
 
     "create a valid question when the post is there." in {
@@ -65,7 +64,6 @@ class WhenDidYouShareThisPostSpec extends DatabaseTester("WhenDidYouShareThisPos
       assert(subject.asInstanceOf[TextPostSubject].text == fbPost.message.getOrElse(""))
 
       assert(postedTime == answer)
-      db.drop()
     }
   }
 

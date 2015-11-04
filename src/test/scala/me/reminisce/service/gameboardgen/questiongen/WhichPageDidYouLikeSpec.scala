@@ -30,7 +30,6 @@ class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") 
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Page not found. $itemId"))
-      db.drop()
     }
 
     "create a valid question when the data is there." in {
@@ -76,7 +75,6 @@ class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") 
       val answer = question.asInstanceOf[MultipleChoiceQuestion].answer
 
       assert(possibilitiesIds(answer) == pages.head.pageId)
-      db.drop()
     }
   }
 

@@ -30,7 +30,6 @@ class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") 
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
       testProbe.expectMsg(NotEnoughData(s"Did not find enough page-likes."))
-      db.drop()
     }
 
     "create a valid question when the data is there." in {
@@ -85,7 +84,6 @@ class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") 
           assert(subject.isInstanceOf[PageSubject])
           assert(subject.asInstanceOf[PageSubject].name == pages(nb).name.getOrElse(""))
       }
-      db.drop()
     }
   }
 }

@@ -51,7 +51,6 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
       StatsTestData.referenceResult.foreach {
         itemStats => assert(stats.contains(itemStats))
       }
-      db.drop()
     }
 
     "Deal with old stats." in {
@@ -95,7 +94,6 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
         Map("Order" -> 0, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 1), Set(FBLike("1", "me")))
 
       assert(userStats.exists(_ == expectedUserStats))
-      db.drop()
     }
 
     "Generate new stats correctly" in {
@@ -161,7 +159,6 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
         Set(FBLike("1", "me"), FBLike("2", "me2"), FBLike("3", "me3"), FBLike("4", "me4")))
 
       assert(userStats.exists(_ == expectedUserStats))
-      db.drop()
     }
   }
 }

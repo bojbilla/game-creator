@@ -30,7 +30,6 @@ class OrderByPostTimeSpec extends DatabaseTester("OrderByPostTimeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
       testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
-      db.drop()
     }
 
     "create a valid question when the data is there." in {
@@ -77,7 +76,6 @@ class OrderByPostTimeSpec extends DatabaseTester("OrderByPostTimeSpec") {
           assert(subject.isInstanceOf[TextPostSubject])
           assert(subject.asInstanceOf[TextPostSubject].text == posts(nb).message.getOrElse(""))
       }
-      db.drop()
     }
   }
 

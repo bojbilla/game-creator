@@ -31,7 +31,6 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Pagelike not found : $userId likes $itemId"))
-      db.drop()
     }
 
     "not create question when there is no page." in {
@@ -47,7 +46,6 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Page not found : $itemId"))
-      db.drop()
     }
 
     "create a valid question when the data is there." in {
@@ -83,7 +81,6 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       assert(subject.asInstanceOf[PageSubject].name == page.name.getOrElse(""))
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
       assert(likedTime.toString(formatter) == answer)
-      db.drop()
     }
   }
 

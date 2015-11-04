@@ -30,7 +30,6 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Strangely there is no userStats."))
-      db.drop()
     }
 
     "not create question when there is no post." in {
@@ -46,7 +45,6 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
-      db.drop()
     }
 
     "not create question when there is no likes for post." in {
@@ -67,7 +65,6 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"No likes on post : $itemId"))
-      db.drop()
     }
 
     "not create question when there is not enough non-likers for post." in {
@@ -91,7 +88,6 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsg(NotEnoughData(s"Not enough non likers for post $itemId and user $userId"))
-      db.drop()
     }
 
     "create a valid question when the data is correctly setup." in {
@@ -135,7 +131,6 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       assert(subject.isInstanceOf[TextPostSubject])
       assert(subject.asInstanceOf[TextPostSubject].text == fbPost.message.getOrElse(""))
       assert(choices(answer).name == likers.head.userName)
-      db.drop()
     }
 
   }

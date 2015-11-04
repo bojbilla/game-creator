@@ -35,7 +35,6 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, RemoveUser(userId))
       testProbe.expectMsg(Done("Deletion performed without error."))
-      db.drop()
     }
 
     "delete extra likes without error." in {
@@ -46,7 +45,6 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, RemoveExtraLikes(userId, likes))
       testProbe.expectMsg(Done("Deletion performed without error."))
-      db.drop()
     }
 
     "clear database only in dev mode." in {
@@ -59,7 +57,6 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
       } else {
         testProbe.expectMsg(ActionForbidden("The app is not in development mode."))
       }
-      db.drop()
     }
   }
 }

@@ -32,7 +32,6 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       testProbe.send(actorRef2, FetchData(userId, "NAN"))
       testProbe.expectMsg(TooManyRequests(s"Already fetching for user $userId"))
       FetcherService.currentlyFetching = Set()
-      db.drop()
     }
 
     "not fetch when the data is already fresh." in {
@@ -48,10 +47,7 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       val testProbe = TestProbe()
       val actorRef = TestActorRef(FetcherService.props(db))
       testProbe.send(actorRef, FetchData(userId, "NAN"))
-      testProbe.expectMsg(AlreadyFresh(s"Data for user $userId is fresh.")/*,
-        GraphAPIInvalidToken(s"The specified token is invalid."),
-        GraphAPIUnreachable(s"Could not reach Facebook graph API.")*/)
-      db.drop()
+      testProbe.expectMsg(AlreadyFresh(s"Data for user $userId is fresh."))
     }
 
   }
