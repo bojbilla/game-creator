@@ -22,15 +22,17 @@ with WordSpecLike with BeforeAndAfterAll {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
-  var nextDbId = 0
 
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
   }
 
   protected def newDb(): DefaultDB = {
-    nextDbId += 1
-    DatabaseTestHelper.getConnection(s"$actorSystemName$nextDbId")
+    val dbId = DatabaseTestHelper.getDBId
+    println(s"#######################################")
+    println(s"############### DB$dbId ##################")
+    println(s"#######################################")
+    DatabaseTestHelper.getConnection(s"DB$dbId")
   }
 
   def waitAttempts[T](operation: Awaitable[Option[T]], value: Option[T] = None, attempts: Int = 0)

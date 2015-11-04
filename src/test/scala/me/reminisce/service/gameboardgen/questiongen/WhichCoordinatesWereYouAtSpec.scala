@@ -28,7 +28,7 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
       db.drop()
     }
 
@@ -44,7 +44,7 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Post has no place : $itemId"))
       db.drop()
     }
 

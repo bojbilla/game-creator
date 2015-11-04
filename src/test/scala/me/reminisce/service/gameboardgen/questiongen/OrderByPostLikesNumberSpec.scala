@@ -28,7 +28,7 @@ class OrderByPostLikesNumberSpec extends DatabaseTester("OrderByPostLikesNumberS
       val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
       db.drop()
     }
 

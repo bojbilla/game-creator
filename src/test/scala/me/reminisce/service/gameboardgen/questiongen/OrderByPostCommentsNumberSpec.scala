@@ -28,7 +28,7 @@ class OrderByPostCommentsNumberSpec extends DatabaseTester("OrderByPostCommentsN
       val actorRef = TestActorRef(OrderByPostCommentsNumber.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
       db.drop()
     }
 

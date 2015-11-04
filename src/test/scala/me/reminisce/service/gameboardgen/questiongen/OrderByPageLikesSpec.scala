@@ -28,7 +28,7 @@ class OrderByPageLikesSpec extends DatabaseTester("OrderByPageLikesSpec") {
       val actorRef = TestActorRef(OrderByPageLikes.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Not enough pages in list."))
       db.drop()
     }
 

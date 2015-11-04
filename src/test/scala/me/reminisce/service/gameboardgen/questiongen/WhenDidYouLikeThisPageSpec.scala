@@ -30,7 +30,7 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Pagelike not found : $userId likes $itemId"))
       db.drop()
     }
 
@@ -46,7 +46,7 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsgType[NotEnoughData]
+      testProbe.expectMsg(NotEnoughData(s"Page not found : $itemId"))
       db.drop()
     }
 
