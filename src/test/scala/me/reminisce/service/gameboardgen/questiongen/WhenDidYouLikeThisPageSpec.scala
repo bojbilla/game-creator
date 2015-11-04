@@ -24,15 +24,18 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
 
   "WhenDidYouLikeThisPage" must {
     "not create question when there is no like." in {
+      val db = newDb()
       val itemId = "This page does not exist"
 
       val actorRef = TestActorRef(WhenDidYouLikeThisPage.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "not create question when there is no page." in {
+      val db = newDb()
       val itemId = "This page does not exist"
 
       val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
@@ -44,9 +47,11 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "create a valid question when the data is there." in {
+      val db = newDb()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
 
       val itemId = s"PageId"
@@ -78,6 +83,7 @@ class WhenDidYouLikeThisPageSpec extends DatabaseTester("WhenDidYouLikeThisPageS
       assert(subject.asInstanceOf[PageSubject].name == page.name.getOrElse(""))
       val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
       assert(likedTime.toString(formatter) == answer)
+      db.drop()
     }
   }
 

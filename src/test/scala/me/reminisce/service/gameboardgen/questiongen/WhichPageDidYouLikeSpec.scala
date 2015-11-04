@@ -23,15 +23,18 @@ class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") 
 
   "WhichPageDidYouLike" must {
     "not create question when there is not enough data." in {
+      val db = newDb()
       val itemId = "This user does not exist"
 
       val actorRef = TestActorRef(WhichPageDidYouLike.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "create a valid question when the data is there." in {
+      val db = newDb()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
 
       val pagesNumber = 4 // MC question
@@ -73,6 +76,7 @@ class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") 
       val answer = question.asInstanceOf[MultipleChoiceQuestion].answer
 
       assert(possibilitiesIds(answer) == pages.head.pageId)
+      db.drop()
     }
   }
 

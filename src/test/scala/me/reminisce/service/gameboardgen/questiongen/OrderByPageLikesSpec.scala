@@ -22,15 +22,18 @@ class OrderByPageLikesSpec extends DatabaseTester("OrderByPageLikesSpec") {
 
   "OderByPageLikes" must {
     "not create question when there is not enough data." in {
+      val db = newDb()
       val itemIds = List("This user does not exist")
 
       val actorRef = TestActorRef(OrderByPageLikes.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "create a valid question when the data is there." in {
+      val db = newDb()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
 
       val pagesNumber = QuestionGenerationConfig.orderingItemsNumber
@@ -70,6 +73,7 @@ class OrderByPageLikesSpec extends DatabaseTester("OrderByPageLikesSpec") {
           assert(subject.isInstanceOf[PageSubject])
           assert(subject.asInstanceOf[PageSubject].name == pages(nb).name.getOrElse(""))
       }
+      db.drop()
     }
   }
 

@@ -23,15 +23,18 @@ class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") 
 
   "OrderByPageLikeTime" must {
     "not create question when there is not enough data." in {
+      val db = newDb()
       val itemIds = List("This user does not exist")
 
       val actorRef = TestActorRef(OrderByPageLikeTime.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "create a valid question when the data is there." in {
+      val db = newDb()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
       val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
 
@@ -82,6 +85,7 @@ class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") 
           assert(subject.isInstanceOf[PageSubject])
           assert(subject.asInstanceOf[PageSubject].name == pages(nb).name.getOrElse(""))
       }
+      db.drop()
     }
   }
 }

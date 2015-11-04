@@ -22,15 +22,18 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
 
   "WhichCoordinatesWereYouAt" must {
     "not create question when there is no post." in {
+      val db = newDb()
       val itemId = "This post does not exist"
 
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "not create question when there is no location." in {
+      val db = newDb()
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val itemId = "This post does not exist"
@@ -42,9 +45,11 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "create a valid question when the post and place is there." in {
+      val db = newDb()
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val userId = "TestUser"
@@ -78,6 +83,7 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
 
       assert(answer.latitude == latitude)
       assert(answer.longitude == longitude)
+      db.drop()
     }
   }
 

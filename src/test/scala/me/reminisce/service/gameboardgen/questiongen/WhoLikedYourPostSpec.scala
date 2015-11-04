@@ -23,15 +23,18 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
 
   "WhoLikedYourPost" must {
     "not create question when there is no user statistics." in {
+      val db = newDb()
       val itemId = "This post does not exist"
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "not create question when there is no post." in {
+      val db = newDb()
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
       val itemId = "This post does not exist"
@@ -43,9 +46,11 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "not create question when there is no likes for post." in {
+      val db = newDb()
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
       val itemId = "This post does exist"
@@ -62,9 +67,11 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "not create question when there is not enough non-likers for post." in {
+      val db = newDb()
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
       val itemId = "This post does exist"
@@ -84,9 +91,11 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
       testProbe.expectMsgType[NotEnoughData]
+      db.drop()
     }
 
     "create a valid question when the data is correctly setup." in {
+      val db = newDb()
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
       val itemId = "Fresh post for this test"
@@ -126,6 +135,7 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       assert(subject.isInstanceOf[TextPostSubject])
       assert(subject.asInstanceOf[TextPostSubject].text == fbPost.message.getOrElse(""))
       assert(choices(answer).name == likers.head.userName)
+      db.drop()
     }
 
   }

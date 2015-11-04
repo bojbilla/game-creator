@@ -22,6 +22,7 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
 
   "FetcherService" must {
     "not fetch when a concurrent fetch has been issued." in {
+      val db = newDb()
       val userId = "TestUserFetcherService1"
       val actorRef = TestActorRef(FetcherService.props(db))
       actorRef ! FetchData(userId, "NAN")
@@ -31,9 +32,11 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       testProbe.send(actorRef2, FetchData(userId, "NAN"))
       testProbe.expectMsg(TooManyRequests(s"Already fetching for user $userId"))
       FetcherService.currentlyFetching = Set()
+      db.drop()
     }
 
     "not fetch when the data is already fresh." in {
+      val db = newDb()
       val userId = "TestUserFetcherService2"
       val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
 
@@ -45,9 +48,10 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       val testProbe = TestProbe()
       val actorRef = TestActorRef(FetcherService.props(db))
       testProbe.send(actorRef, FetchData(userId, "NAN"))
-      testProbe.expectMsgAnyOf(AlreadyFresh(s"Data for user $userId is fresh."),
+      testProbe.expectMsg(AlreadyFresh(s"Data for user $userId is fresh.")/*,
         GraphAPIInvalidToken(s"The specified token is invalid."),
-        GraphAPIUnreachable(s"Could not reach Facebook graph API."))
+        GraphAPIUnreachable(s"Could not reach Facebook graph API.")*/)
+      db.drop()
     }
 
   }

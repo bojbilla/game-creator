@@ -15,6 +15,7 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
 
   "MongoDatabaseService" must {
     "save post to database." in {
+      val db = newDb()
       val userId = PostTestsData.userId
       val post = PostTestsData.post
 
@@ -33,10 +34,11 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
         case None =>
           fail("Too many attempts at retrieving post, maybe not saved.")
       }
-
+      db.drop()
     }
 
     "save page to database." in {
+      val db = newDb()
       val userId = PageTestsData.userId
       val page = PageTestsData.page
 
@@ -68,9 +70,11 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
         case None =>
           fail("Too many attempts at retrieving page like, maybe not saved.")
       }
+      db.drop()
     }
 
     "save last fetched time to database." in {
+      val db = newDb()
       val now = DateTime.now
 
       val userId = "UserId"
@@ -90,6 +94,7 @@ class MongoDatabaseServiceSpec extends DatabaseTester("MongoDatabaseServiceSpec"
         case None =>
           fail(s"Too many attempts (${attemptsPermitted + 1}) at retrieving last fetched time, maybe not saved.")
       }
+      db.drop()
     }
   }
 }

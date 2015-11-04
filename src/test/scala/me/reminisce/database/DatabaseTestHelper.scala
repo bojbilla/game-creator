@@ -2,19 +2,17 @@ package me.reminisce.database
 
 import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
 import me.reminisce.TestsConfig
-import reactivemongo.api.{DefaultDB, MongoDriver}
+import reactivemongo.api.{MongoConnection, MongoDriver}
 
 object DatabaseTestHelper extends MongoEmbedDatabase {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   var portsInUse: Set[Int] = Set()
 
 
-  private var db: DefaultDB = null
   private var port = 0
-  private var mongoProps: MongodProps = null
-  private var driver: MongoDriver = null
+  private var mongoProps: Option[MongodProps] = None
+  private var driver: Option[MongoDriver] = None
+  private var connection: Option[MongoConnection] = None
 
   private def getNewPort: Int = {
     this.synchronized {
@@ -40,30 +38,29 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
     }
   }
 
-
-  def getDb: DefaultDB = {
+  def closeConnection() = {
     this.synchronized {
-      if (db == null) {
-        port = getNewPort
-        mongoProps = mongoStart(port = port)
-        driver = new MongoDriver
-        val connection = driver.connection(s"localhost:$port" :: Nil)
-        db = connection("mydb")
-      }
-      db
+      mongoProps.foreach(m => mongoStop(m))
+      driver.foreach(d => d.system.shutdown())
+      releasePort(port)
+      port = 0
+      mongoProps = None
+      driver = None
     }
   }
 
-  def closeDb() = {
+  def getConnection: MongoConnection = {
     this.synchronized {
-      if (db != null) {
-        mongoStop(mongoProps)
-        driver.system.shutdown()
-        releasePort(port)
-        port = 0
-        mongoProps = null
-        driver = null
-        db = null
+      connection match {
+        case Some(conn) => conn
+        case None =>
+          port = getNewPort
+          mongoProps = Some(mongoStart(port = port))
+          val tDriver = new MongoDriver
+          driver = Some(tDriver)
+          val tConnection = tDriver.connection(s"localhost:$port" :: Nil)
+          connection = Some(tConnection)
+          tConnection
       }
     }
   }
