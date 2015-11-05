@@ -28,10 +28,6 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
 
   implicit def actorRefFactory: ActorContext = context
 
-  var tiles: List[Tile] = List()
-  var fetcherAcked = false
-  var isTokenStale = false
-
   def receive = {
     case CreateBoard(accessToken, strategy) =>
       val client = sender()
@@ -39,7 +35,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
       val fetcherService = context.actorOf(FetcherService.props(database))
       creator ! InitBoardCreation()
       fetcherService ! FetchData(userId, accessToken)
-      context.become(awaitFeedBack(client, creator))
+      context.become(awaitFeedBack(client, creator, List()))
     case x => log.error("GameGenerator received unexpected Message " + x)
   }
 
@@ -50,47 +46,49 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
     case "choose" =>
       context.actorOf(Props(new StrategyChooser(database, userId)))
     case "random" =>
-      context.actorOf(Props(new RandomBoardGenerator(database, userId)))
+      context.actorOf(Props(new FullRandomBoardGenerator(database, userId)))
     case any =>
       context.actorOf(Props(new StrategyChooser(database, userId)))
   }
 
 
   // Awaits feedback from the FetcherService and the tile creators
-  def awaitFeedBack(client: ActorRef, worker: ActorRef): Receive = {
+  def awaitFeedBack(client: ActorRef, worker: ActorRef, tiles: List[Tile],
+                    fetcherAcked: Boolean = false, isTokenStale: Boolean = false): Receive = {
     case FinishedBoardGeneration(receivedTiles) =>
-      tiles = receivedTiles
-      verifyAndAnswer(client)
+      context.become(awaitFeedBack(client, worker, receivedTiles, fetcherAcked, isTokenStale))
+      verifyAndAnswer(client, receivedTiles, fetcherAcked, isTokenStale)
     case FailedBoardGeneration(message) =>
       worker ! PoisonPill
       client ! InternalError(message)
       log.error(s"An internal error occurred while generating the gameboard for user $userId.")
     case Done(message) =>
-      fetcherAcked = true
-      verifyAndAnswer(client)
+      verifyAndAnswer(client, tiles, ack = true, isTokenStale)
+      context.become(awaitFeedBack(client, worker, tiles, fetcherAcked = true, isTokenStale))
       log.info(s"Update done. $message")
     case Domain.TooManyRequests(message) =>
-      fetcherAcked = true
-      verifyAndAnswer(client)
+      verifyAndAnswer(client, tiles, ack = true, isTokenStale)
+      context.become(awaitFeedBack(client, worker, tiles, fetcherAcked = true, isTokenStale))
       log.info(message)
     case GraphAPIInvalidToken(message) =>
-      isTokenStale = true
-      fetcherAcked = true
-      verifyAndAnswer(client)
+      verifyAndAnswer(client, tiles, ack = true, stale = true)
+      context.become(awaitFeedBack(client, worker, tiles, fetcherAcked = true, isTokenStale = true))
       log.error(message)
     case GraphAPIUnreachable(message) =>
-      fetcherAcked = true
-      verifyAndAnswer(client)
+      verifyAndAnswer(client, tiles, ack = true, isTokenStale)
+      context.become(awaitFeedBack(client, worker, tiles, fetcherAcked = true, isTokenStale))
       log.error(message)
     case AlreadyFresh(message) =>
-      fetcherAcked = true
-      verifyAndAnswer(client)
+      verifyAndAnswer(client, tiles, ack = true, isTokenStale)
+      context.become(awaitFeedBack(client, worker, tiles, fetcherAcked = true, isTokenStale))
       log.info(message)
+    case any =>
+      log.error(s"GameGenerator received an unknown message : $any.")
   }
 
-  def verifyAndAnswer(client: ActorRef): Unit = {
-    if (tiles.length == 9 && fetcherAcked) {
-      client ! Board(userId, tiles, isTokenStale)
+  def verifyAndAnswer(client: ActorRef, tiles: List[Tile], ack: Boolean, stale: Boolean): Unit = {
+    if (tiles.length == 9 && ack) {
+      client ! Board(userId, tiles, stale)
       sender() ! PoisonPill
     }
   }

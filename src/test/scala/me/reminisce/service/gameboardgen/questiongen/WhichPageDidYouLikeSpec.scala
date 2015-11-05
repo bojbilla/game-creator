@@ -3,21 +3,20 @@ package me.reminisce.service.gameboardgen.questiongen
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
-import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
 import me.reminisce.service.gameboardgen.GameboardEntities.MultipleChoiceQuestion
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+class WhichPageDidYouLikeSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
 
   val userId = "TestUserWhichPageDidYouLike"
 
@@ -60,21 +59,24 @@ class WhichPageDidYouLikeSpec extends DatabaseTester("WhichPageDidYouLikeSpec") 
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemIds.head))
 
-      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
-      assert(finishedCreation != null)
-      assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
+      checkFinished[MultipleChoiceQuestion](testProbe) {
+        question =>
+          val possibilitiesIds = question.choices.map {
+            poss =>
+              poss.fbId match {
+                case Some(id) => id
+                case None => fail(s"ID is not defined for possibility $poss.")
+              }
+          }
+          val answer = question.answer
 
-      val question = finishedCreation.asInstanceOf[FinishedQuestionCreation].question
-      assert(question.isInstanceOf[MultipleChoiceQuestion])
-
-      val possibilitiesIds = question.asInstanceOf[MultipleChoiceQuestion].choices.map {
-        poss =>
-          assert(poss.fbId.isDefined)
-          poss.fbId.get
+          pages.headOption match {
+            case Some(pge) =>
+              assert(possibilitiesIds(answer) == pge.pageId)
+            case None =>
+              fail("Pages is empty.")
+          }
       }
-      val answer = question.asInstanceOf[MultipleChoiceQuestion].answer
-
-      assert(possibilitiesIds(answer) == pages.head.pageId)
     }
   }
 

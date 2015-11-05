@@ -9,9 +9,10 @@ import org.json4s.jackson.JsonMethods._
 import spray.client.pipelining._
 import spray.http.StatusCodes._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 object RetrieveEntitiesService {
 
@@ -54,8 +55,6 @@ object RetrieveEntitiesService {
 
 class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: Manifest[T]) extends FBCommunicationManager {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   def receive = {
     case RetrieveEntities(params) =>
       val originalSender = sender()
@@ -73,6 +72,8 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
       }
       context.become(retrieveEntities())
       self ! GetEntities[T](originalSender, path, params.minimalEntities)
+    case any =>
+      log.error(s"RetrieveEntitiesService received an unexpected message : $any.")
   }
 
   def retrieveEntities(): Receive = {
@@ -80,6 +81,8 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
       handleGetEntities(client, path, minimum, count)
     case NotEnoughRetrieved(client, paging, minimum, count, entities: Vector[T]) =>
       handleNotEnough(client, paging, minimum, count, entities)
+    case any =>
+      log.error(s"RetrieveEntitiesService received an unexpected message : $any.")
   }
 
 
@@ -160,10 +163,12 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
 
   private def singleFromRoot(root: Root[_ <: List[T]], json: JValue): Option[T] = root match {
     case Root(None, _, _) =>
-      try {
-        Some(json.extract[T])
-      } catch {
-        case e: Exception =>
+      Try(json.extract[T]) match {
+        case Success(j) => Some(j)
+        case Failure(e) =>
+          log.info(s"$e")
+          None
+        case _ =>
           None
       }
     case _ => None

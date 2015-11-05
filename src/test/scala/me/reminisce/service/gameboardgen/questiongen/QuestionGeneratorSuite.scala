@@ -7,15 +7,15 @@ import org.scalatest.FunSuite
 
 class QuestionGeneratorSuite extends FunSuite {
 
-  def createTestPost(message: String, story: String, `type`: String,
+  def createTestPost(message: String, story: String, postType: String,
                      mediaUrl: Option[String] = None, link: Option[String] = None, from: Option[FBFrom] = None): FBPost = {
     val attachments = mediaUrl.map {
       url => List(FBAttachment(media = Some(FBMedia(1, 1, url))))
     }
 
-    val messgaeOpt = if (message != "" && message != null) Some(message) else None
-    val storyopt = if (story != "" && story != null) Some(story) else None
-    FBPost(postId = "NONE", userId = "NONE", `type` = Some(`type`),
+    val messgaeOpt = if (message != "") Some(message) else None
+    val storyopt = if (story != "") Some(story) else None
+    FBPost(postId = "NONE", userId = "NONE", `type` = Some(postType),
       attachments = attachments,
       message = messgaeOpt,
       story = storyopt,
@@ -35,8 +35,8 @@ class QuestionGeneratorSuite extends FunSuite {
       case ImagePostSubject(text, pImageUrl, facebookImageUrl, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
         assert(tpe == SubjectType.ImagePost)
-        assert(pImageUrl.orNull == imageUrl)
-        assert(facebookImageUrl.orNull == fbImageUrl)
+        assert(pImageUrl.getOrElse("") == imageUrl)
+        assert(facebookImageUrl.getOrElse("") == fbImageUrl)
       case x => fail(s"Wrong subject type extracted : $x.")
     }
   }
@@ -52,8 +52,8 @@ class QuestionGeneratorSuite extends FunSuite {
       case VideoPostSubject(text, thumbUrl, vidUrl, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
         assert(tpe == SubjectType.VideoPost)
-        assert(thumbUrl.orNull == thumbnailUrl)
-        assert(vidUrl.orNull == videoUrl)
+        assert(thumbUrl.getOrElse("") == thumbnailUrl)
+        assert(vidUrl.getOrElse("") == videoUrl)
       case x => fail(s"Wrong subject type extracted : $x.")
     }
   }
@@ -69,8 +69,8 @@ class QuestionGeneratorSuite extends FunSuite {
       case LinkPostSubject(text, thumbUrl, shrdLink, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
         assert(tpe == SubjectType.LinkPost)
-        assert(thumbUrl.orNull == thumbnailUrl)
-        assert(shrdLink.orNull == sharedUrl)
+        assert(thumbUrl.getOrElse("") == thumbnailUrl)
+        assert(shrdLink.getOrElse("") == sharedUrl)
       case x => fail(s"Wrong subject type extracted : $x.")
     }
   }
@@ -116,9 +116,13 @@ class QuestionGeneratorSuite extends FunSuite {
 
     subject match {
       case TextPostSubject(text, tpe, frm) =>
-        assert(frm.isDefined)
-        assert(frm.get.userId == fromId)
-        assert(frm.get.userName == fromName)
+        frm match {
+          case Some(subFrom) =>
+            assert(subFrom.userId == fromId)
+            assert(subFrom.userName == fromName)
+          case None =>
+            fail(s"From is not defined.")
+        }
       case x => fail(s"Wrong subject extracted : $x.")
     }
   }
@@ -146,7 +150,7 @@ class QuestionGeneratorSuite extends FunSuite {
 
   test("Extracting src from FBAttachments.") {
     val noneAttachments = None
-    assert(QuestionGenerator.srcFromAttachments(noneAttachments) == None)
+    assert(QuestionGenerator.srcFromAttachments(noneAttachments).isEmpty)
 
     val source = "Source"
 
@@ -156,7 +160,7 @@ class QuestionGeneratorSuite extends FunSuite {
     val list2 = List(attachment2, attachment1)
 
     assert(QuestionGenerator.srcFromAttachments(Some(list1)) == Some(source))
-    assert(QuestionGenerator.srcFromAttachments(Some(list2)) == None)
+    assert(QuestionGenerator.srcFromAttachments(Some(list2)).isEmpty)
   }
 
   test("Extracting subject from a page.") {
@@ -167,7 +171,7 @@ class QuestionGeneratorSuite extends FunSuite {
     assert(subjectNoPhotoNoName.`type` == SubjectType.PageSubject)
     assert(subjectNoPhotoNoName.name == "")
     assert(subjectNoPhotoNoName.pageId == "PageId")
-    assert(subjectNoPhotoNoName.photoUrl == None)
+    assert(subjectNoPhotoNoName.photoUrl.isEmpty)
 
     val fbPhotoNoSource = FBPhoto(id = "", source = None, createdTime = None, tags = None)
     val pageNoPhotoSource = FBPage(None, "PageId", Some("PageName"), photos = Some(fbPhotoNoSource), 0)
@@ -177,7 +181,7 @@ class QuestionGeneratorSuite extends FunSuite {
     assert(subjectNoPhotoSource.`type` == SubjectType.PageSubject)
     assert(subjectNoPhotoSource.name == "PageName")
     assert(subjectNoPhotoSource.pageId == "PageId")
-    assert(subjectNoPhotoSource.photoUrl == None)
+    assert(subjectNoPhotoSource.photoUrl.isEmpty)
 
     val fbPhoto = FBPhoto(id = "", source = Some("PhotoUrl"), createdTime = None, tags = None)
     val fbPage = FBPage(None, "PageId", Some("PageName"), photos = Some(fbPhoto), 0)

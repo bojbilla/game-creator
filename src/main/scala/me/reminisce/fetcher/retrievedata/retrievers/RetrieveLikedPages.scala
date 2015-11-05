@@ -21,8 +21,6 @@ object RetrieveLikedPages {
 
 class RetrieveLikedPages extends RetrieveData {
 
-  var entityCount = 0
-
   def receive = {
     case RetrieveEntities(params) =>
       val params1 = params.copy(query = Some("me/likes?fields=name,photos.type(profile).limit(1){id,name,source},likes,created_time"))
@@ -32,18 +30,16 @@ class RetrieveLikedPages extends RetrieveData {
       context.become(awaitResponse(client))
   }
 
-  def awaitResponse(client: ActorRef): Receive = {
+  def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {
     case PartialResult(entities) =>
-      entityCount += entities.length
+      context.become(awaitResponse(client, entityCount + entities.length))
       client ! PartialLikedPagesResult(entities.asInstanceOf[Vector[Page]])
     case FinishedRetrievingEntities(entities) =>
-      entityCount += entities.length
-      log.info(s"Received $entityCount liked pages.")
+      log.info(s"Received ${entityCount + entities.length} liked pages.")
       client ! FinishedRetrievingLikedPages(entities.asInstanceOf[Vector[Page]])
     case NotEnoughFound(entities) =>
-      entityCount += entities.length
-      log.info(s"Received not enough ($entityCount) liked pages.")
+      log.info(s"Received not enough (${entityCount + entities.length}) liked pages.")
       client ! FinishedRetrievingLikedPages(entities.asInstanceOf[Vector[Page]])
-
+    case _ => log.error("RetrieveLikedPages received unexpected message")
   }
 }

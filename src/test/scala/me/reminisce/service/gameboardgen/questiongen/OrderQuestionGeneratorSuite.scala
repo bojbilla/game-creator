@@ -9,10 +9,6 @@ class OrderQuestionGeneratorSuite extends FunSuite {
     assert(OrderQuestionGenerator.generateSubjectsWithId(List()) ==(List(), List()))
   }
 
-  test("Null list of subjects to SubjectWithIds.") {
-    assert(OrderQuestionGenerator.generateSubjectsWithId(null) ==(null, null))
-  }
-
   test("List of subjects to SubjectWithIds.") {
     val subject1 = TextPostSubject("Salmon.", from = None)
     val subject2 = TextPostSubject("Banana.", from = None)

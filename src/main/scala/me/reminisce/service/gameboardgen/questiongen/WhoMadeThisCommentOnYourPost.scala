@@ -11,6 +11,7 @@ import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Random, Success}
 
 object WhoMadeThisCommentOnYourPost {
@@ -23,35 +24,26 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
     case CreateQuestion(userId, itemId) =>
-      import scala.concurrent.ExecutionContext.Implicits.global
       val client = sender()
       val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
       postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost].onComplete {
         case Success(postOpt) =>
-          postOpt match {
-            case Some(post) =>
-              post.comments match {
-                case Some(comments) =>
-                  if (comments.size < 4) {
-                    client ! NotEnoughData(s"Post has not enough comments : $itemId")
-                  } else {
-                    val selectedComments = getCandidatesComments(comments)
-                    val rightOne = selectedComments.head
-                    val shuffled = Random.shuffle(selectedComments)
-                    val answer = shuffled.indexOf(rightOne)
-                    val shuffledPossibilities = shuffled.map {
-                      comm => Possibility(comm.from.userName, None, "Person", Some(comm.from.userId))
-                    }
-                    val postSubject = QuestionGenerator.subjectFromPost(post)
-                    val commentSubject = CommentSubject(rightOne.message, postSubject)
-                    val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoMadeThisCommentOnYourPost, Some(commentSubject), shuffledPossibilities, answer)
-                    client ! FinishedQuestionCreation(gameQuestion)
-                  }
-                case None =>
-                  client ! NotEnoughData(s"Post has no comment : $itemId")
-              }
+          (for {
+            post <- postOpt
+            comments <- post.comments
+            selectedComments = getCandidatesComments(comments)
+            rightOne <- selectedComments.headOption
+          } yield {
+            if (comments.size < 4) {
+              NotEnoughData(s"Post has not enough comments : $itemId")
+            } else {
+              FinishedQuestionCreation(generateQuestion(userId, selectedComments, rightOne, post))
+            }
+          }) match {
+            case Some(message) =>
+              client ! message
             case None =>
-              client ! NotEnoughData(s"Post not found : $itemId")
+              client ! NotEnoughData(s"Post '$itemId' not found or post has no comment.")
           }
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")
@@ -67,9 +59,23 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
 
     val candidatesSet = Random.shuffle(fromsSet).take(4)
     val shuffledList = Random.shuffle(comments)
-    candidatesSet.map {
-      elm => shuffledList.filter(comm => comm.from == elm).head
+    candidatesSet.flatMap {
+      elm =>
+        shuffledList.find(comm => comm.from == elm)
     }.toList
+  }
+
+  def generateQuestion(userId: String, selectedComments: List[FBComment],
+                       rightOne: FBComment, post: FBPost): MultipleChoiceQuestion = {
+    val shuffled = Random.shuffle(selectedComments)
+    val answer = shuffled.indexOf(rightOne)
+    val shuffledPossibilities = shuffled.map {
+      comm => Possibility(comm.from.userName, None, "Person", Some(comm.from.userId))
+    }
+    val postSubject = QuestionGenerator.subjectFromPost(post)
+    val commentSubject = CommentSubject(rightOne.message, postSubject)
+    MultipleChoiceQuestion(userId, MultipleChoice,
+      MCWhoMadeThisCommentOnYourPost, Some(commentSubject), shuffledPossibilities, answer)
   }
 
 }

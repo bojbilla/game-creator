@@ -10,9 +10,7 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 
-object StrategyChooser {
-
-}
+object StrategyChooser
 
 class StrategyChooser(database: DefaultDB, userId: String) extends BoardGenerator(database, userId) {
 
@@ -30,7 +28,7 @@ class StrategyChooser(database: DefaultDB, userId: String) extends BoardGenerato
   def getCreatorFromUserStats(userStatsOpt: Option[UserStats]): ActorRef = userStatsOpt match {
     case None =>
       log.info(s"Random generator chosen for user $userId.")
-      context.actorOf(Props(new RandomBoardGenerator(database, userId)))
+      context.actorOf(Props(new FullRandomBoardGenerator(database, userId)))
     case Some(userStats) =>
       log.info(s"Uniform generator chosen for user $userId.")
       context.actorOf(Props(new UniformBoardGenerator(database, userId)))
@@ -41,6 +39,8 @@ class StrategyChooser(database: DefaultDB, userId: String) extends BoardGenerato
       client ! FinishedBoardGeneration(tiles)
     case FailedBoardGeneration(message) =>
       client ! FailedBoardGeneration(message)
+    case any =>
+      log.error(s"StrategyChooser received an unexpected message: $any.")
   }
 
 }

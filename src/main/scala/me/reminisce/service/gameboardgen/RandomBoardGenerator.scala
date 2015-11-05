@@ -12,45 +12,36 @@ import me.reminisce.service.gameboardgen.tilegen.TileGenerator.{CreateTile, Fail
 import me.reminisce.service.stats.StatsDataTypes._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.{BSONArray, BSONDocument}
+import reactivemongo.bson.BSONDocument
 
 import scala.util.Random
 
-object RandomBoardGenerator {
+object RandomBoardGenerator
 
-}
-
-class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGenerator(database, userId) {
-
-  var tiles: List[Tile] = List()
+abstract class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGenerator(database, userId) {
 
   val orderingItemsNumber = QuestionGenerationConfig.orderingItemsNumber
 
-  def createGame(client: ActorRef): Unit = {
-    val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)
-    val selector = BSONDocument("userId" -> userId)
-    findOne[UserStats](userCollection, selector, client) {
-      case Some(userStats) =>
-        generateBoard(userStats, client)
-      case None =>
-        generateBoard(client)
-    }
-  }
-
-  def awaitFeedBack(client: ActorRef): Receive = {
+  protected def awaitFeedBack(client: ActorRef, tiles: List[Tile]): Receive = {
     case FinishedTileCreation(usrId, tile) =>
-      tiles = tile :: tiles
-      if (tiles.length == 9) {
-        tiles = Random.shuffle(tiles)
-        client ! FinishedBoardGeneration(tiles)
+      val newTiles = tile :: tiles
+      if (newTiles.length == 9) {
+        val shuffledTiles = Random.shuffle(newTiles)
+        client ! FinishedBoardGeneration(shuffledTiles)
+      } else {
+        context.become(awaitFeedBack(client, newTiles))
       }
     case FailedTileCreation(message) =>
       log.error(s"Failed board creation: $message")
       client ! FailedBoardGeneration(message)
+    case any =>
+      log.error(s"${this.getClass.getName} received unknown message : $any")
   }
 
 
-  def generateBoard(userStats: UserStats, client: ActorRef): Unit = {
+  protected def generateBoard(userStats: UserStats, client: ActorRef)
+                             (randomKindDrawer: (List[Int], List[QuestionKind], Int, Int) => List[QuestionKind],
+                              randomTypeDrawer: (List[Int], List[DataType], Int, Int) => List[DataType]): Unit = {
     // An order question is made of multiple items
     val normalizedCounts = userStats.questionCounts.map {
       case (k, v) =>
@@ -67,12 +58,11 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
       val tlCount = normalizedCounts.getOrElse(Timeline.toString, 0)
       val ordCount = normalizedCounts.getOrElse(Order.toString, 0)
       val mcCount = normalizedCounts.getOrElse(MultipleChoice.toString, 0)
-      val geoCount = normalizedCounts.getOrElse(Geolocation.toString, 0)
+      //val geoCount = normalizedCounts.getOrElse(Geolocation.toString, 0)
 
-      val selectedKinds = drawItemsAtRandomFromBags[QuestionKind](List(tlCount, ordCount, mcCount, geoCount),
-        List(Timeline, Order, MultipleChoice, Geolocation), 27)
-
-
+      //TODO : RE-ENABLE GEOLOCATION
+      val selectedKinds = randomKindDrawer(List(tlCount, ordCount, mcCount),
+        List(Timeline, Order, MultipleChoice), 27, 1)
 
       val pairsKindType: List[(QuestionKind, DataType)] = selectedKinds.groupBy(el => el).toList.flatMap {
         case (kind, kindList) =>
@@ -80,9 +70,9 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
           val counts = possTypes.map(t => userStats.dataTypeCounts.getOrElse(t.name, 0))
           val selectedTypes =
             if (kind == Order) {
-              drawItemsAtRandomFromBags[DataType](counts, possTypes, kindList.length, orderingItemsNumber)
+              randomTypeDrawer(counts, possTypes, kindList.length, orderingItemsNumber)
             } else {
-              drawItemsAtRandomFromBags[DataType](counts, possTypes, kindList.length)
+              randomTypeDrawer(counts, possTypes, kindList.length, 1)
             }
           kindList.zip(selectedTypes)
       }
@@ -95,91 +85,61 @@ class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGen
 
   }
 
-  def generateWithKindTypePairs(alreadyFound: List[(QuestionKind, DataType, List[(String, String)])],
-                                pairsKindType: List[(QuestionKind, DataType)], client: ActorRef): Unit = pairsKindType match {
-    case head :: tail =>
-      val (current, rest) = pairsKindType.partition(el => (el._1 == head._1) && (el._2 == head._2))
-      val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
-      val query = BSONDocument("userId" -> userId, "dataTypes" -> BSONDocument("$in" -> List(head._2.name)), "readForStats" -> true)
-      findSome[ItemStats](itemsStatsCollection, query, client) {
-        listItemsStats =>
-          if (head._1 == Order) {
-            if (listItemsStats.length >= orderingItemsNumber * current.length) {
-              val groups = listItemsStats.groupBy(is => is.itemType).toList.map { case (itemType, list) => list.map(is => (is.itemId, is.itemType)) }
-              val randomBuckets = Random.shuffle(groups.flatMap(list => createBuckets[(String, String)](list, orderingItemsNumber)))
-              if (randomBuckets.length >= current.length) {
-                val newFound = current.zip(randomBuckets).map {
-                  case (k, v) => (k._1, k._2, v)
-                }
-                generateWithKindTypePairs(alreadyFound ++ newFound, rest, client)
-              } else {
-                client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
+  protected def generateWithKindTypePairs(alreadyFound: List[(QuestionKind, DataType, List[(String, String)])],
+                                          pairsKindType: List[(QuestionKind, DataType)], client: ActorRef): Unit = pairsKindType match {
+    case (cKind, cType) :: tail =>
+      pairsKindType.partition { case (kind, dType) => (kind == cKind) && (dType == cType) } match {
+        case (current, rest) =>
+          val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
+          val query = BSONDocument("userId" -> userId, "dataTypes" -> BSONDocument("$in" -> List(cType.name)), "readForStats" -> true)
+          findSome[ItemStats](itemsStatsCollection, query, client) {
+            listItemsStats =>
+              cKind match {
+                case Order =>
+                  if (listItemsStats.length >= orderingItemsNumber * current.length) {
+                    val groups = listItemsStats.groupBy(is => is.itemType).toList.map {
+                      case (itemType, list) => list.map(itemStats => (itemStats.itemId, itemStats.itemType))
+                    }
+                    val randomBuckets = Random.shuffle(groups.flatMap(list => createBuckets[(String, String)](list, orderingItemsNumber)))
+                    if (randomBuckets.length >= current.length) {
+                      val newFound = current.zip(randomBuckets).map {
+                        case ((kind, dType), v) => (kind, dType, v)
+                      }
+                      generateWithKindTypePairs(alreadyFound ++ newFound, rest, client)
+                    } else {
+                      client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
+                    }
+                  } else {
+                    client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
+                  }
+                case _ =>
+                  if (listItemsStats.length >= current.length) {
+                    val newFound = current.zip(listItemsStats.map(is => (is.itemId, is.itemType))).map {
+                      case ((kind, dType), v) => (kind, dType, List(v))
+                    }
+                    generateWithKindTypePairs(alreadyFound ++ newFound, rest, client)
+                  } else {
+                    client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
+                  }
               }
-            } else {
-              client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
-            }
-          } else {
-            if (listItemsStats.length >= current.length) {
-              val newFound = current.zip(listItemsStats.map(is => (is.itemId, is.itemType))).map {
-                case (k, v) => (k._1, k._2, List(v))
-              }
-              generateWithKindTypePairs(alreadyFound ++ newFound, rest, client)
-            } else {
-              client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
-            }
           }
       }
-    case List() =>
-      val tiles = generateTiles(alreadyFound, client)
-      if (tiles.length > 9) {
-        client ! FailedBoardGeneration(s"Too many tiles generated ! (${tiles.length})")
-      }
-      context.become(awaitFeedBack(client))
-      tiles.foreach {
-        tile =>
-          val worker = context.actorOf(TileGenerator.props(database))
-          val req = CreateTile(userId, tile._2, tile._1)
-          worker ! req
-      }
+    case _ =>
+      sendOrders(client, alreadyFound)
 
   }
 
-  def generateBoard(client: ActorRef): Unit = {
-    // As order cannot be generated only from one question, we exclude the types that only lead to this kind of question
-    // PostWhoLiked is also excluded as it cannot be generated without UserStats (even though this type should not be
-    // marked as available on an item if no UserStats was generated)
-    val excluded = (PostWhoLiked :: possibleTypes(Order).filter(t => possibleKind(t).size == 1)).map(_.name)
-    val selector = BSONDocument("userId" -> userId,
-      "$or" -> BSONArray(
-        BSONDocument("dataCount" -> BSONDocument("$gt" -> excluded.size)),
-        BSONDocument("dataTypes" -> BSONDocument("$nin" -> excluded))))
-    val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
-    findSome[ItemStats](itemsStatsCollection, selector, client) {
-      itemsStatsList =>
-        if (itemsStatsList.length < 27) {
-          client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
-        } else {
-          val shuffledList = Random.shuffle(itemsStatsList).take(27)
-          val tuples = shuffledList.map {
-            is =>
-              val okTypes = is.dataTypes.filterNot(t => excluded.contains(t)).map(stringToType)
-              val chosenType = Random.shuffle(okTypes).head
-              val chosenKind = Random.shuffle(possibleKind(chosenType).filterNot(k => k == Order)).head
-              (chosenKind, chosenType, List((is.itemId, is.itemType)))
-          }
-
-          val tiles = generateTiles(tuples, client)
-          if (tiles.length > 9) {
-            client ! FailedBoardGeneration(s"Too many tiles generated ! (${tiles.length})")
-          }
-          context.become(awaitFeedBack(client))
-          tiles.foreach {
-            tile =>
-              val worker = context.actorOf(TileGenerator.props(database))
-              val req = CreateTile(userId, tile._2, tile._1)
-              worker ! req
-          }
-        }
+  protected def sendOrders(client: ActorRef, orders: List[(QuestionKind, DataType, List[(String, String)])]): Unit = {
+    val tiles = generateTiles(orders, client)
+    if (tiles.length > 9) {
+      client ! FailedBoardGeneration(s"Too many tiles generated ! (${tiles.length})")
+    }
+    context.become(awaitFeedBack(client, List()))
+    tiles.foreach {
+      case (kind, choices) =>
+        val worker = context.actorOf(TileGenerator.props(database))
+        val req = CreateTile(userId, choices, kind)
+        worker ! req
     }
   }
 

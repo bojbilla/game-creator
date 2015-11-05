@@ -9,6 +9,7 @@ import me.reminisce.fetcher.common.GraphResponses._
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.mongodb.StatsEntities.{ItemStats, UserStats}
 import me.reminisce.service.stats.StatsHandler.{FinalStats, TransientPostsStats}
+import me.reminisce.testutils.Retry
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
@@ -33,23 +34,17 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
 
       val postIds = StatsTestData.posts.map(p => p.id)
       val selector = BSONDocument("userId" -> StatsTestData.userId, "itemId" -> BSONDocument("$in" -> postIds))
-      var stats: List[ItemStats] = List()
-      var attempts = 0
-      while (stats.isEmpty || stats.size < StatsTestData.referenceResult.size) {
-        if (attempts > attemptsPermitted) {
-          fail("Too many attempts at retrieving stats, maybe not saved.")
-        }
-        stats = Await.result(itemsStatsCollection.find(selector).cursor[ItemStats].collect[List](postIds.length,
-          stopOnError = true), Duration(10, TimeUnit.SECONDS))
-        attempts += 1
-        Thread.sleep(200)
-      }
 
-      assert(stats.nonEmpty)
-
-      assert(stats.size == StatsTestData.referenceResult.size)
-      StatsTestData.referenceResult.foreach {
-        itemStats => assert(stats.contains(itemStats))
+      Retry.findList[ItemStats](itemsStatsCollection, selector, postIds.length, 0) {
+        _.size >= StatsTestData.referenceResult.size
+      } match {
+        case List() =>
+          fail("Failed to retrieve items stats after requesting them.")
+        case stats =>
+          assert(stats.size == StatsTestData.referenceResult.size)
+          StatsTestData.referenceResult.foreach {
+            itemStats => assert(stats.contains(itemStats))
+          }
       }
     }
 
@@ -75,19 +70,10 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
       ref ! FinalStats(Set(), Set())
 
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
-      var userStats: Option[UserStats] = None
-      var attempts = 0
 
       val selector = BSONDocument("userId" -> StatsTestData.userId)
 
-      while (userStats.isEmpty) {
-        if (attempts > attemptsPermitted) {
-          fail("Too many attempts at retrieving stats, maybe not saved.")
-        }
-        userStats = Await.result(userStatsCollection.find(selector).one[UserStats], Duration(10, TimeUnit.SECONDS))
-        attempts += 1
-        Thread.sleep(200)
-      }
+      val userStats = Retry.find[UserStats](userStatsCollection, selector, 0)(_ => true)
 
       val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",
         Map("LikeNumber" -> 1, "PostWhoCommented" -> 1, "PostGeolocation" -> 1, "Time" -> 1, "PostCommentsNumber" -> 1),
@@ -140,17 +126,9 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
       val ref = TestActorRef(StatsHandler.props(StatsTestData.userId, db))
       ref ! FinalStats(fbPostIds, fbPageIds)
 
-      var userStats: Option[UserStats] = None
-      var attempts = 0
-
-      //the likers size is expected to grow
-      while (userStats.isEmpty || userStats.get.likers.size == StatsTestData.sampleUserStats.likers.size) {
-        if (attempts > attemptsPermitted) {
-          fail("Too many attempts at retrieving stats, maybe not saved.")
-        }
-        userStats = Await.result(userStatsCollection.find(selector).one[UserStats], Duration(10, TimeUnit.SECONDS))
-        attempts += 1
-        Thread.sleep(200)
+      //likers is supposed to grow
+      val userStats = Retry.find[UserStats](userStatsCollection, selector, 0) {
+        _.likers.size > StatsTestData.sampleUserStats.likers.size
       }
 
       val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",

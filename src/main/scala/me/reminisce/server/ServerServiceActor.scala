@@ -21,4 +21,10 @@ class ServerServiceActor extends Actor with GameCreatorServiceActor with ActorLo
 
   override implicit def json4sFormats: Formats = DefaultFormats
 
+  override def postStop(): Unit = {
+    connection.close()
+    driver.system.shutdown()
+    driver.close()
+  }
+
 }

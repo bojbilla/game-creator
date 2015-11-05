@@ -12,6 +12,7 @@ import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 import reactivemongo.core.commands.Count
 
 import scala.annotation.tailrec
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Random, Success}
 
 object BoardGenerator {
@@ -49,20 +50,25 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
       val totalCount = updatedBagSizes.sum
 
       if (totalCount > 0) {
-        val bagThresholds = formThresholds(List(updatedBagSizes.head - 1), updatedBagSizes.tail)
-        val selectedType = findFirstLessOrEqual(bagThresholds, bagTypes, Random.nextInt(totalCount))
-        val typePosition = bagTypes.indexOf(selectedType)
+        updatedBagSizes match {
+          case head :: tail =>
+            val bagThresholds = formThresholds(List(head - 1), tail)
+            val selectedType = findFirstLessOrEqual(bagThresholds, bagTypes, Random.nextInt(totalCount))
+            val typePosition = bagTypes.indexOf(selectedType)
 
-        val newSizes = (0 until updatedBagSizes.length).map {
-          i =>
-            if (i == typePosition) {
-              updatedBagSizes(i) - drawnQuantity
-            } else {
-              updatedBagSizes(i)
-            }
-        }.toList
+            val newSizes = updatedBagSizes.indices.map {
+              i =>
+                if (i == typePosition) {
+                  updatedBagSizes(i) - drawnQuantity
+                } else {
+                  updatedBagSizes(i)
+                }
+            }.toList
 
-        selectedType :: drawItemsAtRandomFromBags[T](newSizes, bagTypes, quantity - 1)
+            selectedType :: drawItemsAtRandomFromBags[T](newSizes, bagTypes, quantity - 1)
+          case Nil =>
+            List()
+        }
       } else {
         List()
       }
@@ -77,7 +83,12 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
       throw new IndexOutOfBoundsException
     case head :: tail =>
       if (generatedRand <= head)
-        bagTypes.head
+        bagTypes match {
+          case hd :: tl =>
+            hd
+          case Nil =>
+            throw new IndexOutOfBoundsException
+        }
       else
         findFirstLessOrEqual(bagThresholds.tail, bagTypes.tail, generatedRand)
   }
@@ -88,21 +99,31 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     case Nil =>
       acc
     case head :: tail =>
-      val newAcc = acc ++ List(acc.last + head)
+      val newAcc = acc.lastOption match {
+        case Some(last) =>
+          acc ++ List(last + head)
+        case None =>
+          acc ++ List(head)
+      }
       formThresholds(newAcc, tail)
   }
 
-  def drawUniformlyFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int): List[T] = {
-    if (quantity > 0 && bagSizes.length > 0) {
-      val picked = bagTypes.head
-      val (newBagSizes, newBagTypes) =
-        if (bagSizes.head > 1) {
-          (bagSizes.tail :+ (bagSizes.head - 1), bagTypes.tail :+ bagTypes.head)
+  def drawUniformlyFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int = 1): List[T] = {
+    if (quantity > 0) {
+      (for {
+        picked <- bagTypes.headOption
+        sizesHead <- bagSizes.headOption
+      } yield {
+        if (sizesHead > 1) {
+          (bagSizes.tail :+ (sizesHead - 1), bagTypes.tail :+ picked)
         } else {
           //it is equal then
           (bagSizes.tail, bagTypes.tail)
         }
-      picked :: drawUniformlyFromBags[T](newBagSizes, newBagTypes, quantity - 1)
+      } match {
+        case (newBagSizes, newBagTypes) =>
+          picked :: drawUniformlyFromBags[T](newBagSizes, newBagTypes, quantity - drawnQuantity)
+      }).getOrElse(Nil)
     } else {
       List()
     }
@@ -110,8 +131,9 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
 
   def createBuckets[T](list: List[T], bucketSize: Int): List[List[T]] = {
     if (list.size >= bucketSize) {
-      val (left, right) = list.splitAt(bucketSize)
-      left :: createBuckets(right, bucketSize)
+      list.splitAt(bucketSize) match {
+        case (left, right) => left :: createBuckets(right, bucketSize)
+      }
     } else {
       List()
     }
@@ -119,7 +141,6 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
 
   def findOne[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (Option[T] => Unit))
                 (implicit reader: BSONDocumentReader[T]): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     collection.find(selector).one[T].onComplete {
       case Success(opt) => f(opt)
       case Failure(e) =>
@@ -129,7 +150,6 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
 
   def findSome[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
                  (implicit reader: BSONDocumentReader[T]): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     collection.find(selector).cursor[T].collect[List]().onComplete {
       case Success(list) => f(list)
       case Failure(e) =>
@@ -141,7 +161,6 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
                         collection: BSONCollection,
                         query: BSONDocument, quantity: Int, client: ActorRef)(f: (List[T] => Unit))
                        (implicit reader: BSONDocumentReader[T]): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     val futureCount = db.command(Count(collection.name, Some(query)))
     futureCount.flatMap { count =>
       val skip = if (count - quantity > 0) Random.nextInt(count - quantity) else 0
@@ -160,16 +179,22 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     }
     generatedTuples match {
       case x :: xs =>
-        val groups = generatedTuples.groupBy(el => el._1).toList
-        val largeGroups = groups.filter(cpl => cpl._2.length >= 3)
+        val groups = generatedTuples.groupBy { case (qKind, dType, idTypeList) => qKind }.toList
+        val largeGroups = groups.filter { case (qKind, tupGroups) => tupGroups.length >= 3 }
         largeGroups match {
-          case head :: tail =>
-            val selectedQuestions = head._2.take(3)
-            val kind = selectedQuestions.head._1
-            (kind, selectedQuestions) :: generateTiles(generatedTuples.filterNot(selectedQuestions.toSet), client)
+          case (qKind, tupGroups) :: tail =>
+            val selectedQuestions = tupGroups.take(3)
+            selectedQuestions.headOption match {
+              case Some((kind, dType, idTypeList)) =>
+                (kind, selectedQuestions) :: generateTiles(generatedTuples.filterNot(selectedQuestions.toSet), client)
+              case None =>
+                generateTiles(generatedTuples.filterNot(selectedQuestions.toSet), client)
+            }
           case Nil =>
-            val (left, right) = generatedTuples.splitAt(3)
-            (Misc, left) :: generateTiles(right, client)
+            generatedTuples.splitAt(3) match {
+              case (left, right) =>
+                (Misc, left) :: generateTiles(right, client)
+            }
         }
       case Nil =>
         List()

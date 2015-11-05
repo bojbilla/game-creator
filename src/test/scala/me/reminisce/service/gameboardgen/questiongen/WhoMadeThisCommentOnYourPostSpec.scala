@@ -3,20 +3,19 @@ package me.reminisce.service.gameboardgen.questiongen
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
-import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.service.gameboardgen.GameboardEntities.{CommentSubject, MultipleChoiceQuestion, TextPostSubject}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+class WhoMadeThisCommentOnYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
 
   val userId = "TestUserWhoMadeThisCommentOnYourPost"
 
@@ -28,7 +27,7 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
+      testProbe.expectMsg(NotEnoughData(s"Post '$itemId' not found or post has no comment."))
     }
 
 
@@ -44,7 +43,7 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Post has no comment : $itemId"))
+      testProbe.expectMsg(NotEnoughData(s"Post '$itemId' not found or post has no comment."))
     }
 
     "not create question when there is not enough comment for post." in {
@@ -88,24 +87,20 @@ class WhoMadeThisCommentOnYourPostSpec extends DatabaseTester("WhichPageDidYouLi
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
 
-      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
-      assert(finishedCreation != null)
-      assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
-
-      val question = finishedCreation.asInstanceOf[FinishedQuestionCreation].question
-      assert(question.isInstanceOf[MultipleChoiceQuestion])
-
-      assert(question.asInstanceOf[MultipleChoiceQuestion].subject.isDefined)
-      val subject = question.asInstanceOf[MultipleChoiceQuestion].subject.get
-      val choices = question.asInstanceOf[MultipleChoiceQuestion].choices
-      assert(subject.isInstanceOf[CommentSubject])
-      val postSubject = subject.asInstanceOf[CommentSubject].post
-      assert(postSubject.isInstanceOf[TextPostSubject])
-      assert(postSubject.asInstanceOf[TextPostSubject].text == fbPost.message.getOrElse(""))
-      val chosenComments = choices.map(c => c.name)
-      val originalComments = comments.map(c => c.from.userName)
-      chosenComments.foreach {
-        c => assert(originalComments.contains(c))
+      checkFinished[MultipleChoiceQuestion](testProbe) {
+        question =>
+          checkSubject[CommentSubject](question.subject) {
+            subject =>
+              val choices = question.choices
+              val postSubject = subject.post
+              assert(postSubject.isInstanceOf[TextPostSubject])
+              assert(postSubject.asInstanceOf[TextPostSubject].text == fbPost.message.getOrElse(""))
+              val chosenComments = choices.map(c => c.name)
+              val originalComments = comments.map(c => c.from.userName)
+              chosenComments.foreach {
+                c => assert(originalComments.contains(c))
+              }
+          }
       }
     }
   }
