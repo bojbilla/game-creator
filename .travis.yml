@@ -16,7 +16,10 @@ cache:
   - $HOME/.sbt/boot/
 
 script:
-- sbt ++$TRAVIS_SCALA_VERSION -J-XX:ReservedCodeCacheSize=256M test
+- sbt ++$TRAVIS_SCALA_VERSION -J-XX:ReservedCodeCacheSize=256M clean coverage test
+- sbt coverageReport
+- sbt coverageAggregate
+- sbt codacyCoverage
 - find $HOME/.sbt -name "*.lock" | xargs rm
 - find $HOME/.ivy2 -name "ivydata-*.properties" | xargs rm
 
