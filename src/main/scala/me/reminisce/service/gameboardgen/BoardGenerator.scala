@@ -172,6 +172,15 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     }
   }
 
+  def findSomeRandom[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
+                       (implicit reader: BSONDocumentReader[T]): Unit = {
+    collection.find(selector).cursor[T].collect[List]().onComplete {
+      case Success(list) => f(Random.shuffle(list))
+      case Failure(e) =>
+        client ! FailedBoardGeneration(s"MongoDB error : ${e.getMessage}.")
+    }
+  }
+
   def generateTiles(generatedTuples: List[(QuestionKind, DataType, List[(String, String)])], client: ActorRef):
   List[(QuestionKind, List[(QuestionKind, DataType, List[(String, String)])])] = {
     if (generatedTuples.length > 27) {

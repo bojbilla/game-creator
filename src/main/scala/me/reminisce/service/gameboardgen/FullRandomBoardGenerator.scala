@@ -40,7 +40,7 @@ class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends Rand
         BSONDocument("dataCount" -> BSONDocument("$gt" -> excluded.size)),
         BSONDocument("dataTypes" -> BSONDocument("$nin" -> excluded))))
     val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
-    findSome[ItemStats](itemsStatsCollection, selector, client) {
+    findSomeRandom[ItemStats](itemsStatsCollection, selector, client) {
       itemsStatsList =>
         if (itemsStatsList.length < 27) {
           client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")

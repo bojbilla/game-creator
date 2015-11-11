@@ -92,7 +92,7 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String) extends
         case (current, rest) =>
           val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
           val query = BSONDocument("userId" -> userId, "dataTypes" -> BSONDocument("$in" -> List(cType.name)), "readForStats" -> true)
-          findSome[ItemStats](itemsStatsCollection, query, client) {
+          findSomeRandom[ItemStats](itemsStatsCollection, query, client) {
             listItemsStats =>
               cKind match {
                 case Order =>
