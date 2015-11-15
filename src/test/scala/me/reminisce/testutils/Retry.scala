@@ -39,20 +39,20 @@ object Retry {
     }
   }
 
-  def findList[T](collection: BSONCollection, selector: BSONDocument, upTo: Int, attempts: Int)
+  def findList[T](collection: BSONCollection, selector: BSONDocument, attempts: Int)
                  (check: List[T] => Boolean)(implicit reader: BSONDocumentReader[T]): List[T] = {
-    Await.result(collection.find(selector).cursor[T].collect[List](upTo, stopOnError = true),
+    Await.result(collection.find(selector).cursor[T].collect[List](stopOnError = true),
       Duration(10, TimeUnit.SECONDS)) match {
       case List() =>
         attempt[List[T]](attempts, Nil) {
-          findList(collection, selector, upTo, attempts + 1)(check)
+          findList(collection, selector, attempts + 1)(check)
         }
       case result =>
         if (check(result)) {
           result
         } else {
           attempt[List[T]](attempts, Nil) {
-            findList(collection, selector, upTo, attempts + 1)(check)
+            findList(collection, selector, attempts + 1)(check)
           }
         }
     }

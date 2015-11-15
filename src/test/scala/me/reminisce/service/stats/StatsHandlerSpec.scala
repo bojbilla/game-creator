@@ -35,7 +35,7 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
       val postIds = StatsTestData.posts.map(p => p.id)
       val selector = BSONDocument("userId" -> StatsTestData.userId, "itemId" -> BSONDocument("$in" -> postIds))
 
-      Retry.findList[ItemStats](itemsStatsCollection, selector, postIds.length, 0) {
+      Retry.findList[ItemStats](itemsStatsCollection, selector, 0) {
         _.size >= StatsTestData.referenceResult.size
       } match {
         case List() =>

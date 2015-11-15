@@ -26,13 +26,9 @@ object RetrieveEntitiesService {
 
   //Will be sent if the required minimum or more entities were found
 
-  case class FinishedRetrievingEntities[A: TypeTag](entities: Vector[A]) {
-    val tpe = typeOf[A]
-  }
+  case class FinishedRetrievingEntities[A: TypeTag](entities: Vector[A])
 
-  case class PartialResult[A: TypeTag](entities: Vector[A]) {
-    val tpe = typeOf[A]
-  }
+  case class PartialResult[A: TypeTag](entities: Vector[A])
 
 
   private case class NotEnoughRetrieved[A](client: ActorRef,

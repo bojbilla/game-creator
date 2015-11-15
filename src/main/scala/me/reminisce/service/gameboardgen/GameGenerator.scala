@@ -73,11 +73,11 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
     case GraphAPIInvalidToken(message) =>
       verifyAndAnswer(client, tiles, ack = true, stale = true)
       context.become(awaitFeedBack(client, worker, tiles, fetcherAcked = true, isTokenStale = true))
-      log.error(message)
+      log.info(message)
     case GraphAPIUnreachable(message) =>
       verifyAndAnswer(client, tiles, ack = true, isTokenStale)
       context.become(awaitFeedBack(client, worker, tiles, fetcherAcked = true, isTokenStale))
-      log.error(message)
+      log.info(message)
     case AlreadyFresh(message) =>
       verifyAndAnswer(client, tiles, ack = true, isTokenStale)
       context.become(awaitFeedBack(client, worker, tiles, fetcherAcked = true, isTokenStale))

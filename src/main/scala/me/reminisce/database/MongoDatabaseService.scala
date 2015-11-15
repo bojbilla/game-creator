@@ -13,11 +13,9 @@ import reactivemongo.core.commands.GetLastError
 object MongoDatabaseService {
   val fbPagesCollection = "fbPages"
   val fbPageLikesCollection = "fbPageLikes"
-  val fbTaggedPostsCollection = "fbTaggedPosts"
   val fbPostsCollection = "fbPosts"
   val lastFetchedCollection = "lastFetched"
   val userStatisticsCollection = "userStatistics"
-  val postQuestionsCollection = "postQuestions"
   val itemsStatsCollection = "itemsStats"
 
   val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
@@ -28,8 +26,6 @@ object MongoDatabaseService {
   case class SaveFBPage(pages: List[Page])
 
   case class SaveFBPost(posts: List[Post])
-
-  case class SaveFBTaggedPost(posts: List[Post])
 
   case class SaveLastFetchedTime()
 
@@ -84,8 +80,6 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
       saveFBPagesToDB(pages)
     case SaveFBPost(posts) =>
       saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbPostsCollection))
-    case SaveFBTaggedPost(posts) =>
-      saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbTaggedPostsCollection))
     case SaveLastFetchedTime =>
       saveLastFetchTime(db[BSONCollection](MongoDatabaseService.lastFetchedCollection))
     case any => log.error(s"MongoDB Service received unexpected message : $any")
