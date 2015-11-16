@@ -19,8 +19,6 @@ object RetrievePosts {
 
 class RetrievePosts extends RetrieveData {
 
-  var entityCount = 0
-
   def receive = {
     case RetrieveEntities(params) =>
       val client = sender()
@@ -34,17 +32,15 @@ class RetrievePosts extends RetrieveData {
       context.become(awaitResponse(client))
   }
 
-  def awaitResponse(client: ActorRef): Receive = {
+  def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {
     case FinishedRetrievingEntities(entities) =>
-      entityCount += entities.length
-      log.info(s"Received $entityCount posts.")
+      log.info(s"Received ${entityCount + entities.length} posts.")
       client ! FinishedRetrievingPosts(entities.asInstanceOf[Vector[Post]])
     case PartialResult(entities) =>
-      entityCount += entities.length
+      context.become(awaitResponse(client, entityCount + entities.length))
       client ! PartialPostsResult(entities.asInstanceOf[Vector[Post]])
     case NotEnoughFound(entities) =>
-      entityCount += entities.length
-      log.info(s"Received not enough ($entityCount) posts.")
+      log.info(s"Received not enough (${entityCount + entities.length}) posts.")
       client ! FinishedRetrievingPosts(entities.asInstanceOf[Vector[Post]])
     case _ => log.error("RetrievingTaggedPosts received unexpected message")
 

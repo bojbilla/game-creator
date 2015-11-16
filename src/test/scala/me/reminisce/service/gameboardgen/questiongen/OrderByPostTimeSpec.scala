@@ -4,20 +4,19 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import com.github.nscala_time.time.Imports._
-import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.FBPost
 import me.reminisce.service.gameboardgen.GameboardEntities.{OrderQuestion, TextPostSubject}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestionWithMultipleItems, FinishedQuestionCreation, NotEnoughData}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestionWithMultipleItems, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class OrderByPostTimeSpec extends DatabaseTester("OrderByPostTimeSpec") {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+class OrderByPostTimeSpec extends QuestionTester("OrderByPostTimeSpec") {
 
   val userId = "TestUserOrderByPostTime"
 
@@ -59,22 +58,12 @@ class OrderByPostTimeSpec extends DatabaseTester("OrderByPostTimeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
 
-      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
-      assert(finishedCreation != null)
-      assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
-
-      val question = finishedCreation.asInstanceOf[FinishedQuestionCreation].question
-      assert(question.isInstanceOf[OrderQuestion])
-
-      val subjectWithIds = question.asInstanceOf[OrderQuestion].choices
-      val answer = question.asInstanceOf[OrderQuestion].answer
-
-      (0 until postsNumber).foreach {
-        case nb =>
-          val a = answer(nb)
-          val subject = subjectWithIds.filter(elm => elm.uId == a).head.subject
-          assert(subject.isInstanceOf[TextPostSubject])
-          assert(subject.asInstanceOf[TextPostSubject].text == posts(nb).message.getOrElse(""))
+      checkFinished[OrderQuestion](testProbe) {
+        question =>
+          orderCheck[TextPostSubject](question) {
+            case (subject, nb) =>
+              assert(subject.text == posts(nb).message.getOrElse(""))
+          }
       }
     }
   }

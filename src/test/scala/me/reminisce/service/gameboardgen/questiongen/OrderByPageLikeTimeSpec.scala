@@ -3,21 +3,20 @@ package me.reminisce.service.gameboardgen.questiongen
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
-import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike}
 import me.reminisce.service.gameboardgen.GameboardEntities.{OrderQuestion, PageSubject}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestionWithMultipleItems, FinishedQuestionCreation, NotEnoughData}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestionWithMultipleItems, NotEnoughData}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+class OrderByPageLikeTimeSpec extends QuestionTester("OrderByPageLikeTimeSpec") {
 
   val userId = "TestUserOrderByPageLikeTime"
 
@@ -29,7 +28,7 @@ class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") 
       val actorRef = TestActorRef(OrderByPageLikeTime.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsg(NotEnoughData(s"Did not find enough page-likes."))
+      testProbe.expectMsg(NotEnoughData(s"Not enough pages or page-likes."))
     }
 
     "create a valid question when the data is there." in {
@@ -67,22 +66,12 @@ class OrderByPageLikeTimeSpec extends DatabaseTester("OrderByPageLikeTimeSpec") 
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
 
-      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
-      assert(finishedCreation != null)
-      assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
-
-      val question = finishedCreation.asInstanceOf[FinishedQuestionCreation].question
-      assert(question.isInstanceOf[OrderQuestion])
-
-      val subjectWithIds = question.asInstanceOf[OrderQuestion].choices
-      val answer = question.asInstanceOf[OrderQuestion].answer
-
-      (0 until pagesNumber).foreach {
-        case nb =>
-          val a = answer(nb)
-          val subject = subjectWithIds.filter(elm => elm.uId == a).head.subject
-          assert(subject.isInstanceOf[PageSubject])
-          assert(subject.asInstanceOf[PageSubject].name == pages(nb).name.getOrElse(""))
+      checkFinished[OrderQuestion](testProbe) {
+        question =>
+          orderCheck[PageSubject](question) {
+            case (subject, nb) =>
+              assert(subject.name == pages(nb).name.getOrElse(""))
+          }
       }
     }
   }

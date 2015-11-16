@@ -31,7 +31,6 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef2, FetchData(userId, "NAN"))
       testProbe.expectMsg(TooManyRequests(s"Already fetching for user $userId"))
-      FetcherService.currentlyFetching = Set()
     }
 
     "not fetch when the data is already fresh." in {

@@ -185,7 +185,7 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
                             postCollection: BSONCollection, pagesCollection: BSONCollection, userStatsCollection: BSONCollection,
                             itemsStatsCollection: BSONCollection): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    if ((fbPagesIds ++ fbPostsIds).length > 0) {
+    if ((fbPagesIds ++ fbPostsIds).nonEmpty) {
       val postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> fbPostsIds))
       val postsCursor = postCollection.find(postSelector).cursor[FBPost]
       (for {
@@ -214,11 +214,16 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
 
         postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> itemsStats.map(is => is.itemId)))
         postsCursor = postCollection.find(postSelector).cursor[FBPost]
-        fbPosts <- postsCursor.collect[List](itemsStats.length, stopOnError = true) if itemsStats.length > 0
+        fbPosts <- postsCursor.collect[List](itemsStats.length, stopOnError = true) if itemsStats.nonEmpty
       } yield dealWithOldStats(fbPosts, itemsStats, userStats, itemsStatsCollection, userStatsCollection)
         ) onFailure {
         case e =>
-          log.error(s"Could not reach database : $e")
+          e.getMessage match {
+            case "Future.filter predicate is not satisfied" =>
+              log.info("There was no element in old stats.")
+            case any =>
+              log.error(s"Could not reach database : $e")
+          }
       }
     }
   }

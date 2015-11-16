@@ -1,10 +1,12 @@
 package me.reminisce.fetcher
 
+import java.util.concurrent.ConcurrentHashMap
+
 import akka.actor._
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.MongoDatabaseService.SaveLastFetchedTime
-import me.reminisce.fetcher.FetcherService.{FetchData, FetchDataSince, FinishedFetching}
+import me.reminisce.fetcher.FetcherService.{FetchData, FetchDataSince, FinishedFetching, currentlyFetching}
 import me.reminisce.fetcher.common.FBCommunicationManager
 import me.reminisce.mongodb.MongoDBEntities.LastFetched
 import me.reminisce.server.domain.Domain.{AlreadyFresh, Done, GraphAPIInvalidToken, GraphAPIUnreachable}
@@ -17,11 +19,11 @@ import reactivemongo.bson.BSONDocument
 import spray.client.pipelining._
 import spray.http.StatusCodes._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-
 object FetcherService {
-  var currentlyFetching: Set[String] = Set()
+  private val currentlyFetching = new ConcurrentHashMap[String, Boolean]()
 
   case class FetchData(userId: String, accessToken: String) extends RestMessage
 
@@ -35,13 +37,10 @@ object FetcherService {
 
 class FetcherService(database: DefaultDB) extends FBCommunicationManager {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   def receive = {
     case FetchData(userId, accessToken) =>
       val client = sender()
-      if (!FetcherService.currentlyFetching.contains(userId)) {
-        FetcherService.currentlyFetching = FetcherService.currentlyFetching + userId
+      if (!currentlyFetching.putIfAbsent(userId, true)) {
         val lastFetched = database[BSONCollection](MongoDatabaseService.lastFetchedCollection)
         val query = BSONDocument(
           "userId" -> userId
@@ -64,7 +63,7 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
       val mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
       mongoSaver ! SaveLastFetchedTime
       sender ! PoisonPill
-      FetcherService.currentlyFetching = FetcherService.currentlyFetching - userId
+      currentlyFetching.remove(userId)
 
     case _ =>
       log.info("Fetcher service Received unexpected message")
@@ -90,16 +89,16 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
             case _ =>
               log.error(s"Received a fetch request with an invalid token.")
               client ! GraphAPIInvalidToken(s"The specified token is invalid.")
-              FetcherService.currentlyFetching = FetcherService.currentlyFetching - userId
+              currentlyFetching.remove(userId)
           }
         case Failure(error) =>
           log.error(s"Facebook didn't respond \npath:$checkPath\n  ${error.toString}")
           client ! GraphAPIUnreachable(s"Could not reach Facebook graph API.")
-          FetcherService.currentlyFetching = FetcherService.currentlyFetching - userId
+          currentlyFetching.remove(userId)
       }
     } else {
       client ! AlreadyFresh(s"Data for user $userId is fresh.")
-      FetcherService.currentlyFetching = FetcherService.currentlyFetching - userId
+      currentlyFetching.remove(userId)
       val statsHandler = context.actorOf(StatsHandler.props(userId, database))
       statsHandler ! FinalStats(Set(), Set())
       log.info(s"Requesting stats update for user $userId.")

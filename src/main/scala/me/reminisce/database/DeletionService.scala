@@ -28,9 +28,6 @@ object DeletionService {
 
 class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
 
-  var workers = Set[ActorRef]()
-  var results = Set[Boolean]()
-
   def receive = {
     case RemoveUser(userId) =>
       log.info(s"Removing user $userId from database.")
@@ -53,24 +50,21 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
       sender() ! ActionForbidden(s"Deletion service received an unexpected message : $any.")
   }
 
-  def awaitFeedBack(client: ActorRef): Receive = {
+  def awaitFeedBack(client: ActorRef, workers: Set[ActorRef], results: Set[Boolean]): Receive = {
     case MongoDBError(m) =>
       workers.foreach(w => w ! PoisonPill)
       client ! InternalError(m)
     case DeletionResult(lastError) =>
-      workers -= sender()
-      results += lastError
-      verifyDone(client)
+      verifyDone(client, workers - sender(), results + lastError)
+    case any =>
+      log.error(s"Deletion service received an unexpected message : $any.")
   }
 
   def removeUser(userId: String, client: ActorRef) = {
     val selector = BSONDocument("userId" -> userId)
     foreachCollection(client) {
-      collectionName =>
-        val collection = database[BSONCollection](collectionName)
-        val worker = context.actorOf(DeletionWorker.props(collection))
+      worker =>
         worker ! DeleteSelectorMatch(selector)
-        workers += worker
     }
   }
 
@@ -79,23 +73,19 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     val selector = BSONDocument("userId" -> userId,
       "pageId" -> BSONDocument("$nin" -> actualLikes.toList)
     )
-    context.become(awaitFeedBack(client))
     val worker = context.actorOf(DeletionWorker.props(pageLikeCollection))
+    context.become(awaitFeedBack(client, Set(worker), Set()))
     worker ! DeleteSelectorMatch(selector)
-    workers += worker
   }
 
   def clearDatabase(client: ActorRef): Unit = {
     foreachCollection(client) {
-      collectionName =>
-        val collection = database[BSONCollection](collectionName)
-        val worker = context.actorOf(DeletionWorker.props(collection))
+      worker =>
         worker ! DropCollection()
-        workers += worker
     }
   }
 
-  def verifyDone(client: ActorRef) = {
+  def verifyDone(client: ActorRef, workers: Set[ActorRef], results: Set[Boolean]) = {
     if (workers.isEmpty) {
       val errors = results.filter(!_)
       if (errors.isEmpty) {
@@ -104,6 +94,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
         client ! InternalError(s"Deletion finished with errors.")
       }
     }
+    context.become(awaitFeedBack(client, workers, results))
   }
 
   def onCollections(client: ActorRef)(handle: List[String] => Unit)(default: () => Unit): Unit = {
@@ -111,7 +102,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     database.collectionNames.onComplete {
       case Success(collectionNames) =>
         val filteredCollectionNames = collectionNames.filter(!_.startsWith("system."))
-        if (filteredCollectionNames.size > 0) {
+        if (filteredCollectionNames.nonEmpty) {
           handle(filteredCollectionNames)
         } else {
           default()
@@ -121,11 +112,16 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     }
   }
 
-  def foreachCollection(client: ActorRef)(handle: String => Unit): Unit = {
+  def foreachCollection(client: ActorRef)(handleWithWorkers: ActorRef => Unit): Unit = {
     onCollections(client) {
       collectionNames =>
-        context.become(awaitFeedBack(client))
-        collectionNames.foreach(handle)
+        val workers = collectionNames.map {
+          collectionName =>
+            val collection = database[BSONCollection](collectionName)
+            context.actorOf(DeletionWorker.props(collection))
+        }
+        context.become(awaitFeedBack(client, workers.toSet, Set()))
+        workers.foreach(handleWithWorkers)
     } {
       () => client ! Done("Deletion performed without error.")
     }

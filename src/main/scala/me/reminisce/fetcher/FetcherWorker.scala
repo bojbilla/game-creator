@@ -29,9 +29,6 @@ object FetcherWorker {
 }
 
 class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
-  var workers: Set[ActorRef] = Set()
-  var foundPosts: Set[String] = Set()
-  var foundPages: Set[String] = Set()
 
   def receive = {
     case FetchDataSince(userId, accessToken, lastFetched) =>
@@ -41,55 +38,51 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
       val pageRetriever = context.actorOf(RetrieveLikedPages.props())
       pageRetriever ! RetrieveEntities(simpleParameters)
-      workers += pageRetriever
 
       val postRetriever = context.actorOf(RetrievePosts.props())
       postRetriever ! RetrieveEntities(simpleParameters)
-      workers += postRetriever
 
       val taggedRetriever = context.actorOf(RetrieveTaggedPosts.props())
       taggedRetriever ! RetrieveEntities(simpleParameters)
-      workers += taggedRetriever
 
-      context.become(awaitResults(client, userId))
+      val workers = Set(pageRetriever, postRetriever, taggedRetriever)
+      context.become(awaitResults(client, userId, workers, Set(), Set()))
     case _ =>
       log.error("Fetcher worker received an unexpected message.")
   }
 
-  def awaitResults(client: ActorRef, userId: String): Receive = {
+  def awaitResults(client: ActorRef, userId: String, workers: Set[ActorRef], foundPosts: Set[String], foundPages: Set[String]): Receive = {
 
     case PartialLikedPagesResult(pages) =>
+      val newFoundPages = pages.map(page => page.id).toSet ++ foundPages
       storePages(pages, userId)
+      context.become(awaitResults(client, userId, workers, foundPosts, newFoundPages))
 
     case FinishedRetrievingLikedPages(pages) =>
       log.info(s"Received liked pages for user: $userId")
       storePages(pages, userId)
       val deletionService = context.actorOf(DeletionService.props(database))
       deletionService ! RemoveExtraLikes(userId, foundPages)
-      workers += deletionService
-      done(sender(), client, userId)
+      val newFoundPages = pages.map(page => page.id).toSet ++ foundPages
+      verifyDone(client, userId, workers, Set(deletionService), Set(sender()), foundPosts, newFoundPages)
 
 
     case PartialPostsResult(posts) =>
-      storePosts(posts, userId)
+      handlePosts(client, workers, posts, userId, foundPosts, foundPages, partial = true)
 
     case FinishedRetrievingPosts(posts) =>
-      log.info(s"Received posts for user: $userId")
-      storePosts(posts, userId)
-      done(sender(), client, userId)
+      handlePosts(client, workers, posts, userId, foundPosts, foundPages)
 
 
     case PartialTaggedPostsResult(posts) =>
-      storePosts(posts, userId)
+      handlePosts(client, workers, posts, userId, foundPosts, foundPages, partial = true)
 
     case FinishedRetrievingTaggedPosts(posts) =>
-      log.info(s"Received tagged posts for user: $userId")
-      storePosts(posts, userId)
-      done(sender(), client, userId)
+      handlePosts(client, workers, posts, userId, foundPosts, foundPages)
 
     case Done(message) =>
       log.info(message)
-      done(sender(), client, userId)
+      verifyDone(client, userId, workers, Set(), Set(sender()), foundPosts, foundPages)
 
     case _ =>
       log.error("Fetcher worker received unexpected message for " + userId)
@@ -97,21 +90,20 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
   }
 
-  def verifyDone(client: ActorRef, userId: String) = {
-    if (workers.isEmpty) {
+  def verifyDone(client: ActorRef, userId: String, workers: Set[ActorRef], newWorkers: Set[ActorRef],
+                 oldWorkers: Set[ActorRef], foundPosts: Set[String], foundPages: Set[String]) = {
+    val newWorkersSet = workers ++ newWorkers -- oldWorkers
+    if (newWorkersSet.isEmpty) {
       client ! FinishedFetching(userId)
       statsHandler(userId) ! FinalStats(foundPosts, foundPages)
     }
+    context.become(awaitResults(client, userId, newWorkersSet, foundPosts, foundPages))
   }
 
-  private def done(worker: ActorRef, client: ActorRef, userId: String): Unit = {
-    workers -= worker
-    verifyDone(client, userId)
-  }
 
   override def postStop(): Unit = {
     super.postStop()
-    workers.foreach(r => r ! PoisonPill)
+    context.children.foreach(r => r ! PoisonPill)
   }
 
   def mongoSaver(userId: String): ActorRef = {
@@ -122,17 +114,25 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
     context.actorOf(StatsHandler.props(userId, database))
   }
 
-  private def storePosts(posts: Vector[Post], userId: String): Unit = {
-    val prunedPosts = prunePosts(posts)
-    foundPosts ++= prunedPosts.map(post => post.id).toSet
+  private def storePosts(prunedPosts: Vector[Post], userId: String): Unit = {
     statsHandler(userId) ! TransientPostsStats(prunedPosts.toList)
     mongoSaver(userId) ! SaveFBPost(prunedPosts.toList)
   }
 
-  private def storePages(pages: Vector[Page], userId: String): Unit = {
-    foundPages ++= pages.map(page => page.id).toSet
-    mongoSaver(userId) ! SaveFBPage(pages.toList)
+  private def handlePosts(client: ActorRef, workers: Set[ActorRef], posts: Vector[Post], userId: String,
+                          foundPosts: Set[String], foundPages: Set[String], partial: Boolean = false): Unit = {
+    val prunedPosts = prunePosts(posts)
+    storePosts(prunedPosts, userId)
+    val oldWorkers = if (partial) {
+      Set[ActorRef]()
+    } else {
+      Set(sender())
+    }
+    verifyDone(client, userId, workers, Set(), oldWorkers, foundPosts ++ prunedPosts.map(p => p.id), foundPages)
   }
 
+  private def storePages(pages: Vector[Page], userId: String): Unit = {
+    mongoSaver(userId) ! SaveFBPage(pages.toList)
+  }
 }
 

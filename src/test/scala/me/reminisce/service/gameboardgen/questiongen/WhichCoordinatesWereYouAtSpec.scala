@@ -3,20 +3,19 @@ package me.reminisce.service.gameboardgen.questiongen
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
-import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.{FBLocation, FBPlace, FBPost}
 import me.reminisce.service.gameboardgen.GameboardEntities.{GeolocationQuestion, TextPostSubject}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWereYouAtSpec") {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+class WhichCoordinatesWereYouAtSpec extends QuestionTester("WhichCoordinatesWereYouAtSpec") {
 
   val userId = "TestUserWhichCoordinatesWereYouAt"
 
@@ -65,22 +64,18 @@ class WhichCoordinatesWereYouAtSpec extends DatabaseTester("WhichCoordinatesWere
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
 
-      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
-      assert(finishedCreation != null)
-      assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
+      checkFinished[GeolocationQuestion](testProbe) {
+        question =>
+          checkSubject[TextPostSubject](question.subject) {
+            subject =>
+              val answer = question.answer
 
-      val question = finishedCreation.asInstanceOf[FinishedQuestionCreation].question
-      assert(question.isInstanceOf[GeolocationQuestion])
+              assert(subject.text == fbPost.message.getOrElse(""))
 
-      assert(question.asInstanceOf[GeolocationQuestion].subject.isDefined)
-      val subject = question.asInstanceOf[GeolocationQuestion].subject.get
-      val answer = question.asInstanceOf[GeolocationQuestion].answer
-
-      assert(subject.isInstanceOf[TextPostSubject])
-      assert(subject.asInstanceOf[TextPostSubject].text == fbPost.message.getOrElse(""))
-
-      assert(answer.latitude == latitude)
-      assert(answer.longitude == longitude)
+              assert(answer.latitude == latitude)
+              assert(answer.longitude == longitude)
+          }
+      }
     }
   }
 

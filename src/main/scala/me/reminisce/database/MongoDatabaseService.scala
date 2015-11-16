@@ -10,16 +10,12 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONInteger}
 import reactivemongo.core.commands.GetLastError
 
-import scala.util.{Failure, Success}
-
 object MongoDatabaseService {
   val fbPagesCollection = "fbPages"
   val fbPageLikesCollection = "fbPageLikes"
-  val fbTaggedPostsCollection = "fbTaggedPosts"
   val fbPostsCollection = "fbPosts"
   val lastFetchedCollection = "lastFetched"
   val userStatisticsCollection = "userStatistics"
-  val postQuestionsCollection = "postQuestions"
   val itemsStatsCollection = "itemsStats"
 
   val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
@@ -30,8 +26,6 @@ object MongoDatabaseService {
   case class SaveFBPage(pages: List[Page])
 
   case class SaveFBPost(posts: List[Post])
-
-  case class SaveFBTaggedPost(posts: List[Post])
 
   case class SaveLastFetchedTime()
 
@@ -86,8 +80,6 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
       saveFBPagesToDB(pages)
     case SaveFBPost(posts) =>
       saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbPostsCollection))
-    case SaveFBTaggedPost(posts) =>
-      saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbTaggedPostsCollection))
     case SaveLastFetchedTime =>
       saveLastFetchTime(db[BSONCollection](MongoDatabaseService.lastFetchedCollection))
     case any => log.error(s"MongoDB Service received unexpected message : $any")
@@ -99,15 +91,13 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     pages.foreach { p =>
       val query = BSONDocument("pageId" -> p.id)
-      fbPageCollection.update(query, pageToFBPage(p), safeLastError, upsert = true).onComplete {
-        case Success(le) => log.error(s"TEST DEBUG PRINT : finished with success : $le")
-        case Failure(e) => log.error(s"TEST DEBUG PRINT : finished with error : $e")
+      fbPageCollection.update(query, pageToFBPage(p), safeLastError, upsert = true).onFailure {
+        case e => log.error(s"TEST DEBUG PRINT : finished with error : $e")
       }
 
       val query2 = BSONDocument("userId" -> userId, "pageId" -> p.id)
-      fbPageLikeCollection.update(query2, pageToFBPageLike(p, userId), safeLastError, upsert = true).onComplete {
-        case Success(le) => log.error(s"TEST DEBUG PRINT : finished with success : $le")
-        case Failure(e) => log.error(s"TEST DEBUG PRINT : finished with error : $e")
+      fbPageLikeCollection.update(query2, pageToFBPageLike(p, userId), safeLastError, upsert = true).onFailure {
+        case e => log.error(s"TEST DEBUG PRINT : finished with error : $e")
       }
     }
   }
@@ -117,9 +107,8 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     import scala.concurrent.ExecutionContext.Implicits.global
     posts.foreach { p =>
       val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
-      collection.update(selector, postToFBPost(p, userId), safeLastError, upsert = true).onComplete {
-        case Success(le) => log.error(s"TEST DEBUG PRINT : finished with success : $le")
-        case Failure(e) => log.error(s"TEST DEBUG PRINT : finished with error : $e")
+      collection.update(selector, postToFBPost(p, userId), safeLastError, upsert = true).onFailure {
+        case e => log.error(s"TEST DEBUG PRINT : finished with error : $e")
       }
     }
   }
@@ -131,9 +120,8 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
 
     val update = BSONDocument("userId" -> userId, "date" -> time)
 
-    collection.update(selector, update, safeLastError, upsert = true).onComplete {
-      case Success(le) => log.error(s"TEST DEBUG PRINT : finished with success : $le")
-      case Failure(e) => log.error(s"TEST DEBUG PRINT : finished with error : $e")
+    collection.update(selector, update, safeLastError, upsert = true).onFailure {
+      case e => log.error(s"TEST DEBUG PRINT : finished with error : $e")
     }
   }
 

@@ -4,20 +4,19 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import com.github.nscala_time.time.Imports._
-import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities.FBPost
 import me.reminisce.service.gameboardgen.GameboardEntities.{TextPostSubject, TimelineQuestion}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhenDidYouShareThisPostSpec extends DatabaseTester("WhenDidYouShareThisPostSpec") {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+class WhenDidYouShareThisPostSpec extends QuestionTester("WhenDidYouShareThisPostSpec") {
 
   val userId = "TestUserWhenDidYouShareThisPost"
 
@@ -49,21 +48,15 @@ class WhenDidYouShareThisPostSpec extends DatabaseTester("WhenDidYouShareThisPos
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
 
-      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
-      assert(finishedCreation != null)
-      assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
-
-      val question = finishedCreation.asInstanceOf[FinishedQuestionCreation].question
-      assert(question.isInstanceOf[TimelineQuestion])
-
-      assert(question.asInstanceOf[TimelineQuestion].subject.isDefined)
-      val subject = question.asInstanceOf[TimelineQuestion].subject.get
-      val answer = question.asInstanceOf[TimelineQuestion].answer
-
-      assert(subject.isInstanceOf[TextPostSubject])
-      assert(subject.asInstanceOf[TextPostSubject].text == fbPost.message.getOrElse(""))
-
-      assert(postedTime == answer)
+      checkFinished[TimelineQuestion](testProbe) {
+        question =>
+          checkSubject[TextPostSubject](question.subject) {
+            subject =>
+              val answer = question.answer
+              assert(subject.text == fbPost.message.getOrElse(""))
+              assert(postedTime == answer)
+          }
+      }
     }
   }
 

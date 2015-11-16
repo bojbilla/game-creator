@@ -8,6 +8,7 @@ import com.github.nscala_time.time.Imports._
 import com.typesafe.config.ConfigFactory
 import me.reminisce.service.ApplicationConfiguration
 import spray.can.Http
+import sun.misc.{Signal, SignalHandler}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -32,8 +33,19 @@ object Server extends App {
   // start a new HTTP server on port 9900 with our service actor as the handler
   IO(Http) ! Http.Bind(service, interface = hostName, port = port)
 
-  // This allows to gracefully shutdown the server
-  sys.addShutdownHook {
+  Signal.handle(new Signal("INT"), new SignalHandler() {
+    def handle(sig: Signal) {
+      shutdown()
+    }
+  })
+
+  Signal.handle(new Signal("TERM"), new SignalHandler() {
+    def handle(sig: Signal) {
+      shutdown()
+    }
+  })
+
+  private def shutdown(): Unit = {
     println("System is shutting down...")
     IO(Http) ! Http.Unbind(Duration(10, TimeUnit.SECONDS))
     system.shutdown()

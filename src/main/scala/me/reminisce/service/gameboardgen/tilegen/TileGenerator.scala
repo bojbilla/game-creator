@@ -2,7 +2,6 @@ package me.reminisce.service.gameboardgen.tilegen
 
 import akka.actor.{ActorRef, PoisonPill, Props}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
-import me.reminisce.service.gameboardgen.GameboardEntities.SpecificQuestionType._
 import me.reminisce.service.gameboardgen.GameboardEntities.{GameQuestion, _}
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator._
 import me.reminisce.service.gameboardgen.questiongen._
@@ -24,25 +23,27 @@ object TileGenerator {
 }
 
 class TileGenerator(db: DefaultDB) extends QuestionGenerator {
-  var questions = List[GameQuestion]()
-  var questionPossibilities: List[SpecificQuestionType] = List()
-  var counter = 0
   val limit = 10
 
   def receive = {
 
     case CreateTile(userId, choices, tpe) =>
+      val client = sender()
       choices.foreach {
-        choice =>
-          val generator = questionInference(choice)
-          if (choice._1 == Order) {
-            generator ! CreateQuestionWithMultipleItems(userId, choice._3.map(_._1))
+        case (questionKind, dataType, itemIdTypes) =>
+          val generator = questionInference((questionKind, dataType, itemIdTypes))
+          if (questionKind == Order) {
+            generator ! CreateQuestionWithMultipleItems(userId, itemIdTypes.map { case (itemId, itemType) => itemId })
           } else {
-            generator ! CreateQuestion(userId, choice._3.head._1)
+            itemIdTypes.headOption match {
+              case Some((itemId, itemType)) =>
+                generator ! CreateQuestion(userId, itemId)
+              case None =>
+                client ! FailedTileCreation(s"Choice had no itemId.")
+            }
           }
       }
-      val client = sender()
-      context.become(awaitingQuestions(client, userId, tpe))
+      context.become(awaitingQuestions(client, userId, tpe, List[GameQuestion]()))
   }
 
   def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): ActorRef = {
@@ -51,17 +52,21 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
       case Order =>
         tpe match {
           case LikeNumber =>
-            if (item.head._2 == "Post")
-              context.actorOf(OrderByPostLikesNumber.props(db))
-            else
-              context.actorOf(OrderByPageLikes.props(db))
+            item.headOption match {
+              case Some((_, "Post")) =>
+                context.actorOf(OrderByPostLikesNumber.props(db))
+              case _ =>
+                context.actorOf(OrderByPageLikes.props(db))
+            }
           case PostCommentsNumber =>
             context.actorOf(OrderByPostCommentsNumber.props(db))
           case Time =>
-            if (item.head._2 == "Post")
-              context.actorOf(OrderByPostTime.props(db))
-            else
-              context.actorOf(OrderByPageLikeTime.props(db))
+            item.headOption match {
+              case Some((_, "Post")) =>
+                context.actorOf(OrderByPostTime.props(db))
+              case _ =>
+                context.actorOf(OrderByPageLikeTime.props(db))
+            }
         }
       case MultipleChoice =>
         tpe match {
@@ -73,10 +78,10 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
             context.actorOf(WhichPageDidYouLike.props(db))
         }
       case Timeline =>
-        item.head._2 match {
-          case "Post" =>
+        item.headOption match {
+          case Some((_, "Post")) =>
             context.actorOf(WhenDidYouShareThisPost.props(db))
-          case "Page" =>
+          case _ =>
             context.actorOf(WhenDidYouLikeThisPage.props(db))
         }
       case Geolocation =>
@@ -84,13 +89,16 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
     }
   }
 
-  def awaitingQuestions(client: ActorRef, userId: String, `type`: QuestionKind): Receive = {
+  def awaitingQuestions(client: ActorRef, userId: String, qType: QuestionKind, questions: List[GameQuestion]): Receive = {
     case FinishedQuestionCreation(q) =>
-      questions = q :: questions
+      val newQuestions = q :: questions
       sender() ! PoisonPill
-      if (questions.length >= 3) {
-        val tile = Tile(`type`, questions(0), questions(1), questions(2))
-        client ! FinishedTileCreation(userId, tile)
+      newQuestions match {
+        case q1 :: q2 :: q3 :: qis =>
+          val tile = Tile(qType, q1, q2, q3)
+          client ! FinishedTileCreation(userId, tile)
+        case _ =>
+          context.become(awaitingQuestions(client, userId, qType, newQuestions))
       }
 
     case MongoDBError(message) =>
@@ -102,5 +110,8 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
       log.error(s"Not enough data : $message")
       sender() ! PoisonPill
       client ! FailedTileCreation(s"Not enough data : $message")
+
+    case any =>
+      log.error(s"Tile generator received an unknown messgae : $any.")
   }
 }

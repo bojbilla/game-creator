@@ -19,10 +19,7 @@ import spray.routing._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object GameCreatorService {
-
-
-}
+object GameCreatorService
 
 trait GameCreatorServiceActor extends GameCreatorService {
   def actorRefFactory = context

@@ -50,10 +50,14 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
                         }
                         Possibility(pge.name.get, url, "Page", Some(pge.pageId))
                     }
-                    val answer = possibilities.head
-                    val shuffled = Random.shuffle(possibilities)
-                    val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhichPageDidYouLike, None, shuffled, shuffled.indexOf(answer))
-                    client ! FinishedQuestionCreation(gameQuestion)
+                    possibilities.headOption match {
+                      case Some(answer) =>
+                        val shuffled = Random.shuffle(possibilities)
+                        val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhichPageDidYouLike, None, shuffled, shuffled.indexOf(answer))
+                        client ! FinishedQuestionCreation(gameQuestion)
+                      case None =>
+                        client ! NotEnoughData(s"This should not happen, but the possibilities were empty.")
+                    }
                   }
                 case Failure(e) =>
                   client ! MongoDBError(s"${e.getMessage}")

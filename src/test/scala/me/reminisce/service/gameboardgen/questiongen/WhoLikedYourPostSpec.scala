@@ -3,21 +3,20 @@ package me.reminisce.service.gameboardgen.questiongen
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
-import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.mongodb.StatsEntities.UserStats
 import me.reminisce.service.gameboardgen.GameboardEntities.{MultipleChoiceQuestion, TextPostSubject}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, NotEnoughData}
+import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.default.BSONCollection
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
 
   val userId = "TestUserWhoLikedYourPost"
 
@@ -117,20 +116,21 @@ class WhoLikedYourPostSpec extends DatabaseTester("WhichPageDidYouLikeSpec") {
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(freshUser, itemId))
 
-      val finishedCreation = testProbe.receiveOne(Duration(10, TimeUnit.SECONDS))
-      assert(finishedCreation != null)
-      assert(finishedCreation.isInstanceOf[FinishedQuestionCreation])
-
-      val question = finishedCreation.asInstanceOf[FinishedQuestionCreation].question
-      assert(question.isInstanceOf[MultipleChoiceQuestion])
-
-      assert(question.asInstanceOf[MultipleChoiceQuestion].subject.isDefined)
-      val subject = question.asInstanceOf[MultipleChoiceQuestion].subject.get
-      val answer = question.asInstanceOf[MultipleChoiceQuestion].answer
-      val choices = question.asInstanceOf[MultipleChoiceQuestion].choices
-      assert(subject.isInstanceOf[TextPostSubject])
-      assert(subject.asInstanceOf[TextPostSubject].text == fbPost.message.getOrElse(""))
-      assert(choices(answer).name == likers.head.userName)
+      checkFinished[MultipleChoiceQuestion](testProbe) {
+        question =>
+          checkSubject[TextPostSubject](question.subject) {
+            subject =>
+              val answer = question.answer
+              val choices = question.choices
+              assert(subject.text == fbPost.message.getOrElse(""))
+              likers.headOption match {
+                case Some(liker) =>
+                  assert(choices(answer).name == liker.userName)
+                case None =>
+                  fail("No liker.")
+              }
+          }
+      }
     }
 
   }
