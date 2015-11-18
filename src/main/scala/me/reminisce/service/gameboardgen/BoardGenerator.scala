@@ -21,22 +21,6 @@ object BoardGenerator {
 
   case class FinishedBoardGeneration(tiles: List[Tile])
 
-}
-
-abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Actor with ActorLogging {
-
-  def createGame(client: ActorRef): Unit
-
-  def receive = {
-    case InitBoardCreation() =>
-      val client = sender()
-      createGame(client)
-    case any =>
-      val client = sender()
-      client ! FailedBoardGeneration(s"Inconsistent message passing.")
-      log.error(s"Received any : $any")
-  }
-
   def drawItemsAtRandomFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int = 1): List[T] = {
     if (quantity > 0 && bagSizes.sum > 0) {
       val updatedBagSizes = bagSizes.map {
@@ -110,12 +94,15 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
 
   def drawUniformlyFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int = 1): List[T] = {
     if (quantity > 0) {
+      val prunedSizesTypes = bagSizes.zip(bagTypes).filter { case (size, tpe) => size >= drawnQuantity }
+      val prunedSizes = prunedSizesTypes.map { case (size, tpe) => size }
+      val prunedTypes = prunedSizesTypes.map { case (size, tpe) => tpe }
       (for {
-        picked <- bagTypes.headOption
-        sizesHead <- bagSizes.headOption
+        picked <- prunedTypes.headOption
+        sizesHead <- prunedSizes.headOption
       } yield {
-        if (sizesHead > 1) {
-          (bagSizes.tail :+ (sizesHead - 1), bagTypes.tail :+ picked)
+        if (sizesHead > drawnQuantity) {
+          (prunedSizes.tail :+ (sizesHead - drawnQuantity), prunedTypes.tail :+ picked)
         } else {
           //it is equal then
           (bagSizes.tail, bagTypes.tail)
@@ -139,8 +126,25 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     }
   }
 
-  def findOne[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (Option[T] => Unit))
-                (implicit reader: BSONDocumentReader[T]): Unit = {
+}
+
+abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor with ActorLogging {
+
+  def createGame(client: ActorRef): Unit
+
+  def receive = {
+    case InitBoardCreation() =>
+      val client = sender()
+      createGame(client)
+    case any =>
+      val client = sender()
+      client ! FailedBoardGeneration(s"Inconsistent message passing.")
+      log.error(s"Received any : $any")
+  }
+
+
+  protected def findOne[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (Option[T] => Unit))
+                          (implicit reader: BSONDocumentReader[T]): Unit = {
     collection.find(selector).one[T].onComplete {
       case Success(opt) => f(opt)
       case Failure(e) =>
@@ -148,8 +152,8 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     }
   }
 
-  def findSome[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
-                 (implicit reader: BSONDocumentReader[T]): Unit = {
+  protected def findSome[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
+                           (implicit reader: BSONDocumentReader[T]): Unit = {
     collection.find(selector).cursor[T].collect[List]().onComplete {
       case Success(list) => f(list)
       case Failure(e) =>
@@ -157,10 +161,10 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     }
   }
 
-  def findSomeRandom[T](db: DefaultDB,
-                        collection: BSONCollection,
-                        query: BSONDocument, quantity: Int, client: ActorRef)(f: (List[T] => Unit))
-                       (implicit reader: BSONDocumentReader[T]): Unit = {
+  protected def findSomeRandom[T](db: DefaultDB,
+                                  collection: BSONCollection,
+                                  query: BSONDocument, quantity: Int, client: ActorRef)(f: (List[T] => Unit))
+                                 (implicit reader: BSONDocumentReader[T]): Unit = {
     val futureCount = db.command(Count(collection.name, Some(query)))
     futureCount.flatMap { count =>
       val skip = if (count - quantity > 0) Random.nextInt(count - quantity) else 0
@@ -172,8 +176,8 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     }
   }
 
-  def findSomeRandom[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
-                       (implicit reader: BSONDocumentReader[T]): Unit = {
+  protected def findSomeRandom[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
+                                 (implicit reader: BSONDocumentReader[T]): Unit = {
     collection.find(selector).cursor[T].collect[List]().onComplete {
       case Success(list) => f(Random.shuffle(list))
       case Failure(e) =>
@@ -181,7 +185,7 @@ abstract class BoardGenerator(database: DefaultDB, user_id: String) extends Acto
     }
   }
 
-  def generateTiles(generatedTuples: List[(QuestionKind, DataType, List[(String, String)])], client: ActorRef):
+  protected def generateTiles(generatedTuples: List[(QuestionKind, DataType, List[(String, String)])], client: ActorRef):
   List[(QuestionKind, List[(QuestionKind, DataType, List[(String, String)])])] = {
     if (generatedTuples.length > 27) {
       client ! FailedBoardGeneration(s"Too many tuples generated ${generatedTuples.length}")

@@ -3,7 +3,7 @@ package me.reminisce.service.gameboardgen
 import akka.actor.ActorRef
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.mongodb.StatsEntities.UserStats
-import me.reminisce.service.gameboardgen.BoardGenerator.FailedBoardGeneration
+import me.reminisce.service.gameboardgen.BoardGenerator._
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.stats.StatsDataTypes.DataType
 import reactivemongo.api.DefaultDB
