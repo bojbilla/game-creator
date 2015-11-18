@@ -6,7 +6,6 @@ import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.{DatabaseTestHelper, DatabaseTester}
 import me.reminisce.server.domain.Domain.InternalError
 import me.reminisce.service.gameboardgen.GameGenerator.CreateBoard
-import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind.QuestionKind
 import me.reminisce.service.gameboardgen.GameboardEntities._
 import org.scalatest.DoNotDiscover
 
@@ -33,7 +32,7 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
         i =>
           val generator = TestActorRef(GameGenerator.props(db, userId))
           val testProbe = TestProbe()
-          testProbe.send(generator, CreateBoard("Wrong_access_token", "random"))
+          testProbe.send(generator, CreateBoard("Wrong_access_token", "uniform"))
           val board = Option(testProbe.receiveOne(Duration(10, TimeUnit.SECONDS)))
           board match {
             case Some(InternalError(message)) =>
@@ -42,36 +41,42 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
               assert(id == userId)
               tiles.foreach {
                 tile =>
-                  tile.question1 match {
-                    case TimelineQuestion(uid, kind: QuestionKind, tpe, subject, answer, min, max, default, unit, step, threshold) =>
-                      subject match {
-                        case Some(s) => subjects += s
-                        case None => fail("Subject not defined")
-                      }
-                    case MultipleChoiceQuestion(uid, kind, tpe, subject, choices, answer) =>
-                      subject match {
-                        case Some(s) => subjects += s
-                        case None => fail("Subject not defined")
-                      }
-                    case GeolocationQuestion(uid, kind, tpe, subject, answer, defaultLocation, range) =>
-                      subject match {
-                        case Some(s) => subjects += s
-                        case None => fail("Subject not defined")
-                      }
-                    case OrderQuestion(uid, kind, tpe, subject, choices, answer) =>
-                      subject match {
-                        case Some(s) =>
-                          fail("Order question should not have a subject")
-                        case None =>
-                      }
-
-                  }
+                  addSubjectFromQuestion(subjects, tile.question1)
+                  addSubjectFromQuestion(subjects, tile.question2)
+                  addSubjectFromQuestion(subjects, tile.question3)
               }
             case any =>
               println(s"Received : $any")
           }
       }
-      assert(subjects.size > 55)
+      assert(subjects.size > 120)
+    }
+  }
+
+  private def addSubjectFromQuestion(subjects: mutable.Set[Subject], question: GameQuestion): Unit = {
+    question match {
+      case TimelineQuestion(uid, kind, tpe, subject, answer, min, max, default, unit, step, threshold) =>
+        subject match {
+          case Some(s) => subjects += s
+          case None => fail("Subject not defined")
+        }
+      case MultipleChoiceQuestion(uid, kind, tpe, subject, choices, answer) =>
+        subject match {
+          case Some(s) => subjects += s
+          case None => fail("Subject not defined")
+        }
+      case GeolocationQuestion(uid, kind, tpe, subject, answer, defaultLocation, range) =>
+        subject match {
+          case Some(s) => subjects += s
+          case None => fail("Subject not defined")
+        }
+      case OrderQuestion(uid, kind, tpe, subject, choices, answer) =>
+        subject match {
+          case Some(s) =>
+            fail("Order question should not have a subject")
+          case None =>
+        }
+
     }
   }
 

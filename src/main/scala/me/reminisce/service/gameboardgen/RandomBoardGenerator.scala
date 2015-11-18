@@ -131,15 +131,16 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String) extends
 
   protected def sendOrders(client: ActorRef, orders: List[(QuestionKind, DataType, List[(String, String)])]): Unit = {
     val tiles = generateTiles(orders, client)
-    if (tiles.length > 9) {
-      client ! FailedBoardGeneration(s"Too many tiles generated ! (${tiles.length})")
-    }
-    context.become(awaitFeedBack(client, List()))
-    tiles.foreach {
-      case (kind, choices) =>
-        val worker = context.actorOf(TileGenerator.props(database))
-        val req = CreateTile(userId, choices, kind)
-        worker ! req
+    if (tiles.length != 9) {
+      client ! FailedBoardGeneration(s"Number of tiles in invalid : ${tiles.length}.")
+    } else {
+      context.become(awaitFeedBack(client, List()))
+      tiles.foreach {
+        case (kind, choices) =>
+          val worker = context.actorOf(TileGenerator.props(database))
+          val req = CreateTile(userId, choices, kind)
+          worker ! req
+      }
     }
   }
 
