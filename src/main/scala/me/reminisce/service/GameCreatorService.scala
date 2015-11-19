@@ -1,6 +1,7 @@
 package me.reminisce.service
 
 import akka.actor._
+import me.reminisce.BuildInfo
 import me.reminisce.database.DeletionService
 import me.reminisce.database.DeletionService.{ClearDatabase, RemoveUser}
 import me.reminisce.fetcher.FetcherService
@@ -12,7 +13,7 @@ import reactivemongo.api.DefaultDB
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
 import spray.http.MediaTypes._
-import spray.http.{HttpRequest, HttpResponse}
+import spray.http.{HttpRequest, HttpResponse, StatusCodes}
 import spray.httpx.Json4sSupport
 import spray.routing._
 
@@ -52,6 +53,14 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
         parameters("user_id", "access_token", "strategy" ? "choose") {
           (userId: String, accessToken: String, strategy: String) =>
             createBoard(CreateBoard(accessToken, strategy), userId)
+        }
+      }
+    } ~ path("info") {
+      get {
+        parameters("UNUSED" ? "") {
+          //ugly fix
+          (UNUSED: String) =>
+            complete(HttpResponse(status = StatusCodes.OK, entity = BuildInfo.toJson))
         }
       }
     } ~ path("removeUser") {

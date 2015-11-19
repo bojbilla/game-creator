@@ -1,11 +1,11 @@
 package me.reminisce.database
 
 import akka.actor._
+import me.reminisce.ApplicationConfiguration
 import me.reminisce.database.DeletionService.{ClearDatabase, RemoveExtraLikes, RemoveUser}
 import me.reminisce.database.DeletionWorker.{DeleteSelectorMatch, DeletionResult, DropCollection}
 import me.reminisce.server.domain.Domain.{ActionForbidden, Done, InternalError}
 import me.reminisce.server.domain.RestMessage
-import me.reminisce.service.ApplicationConfiguration
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.MongoDBError
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection

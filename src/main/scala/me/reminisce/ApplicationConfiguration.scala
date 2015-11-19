@@ -1,4 +1,4 @@
-package me.reminisce.service
+package me.reminisce
 
 import scala.util.Properties._
 

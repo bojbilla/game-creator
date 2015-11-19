@@ -36,7 +36,23 @@ libraryDependencies ++= {
 
 Defaults.itSettings
 
-lazy val `game-creator` = project.in(file(".")).configs(IntegrationTest)
+lazy val `game-creator` = project.in(file(".")).configs(IntegrationTest).
+  enablePlugins(BuildInfoPlugin).
+  settings(
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "me.reminisce"
+  )
+
+buildInfoOptions += BuildInfoOption.ToJson
+
+buildInfoKeys ++= Seq[BuildInfoKey] (
+  BuildInfoKey.action("buildTime") {
+    System.currentTimeMillis
+  },
+  BuildInfoKey.action("commitHash") {
+    Process("git rev-parse HEAD").lines.head
+  }
+)
 
 resolvers ++= Seq("spray" at "http://repo.spray.io/")
 
@@ -47,6 +63,7 @@ resolvers ++= Seq("Sonatype Snapshots" at "https://oss.sonatype.org/content/repo
 resolvers ++= Seq("Typesafe repository releases" at "http://repo.typesafe.com/typesafe/releases/")
 
 assemblyJarName in assembly := "game-creator.jar"
+
 
 coverageHighlighting := false
 parallelExecution in Test := false
