@@ -18,8 +18,8 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
 
   case class FBPageLikeWithoutDate(id: Option[BSONObjectID], userId: String, pageId: String, likeTime: String)
 
-  // does not conflict with live mongo instances
-  private val port = 28000
+  // this conflicts with live mongo instances
+  private val port = 27017
   private val mongoProps: MongodProps = mongoStart(port = port)
   private lazy val driver: MongoDriver = new MongoDriver
   private lazy val connection: MongoConnection = driver.connection(s"localhost:$port" :: Nil)
@@ -99,4 +99,3 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
     storeObjects(db, "itemsStats", itemsStats)
   }
 }
-

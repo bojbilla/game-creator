@@ -3,13 +3,19 @@ package me.reminisce.service.gameboardgen
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
-import me.reminisce.database.{DatabaseTestHelper, DatabaseTester}
+import me.reminisce.database.{DatabaseTestHelper, DatabaseTester, MongoDatabaseService}
+import me.reminisce.mongodb.MongoDBEntities.LastFetched
 import me.reminisce.server.domain.Domain.InternalError
 import me.reminisce.service.gameboardgen.GameGenerator.CreateBoard
 import me.reminisce.service.gameboardgen.GameboardEntities._
+import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
+import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.BSONInteger
+import reactivemongo.core.commands.GetLastError
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.io.Source
 
@@ -27,6 +33,8 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
           fail("UserId is not defined.")
       }
       DatabaseTestHelper.populateWithTestData(db, testDb)
+      val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
+      db[BSONCollection](MongoDatabaseService.lastFetchedCollection).save(LastFetched(None, userId, DateTime.now), safeLastError)
       val subjects = mutable.Set[Subject]()
       (0 until 10).foreach {
         i =>

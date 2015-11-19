@@ -1,6 +1,7 @@
 package me.reminisce.database
 
 import me.reminisce.fetcher.FetcherServiceSpec
+import me.reminisce.service.ServerServiceActorSpec
 import me.reminisce.service.gameboardgen.GameboardGeneratorSpec
 import me.reminisce.service.gameboardgen.questiongen._
 import me.reminisce.service.stats.StatsHandlerSpec
@@ -12,7 +13,7 @@ class DatabaseTests extends Suites(new OrderByPageLikesSpec, new OrderByPageLike
   new OrderByPostLikesNumberSpec, new OrderByPostTimeSpec, new WhenDidYouLikeThisPageSpec,
   new WhenDidYouShareThisPostSpec, new WhichCoordinatesWereYouAtSpec, new WhichPageDidYouLikeSpec, new WhoLikedYourPostSpec,
   new WhoMadeThisCommentOnYourPostSpec, new FetcherServiceSpec, new MongoDatabaseServiceSpec, new DeletionServiceSpec,
-  new StatsHandlerSpec, new GameboardGeneratorSpec)
+  new StatsHandlerSpec, new GameboardGeneratorSpec, new ServerServiceActorSpec)
 with BeforeAndAfterAll {
 
   override def afterAll() = {
