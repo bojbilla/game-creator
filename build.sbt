@@ -43,12 +43,10 @@ lazy val `game-creator` = project.in(file(".")).configs(IntegrationTest).
     buildInfoPackage := "me.reminisce"
   )
 
+buildInfoOptions += BuildInfoOption.BuildTime
 buildInfoOptions += BuildInfoOption.ToJson
 
 buildInfoKeys ++= Seq[BuildInfoKey] (
-  BuildInfoKey.action("buildTime") {
-    System.currentTimeMillis
-  },
   BuildInfoKey.action("commitHash") {
     Process("git rev-parse HEAD").lines.head
   }

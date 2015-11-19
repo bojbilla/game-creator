@@ -13,7 +13,7 @@ import reactivemongo.api.DefaultDB
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
 import spray.http.MediaTypes._
-import spray.http.{HttpRequest, HttpResponse, StatusCodes}
+import spray.http._
 import spray.httpx.Json4sSupport
 import spray.routing._
 
@@ -60,7 +60,7 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
         parameters("UNUSED" ? "") {
           //ugly fix
           (UNUSED: String) =>
-            complete(HttpResponse(status = StatusCodes.OK, entity = BuildInfo.toJson))
+            complete(BuildInfo.toMap)
         }
       }
     } ~ path("removeUser") {
