@@ -77,6 +77,8 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
           case None =>
         }
 
+      case _ =>
+        fail("Unsupported question type.")
     }
   }
 
