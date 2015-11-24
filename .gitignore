@@ -23,6 +23,10 @@ project/plugins/project/
 .DS-Store
 .DS_Store
 
+#Python scripts
+
+*__pycache__*
+
 #Deployment
 deployment/*.jar
 deployment/data/*
