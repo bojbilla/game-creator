@@ -12,7 +12,7 @@ import reactivemongo.bson.BSONDocument
 
 object UniformBoardGenerator
 
-class UniformBoardGenerator(database: DefaultDB, userId: String) extends RandomBoardGenerator(database, userId) {
+class UniformBoardGenerator(database: DefaultDB, userId: String) extends RandomBoardGenerator(database, userId, "uniform") {
 
   def createGame(client: ActorRef): Unit = {
     val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)

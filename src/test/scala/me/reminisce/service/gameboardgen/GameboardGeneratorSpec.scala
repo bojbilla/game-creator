@@ -45,7 +45,7 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
           board match {
             case Some(InternalError(message)) =>
               fail(s"Board creation failed with message : $message")
-            case Some(Board(id, tiles, isTokenStale)) =>
+            case Some(Board(id, tiles, isTokenStale, strategy)) =>
               assert(id == userId)
               tiles.foreach {
                 tile =>

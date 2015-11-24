@@ -131,6 +131,6 @@ object GameboardEntities {
                   question2: GameQuestion,
                   question3: GameQuestion) extends RestMessage
 
-  case class Board(userId: String, tiles: List[Tile], isTokenStale: Boolean) extends RestMessage
+  case class Board(userId: String, tiles: List[Tile], isTokenStale: Boolean, strategy: String) extends RestMessage
 
 }

@@ -18,7 +18,7 @@ import scala.util.Random
 
 object RandomBoardGenerator
 
-abstract class RandomBoardGenerator(database: DefaultDB, userId: String) extends BoardGenerator(database, userId) {
+abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strategy: String) extends BoardGenerator(database, userId) {
 
   val orderingItemsNumber = QuestionGenerationConfig.orderingItemsNumber
 
@@ -27,7 +27,7 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String) extends
       val newTiles = tile :: tiles
       if (newTiles.length == 9) {
         val shuffledTiles = Random.shuffle(newTiles)
-        client ! FinishedBoardGeneration(shuffledTiles)
+        client ! FinishedBoardGeneration(shuffledTiles, strategy)
       } else {
         context.become(awaitFeedBack(client, newTiles))
       }

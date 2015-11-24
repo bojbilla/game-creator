@@ -14,7 +14,7 @@ import scala.util.Random
 
 object FullRandomBoardGenerator
 
-class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends RandomBoardGenerator(database, userId) {
+class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends RandomBoardGenerator(database, userId, "random") {
 
   def createGame(client: ActorRef): Unit = {
     val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)

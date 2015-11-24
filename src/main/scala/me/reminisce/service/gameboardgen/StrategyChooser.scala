@@ -35,8 +35,8 @@ class StrategyChooser(database: DefaultDB, userId: String) extends BoardGenerato
   }
 
   def awaitFeedBack(client: ActorRef): Receive = {
-    case FinishedBoardGeneration(tiles) =>
-      client ! FinishedBoardGeneration(tiles)
+    case FinishedBoardGeneration(tiles, strat) =>
+      client ! FinishedBoardGeneration(tiles, "chooser/" + strat)
     case FailedBoardGeneration(message) =>
       client ! FailedBoardGeneration(message)
     case any =>
