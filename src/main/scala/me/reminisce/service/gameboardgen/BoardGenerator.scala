@@ -19,46 +19,53 @@ object BoardGenerator {
 
   case class FailedBoardGeneration(message: String)
 
-  case class FinishedBoardGeneration(tiles: List[Tile])
+  case class FinishedBoardGeneration(tiles: List[Tile], strategy: String)
 
   def drawItemsAtRandomFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int = 1): List[T] = {
-    if (quantity > 0 && bagSizes.sum > 0) {
-      val updatedBagSizes = bagSizes.map {
-        s =>
-          if (s >= drawnQuantity) {
-            s
-          } else {
-            0
+
+    @tailrec
+    def tailRecDraw(bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int, acc: List[T] = Nil): List[T] = {
+      if (quantity > 0 && bagSizes.sum > 0) {
+        val updatedBagSizes = bagSizes.map {
+          s =>
+            if (s >= drawnQuantity) {
+              s
+            } else {
+              0
+            }
+        }
+        val totalCount = updatedBagSizes.sum
+
+        if (totalCount > 0) {
+          updatedBagSizes match {
+            case head :: tail =>
+              val bagThresholds = formThresholds(List(head - 1), tail)
+              val selectedType = findFirstLessOrEqual(bagThresholds, bagTypes, Random.nextInt(totalCount))
+              val typePosition = bagTypes.indexOf(selectedType)
+
+              val newSizes = updatedBagSizes.indices.map {
+                i =>
+                  if (i == typePosition) {
+                    updatedBagSizes(i) - drawnQuantity
+                  } else {
+                    updatedBagSizes(i)
+                  }
+              }.toList
+
+              tailRecDraw(newSizes, bagTypes, quantity - 1, drawnQuantity, selectedType :: acc)
+            case Nil =>
+              acc
           }
-      }
-      val totalCount = updatedBagSizes.sum
-
-      if (totalCount > 0) {
-        updatedBagSizes match {
-          case head :: tail =>
-            val bagThresholds = formThresholds(List(head - 1), tail)
-            val selectedType = findFirstLessOrEqual(bagThresholds, bagTypes, Random.nextInt(totalCount))
-            val typePosition = bagTypes.indexOf(selectedType)
-
-            val newSizes = updatedBagSizes.indices.map {
-              i =>
-                if (i == typePosition) {
-                  updatedBagSizes(i) - drawnQuantity
-                } else {
-                  updatedBagSizes(i)
-                }
-            }.toList
-
-            selectedType :: drawItemsAtRandomFromBags[T](newSizes, bagTypes, quantity - 1)
-          case Nil =>
-            List()
+        } else {
+          acc
         }
       } else {
-        List()
+        acc
       }
-    } else {
-      List()
     }
+
+    tailRecDraw(bagSizes, bagTypes, quantity, drawnQuantity)
+
   }
 
   @tailrec
@@ -93,36 +100,49 @@ object BoardGenerator {
   }
 
   def drawUniformlyFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int = 1): List[T] = {
-    if (quantity > 0) {
-      val prunedSizesTypes = bagSizes.zip(bagTypes).filter { case (size, tpe) => size >= drawnQuantity }
-      val prunedSizes = prunedSizesTypes.map { case (size, tpe) => size }
-      val prunedTypes = prunedSizesTypes.map { case (size, tpe) => tpe }
-      (for {
-        picked <- prunedTypes.headOption
-        sizesHead <- prunedSizes.headOption
-      } yield {
-        if (sizesHead > drawnQuantity) {
-          (prunedSizes.tail :+ (sizesHead - drawnQuantity), prunedTypes.tail :+ picked)
-        } else {
-          //it is equal then
-          (bagSizes.tail, bagTypes.tail)
+
+    @tailrec
+    def tailRecDraw(bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int, acc : List[T] = Nil) : List[T] = {
+      if (quantity > 0) {
+        val prunedSizesTypes = bagSizes.zip(bagTypes).filter { case (size, tpe) => size >= drawnQuantity }
+        val prunedSizes = prunedSizesTypes.map { case (size, tpe) => size }
+        val prunedTypes = prunedSizesTypes.map { case (size, tpe) => tpe }
+        (for {
+          picked <- prunedTypes.headOption
+          sizesHead <- prunedSizes.headOption
+        } yield {
+          (sizesHead, picked)
+        }) match {
+          case Some((sizesHead, picked)) =>
+            if (sizesHead > drawnQuantity) {
+              val newBagSizes = prunedSizes.tail :+ (sizesHead - drawnQuantity)
+              val newBagTypes = prunedTypes.tail :+ picked
+              tailRecDraw(newBagSizes, newBagTypes, quantity - drawnQuantity, drawnQuantity, picked :: acc)
+            } else {
+              //it is equal then
+              val newBagSizes = bagSizes.tail
+              val newBagTypes = bagTypes.tail
+              tailRecDraw(newBagSizes, newBagTypes, quantity - drawnQuantity, drawnQuantity, picked :: acc)
+            }
+          case _ =>
+            acc
         }
-      } match {
-        case (newBagSizes, newBagTypes) =>
-          picked :: drawUniformlyFromBags[T](newBagSizes, newBagTypes, quantity - drawnQuantity)
-      }).getOrElse(Nil)
-    } else {
-      List()
+      } else {
+        acc
+      }
     }
+
+    tailRecDraw(bagSizes, bagTypes, quantity, drawnQuantity)
   }
 
-  def createBuckets[T](list: List[T], bucketSize: Int): List[List[T]] = {
+  @tailrec
+  def createBuckets[T](list: List[T], bucketSize: Int, acc: List[List[T]] = Nil): List[List[T]] = {
     if (list.size >= bucketSize) {
       list.splitAt(bucketSize) match {
-        case (left, right) => left :: createBuckets(right, bucketSize)
+        case (left, right) => createBuckets(right, bucketSize, left :: acc)
       }
     } else {
-      List()
+      acc
     }
   }
 
