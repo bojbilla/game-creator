@@ -15,24 +15,26 @@ object TimeQuestionGenerator {
     val weeksDiff = Weeks.weeksBetween(actualDate, currentTime).getWeeks
     val daysDiff = Days.daysBetween(actualDate, currentTime).getDays
 
-    val (stepSize, difference, unit) =
-      if (yearsDiff > 0) {
-        (1.year, yearsDiff, TimeUnit.Year)
-      } else if (monthsDiff > 0) {
-        (1.month, monthsDiff, TimeUnit.Month)
-      } else if (weeksDiff > 0) {
-        (1.week, weeksDiff, TimeUnit.Week)
-      } else {
-        (1.day, daysDiff, TimeUnit.Day)
-      }
 
-    //difference because for years, months, weeks etc... it can never be 0 ago
-    val maxStepsForward = List[Int](difference - 1, 4).min
-    val stepsForward = if (maxStepsForward > 0) Random.nextInt(maxStepsForward) else 0
+    val params = if (yearsDiff > 0) {
+      (1.year, yearsDiff, TimeUnit.Year)
+    } else if (monthsDiff > 0) {
+      (1.month, monthsDiff, TimeUnit.Month)
+    } else if (weeksDiff > 0) {
+      (1.week, weeksDiff, TimeUnit.Week)
+    } else {
+      (1.day, daysDiff, TimeUnit.Day)
+    }
+    params match {
+      case (stepSize, difference, unit) =>
+        //difference because for years, months, weeks etc... it can never be 0 ago
+        val maxStepsForward = List[Int](difference - 1, 4).min
+        val stepsForward = if (maxStepsForward > 0) Random.nextInt(maxStepsForward) else 0
 
-    val min = actualDate - stepSize.multipliedBy(4 - stepsForward)
-    val max = actualDate + stepSize.multipliedBy(stepsForward)
-    (min, max, unit)
+        val min = actualDate - stepSize.multipliedBy(4 - stepsForward)
+        val max = actualDate + stepSize.multipliedBy(stepsForward)
+        (min, max, unit)
+    }
   }
 }
 

@@ -15,6 +15,7 @@ import reactivemongo.bson.BSONDocument
 import reactivemongo.core.commands.Count
 
 import scala.annotation.tailrec
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
 object StatsHandler {
@@ -26,12 +27,13 @@ object StatsHandler {
   def props(userId: String, db: DefaultDB): Props =
     Props(new StatsHandler(userId, db))
 
-  private def addTypeToMap(typeAndCount: (String, Int), oldMap: Map[String, Int]): Map[String, Int] = {
-    if (oldMap.contains(typeAndCount._1)) {
-      oldMap.updated(typeAndCount._1, oldMap(typeAndCount._1) + typeAndCount._2)
-    } else {
-      oldMap.updated(typeAndCount._1, typeAndCount._2)
-    }
+  private def addTypeToMap(typeAndCount: (String, Int), oldMap: Map[String, Int]): Map[String, Int] = typeAndCount match {
+    case (tpe, count) =>
+      if (oldMap.contains(tpe)) {
+        oldMap.updated(tpe, oldMap(tpe) + count)
+      } else {
+        oldMap.updated(tpe, count)
+      }
   }
 
   @tailrec
@@ -67,15 +69,12 @@ object StatsHandler {
     val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
       FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
     }))
-    if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) && fbComments.nonEmpty) {
-      val fromSet = fbComments.get.map {
-        comm => comm.from
-      }.toSet
-      if (fromSet.size > 3) {
-        Some(PostWhoCommented)
-      } else {
-        None
-      }
+    if (post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) {
+      for {
+        comments <- fbComments
+        fromSet = comments.map(comm => comm.from).toSet
+        if fromSet.size > 3
+      } yield PostWhoCommented
     } else {
       None
     }
@@ -86,11 +85,7 @@ object StatsHandler {
       FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
     }))
     if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) && fbComments.nonEmpty) {
-      if (fbComments.get.size > 3) {
-        Some(PostCommentsNumber)
-      } else {
-        None
-      }
+      fbComments.withFilter(comments => comments.size > 3).map(comments => PostCommentsNumber)
     } else {
       None
     }
@@ -123,16 +118,16 @@ object StatsHandler {
     // One has to be careful as the count for order is just the count of items that have a data type suited for ordering
     // Ordering have to be a multiple of the number of items to order
     val newQuestionCounts: Map[String, Int] = newDataTypes.foldLeft(Map[String, Int]()) {
-      case (acc, cpl) =>
-        val kinds = possibleKind(stringToType(cpl._1))
+      case (acc, (tpe, cnt)) =>
+        val kinds = possibleKind(stringToType(tpe))
         val newCounts = kinds.map {
           kind =>
             val count = kind match {
               case Order =>
-                val excess = cpl._2 % QuestionGenerationConfig.orderingItemsNumber
-                cpl._2 - excess
+                val excess = cnt % QuestionGenerationConfig.orderingItemsNumber
+                cnt - excess
               case _ =>
-                cpl._2
+                cnt
             }
             (kind.toString, count)
         }
@@ -148,7 +143,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
 
   def receive = {
     case FinalStats(fbPosts, fbPages) =>
-      import scala.concurrent.ExecutionContext.Implicits.global
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
       val itemsStatsCollection = db[BSONCollection](MongoDatabaseService.itemsStatsCollection)
       val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
@@ -170,7 +164,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
 
 
   def saveTransientPostsStats(fbPosts: List[Post], itemsStatsCollection: BSONCollection): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     fbPosts.foreach {
       post =>
         val selector = BSONDocument("userId" -> userId, "itemId" -> post.id)
@@ -184,7 +177,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
   private def finalizeStats(fbPostsIds: List[String], fbPagesIds: List[String], userStats: UserStats,
                             postCollection: BSONCollection, pagesCollection: BSONCollection, userStatsCollection: BSONCollection,
                             itemsStatsCollection: BSONCollection): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     if ((fbPagesIds ++ fbPostsIds).nonEmpty) {
       val postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> fbPostsIds))
       val postsCursor = postCollection.find(postSelector).cursor[FBPost]
@@ -231,8 +223,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
   private def finalizeStats(fbPosts: List[FBPost], fbPages: List[FBPage], notLikedPagesCount: Int, userStats: UserStats,
                             itemsStats: List[ItemStats], itemsStatsCollection: BSONCollection,
                             userStatsCollection: BSONCollection): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
     val newLikers = accumulateLikes(fbPosts) ++ userStats.likers
 
     val updatedPosts: List[ItemStats] = updatePostsStats(fbPosts, newLikers, itemsStats)
@@ -264,7 +254,6 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
   private def dealWithOldStats(fbPosts: List[FBPost], itemsStats: List[ItemStats], userStats: UserStats,
                                itemsStatsCollection: BSONCollection, userStatsCollection: BSONCollection): Unit = {
 
-    import scala.concurrent.ExecutionContext.Implicits.global
     val newLikers = accumulateLikes(fbPosts) ++ userStats.likers
 
     val updatedPosts: List[ItemStats] = updatePostsStats(fbPosts, newLikers, itemsStats)

@@ -10,6 +10,8 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONInteger}
 import reactivemongo.core.commands.GetLastError
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 object MongoDatabaseService {
   val fbPagesCollection = "fbPages"
   val fbPageLikesCollection = "fbPageLikes"
@@ -51,7 +53,7 @@ object MongoDatabaseService {
 
   def postToFBPost(post: Post, userId: String): FBPost = {
     val likes = post.likes.flatMap(root => root.data.map(likes => likes.map(l => FBLike(l.id, l.name))))
-    val like_count = likes.map(likesList => likesList.length)
+    val likeCount = likes.map(likesList => likesList.length)
     val fbFrom = post.from.map(f => FBFrom(f.id, f.name))
     val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
       FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
@@ -60,7 +62,7 @@ object MongoDatabaseService {
     val fbAttachments = post.attachments.flatMap(root => root.data.map(attachments => attachments.map {
       a =>
         val media = a.media.flatMap(m => m.image.map(image => FBMedia(image.height, image.width, image.src)))
-        FBAttachment(a.description, media = media, `type` = a.`type`)
+        FBAttachment(a.description, media = media, tpe = a.`type`)
     }))
     val fbPlace: Option[FBPlace] = post.place.flatMap(place => place.name.flatMap(name => place.location.flatMap(
       location => location.latitude.flatMap(lat => location.longitude.flatMap(
@@ -69,7 +71,7 @@ object MongoDatabaseService {
       ))
     )))
     FBPost(None, userId, post.id, post.message, post.story, fbPlace, post.created_time, fbFrom,
-      likes, like_count, post.`type`, post.link, fbAttachments, fbComments, fbCommentsCount)
+      likes, likeCount, post.`type`, post.link, fbAttachments, fbComments, fbCommentsCount)
   }
 }
 
@@ -86,7 +88,6 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
   }
 
   def saveFBPagesToDB(pages: List[Page]): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     val fbPageCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     pages.foreach { p =>
@@ -104,7 +105,6 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
 
 
   def saveFBPostToDB(posts: List[Post], collection: BSONCollection): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     posts.foreach { p =>
       val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
       collection.update(selector, postToFBPost(p, userId), safeLastError, upsert = true).onFailure {

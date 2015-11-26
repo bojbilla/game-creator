@@ -11,8 +11,8 @@ import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Random, Success}
-
 
 object WhichCoordinatesWereYouAt {
 
@@ -23,7 +23,6 @@ object WhichCoordinatesWereYouAt {
 class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
   def receive = {
     case CreateQuestion(userId, itemId) =>
-      import scala.concurrent.ExecutionContext.Implicits.global
       val client = sender()
       val query = BSONDocument(
         "userId" -> userId,
@@ -32,28 +31,29 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
       val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
       postCollection.find(query).one[FBPost].onComplete {
         case Success(postOpt) =>
-          postOpt match {
-            case Some(post) =>
-              val postSubject = QuestionGenerator.subjectFromPost(post)
-              post.place match {
-                case Some(place) =>
-                  val answer = Location(place.location.latitude, place.location.longitude)
-                  //magic numbers
-                  val maxDisplacement = 0.03166666666
-                  val minDisplacement = 0.02743473384
-                  val t = Random.nextDouble() * (maxDisplacement - minDisplacement) + minDisplacement
-                  val theta = Random.nextDouble() * 2 * math.Pi
-                  val defaultLocation = Location(answer.latitude + t * math.sin(theta), answer.longitude + t * math.cos(theta))
-                  //magic number, around 2 kilometers
-                  val range = 0.02612831795
-                  val gameQuestion = GeolocationQuestion(userId, Geolocation, GeoWhatCoordinatesWereYouAt, Some(postSubject),
-                    answer, defaultLocation, range)
-                  client ! FinishedQuestionCreation(gameQuestion)
-                case None =>
-                  client ! NotEnoughData(s"Post has no place : $itemId")
-              }
+          val questionOpt =
+            for {
+              post <- postOpt
+              postSubject = QuestionGenerator.subjectFromPost(post)
+              place <- post.place
+            } yield {
+              val answer = Location(place.location.latitude, place.location.longitude)
+              //magic numbers
+              val maxDisplacement = 0.03166666666
+              val minDisplacement = 0.02743473384
+              val t = Random.nextDouble() * (maxDisplacement - minDisplacement) + minDisplacement
+              val theta = Random.nextDouble() * 2 * math.Pi
+              val defaultLocation = Location(answer.latitude + t * math.sin(theta), answer.longitude + t * math.cos(theta))
+              //magic number, around 2 kilometers
+              val range = 0.02612831795
+              GeolocationQuestion(userId, Geolocation, GeoWhatCoordinatesWereYouAt, Some(postSubject),
+                answer, defaultLocation, range)
+            }
+          questionOpt match {
+            case Some(q) =>
+              client ! FinishedQuestionCreation(q)
             case None =>
-              client ! NotEnoughData(s"Post not found : $itemId")
+              client ! NotEnoughData(s"Post has no place or post does not exist : $itemId")
           }
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")

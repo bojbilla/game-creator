@@ -27,9 +27,11 @@ class OrderByPostLikesNumber(db: DefaultDB) extends OrderQuestionGenerator {
             client ! NotEnoughData(s"Not enough posts in list.")
           } else {
             val ordered = postsList.take(itemsToOrder).sortBy(_.likesCount).map(subjectFromPost)
-            val (subjectsWithId, answer) = OrderQuestionGenerator.generateSubjectsWithId(ordered)
-            val gameQuestion = OrderQuestion(userId, Order, ORDPostLikesNumber, None, subjectsWithId, answer)
-            client ! FinishedQuestionCreation(gameQuestion)
+            OrderQuestionGenerator.generateSubjectsWithId(ordered) match {
+              case (subjectsWithId, answer) =>
+                val gameQuestion = OrderQuestion(userId, Order, ORDPostLikesNumber, None, subjectsWithId, answer)
+                client ! FinishedQuestionCreation(gameQuestion)
+            }
           }
       }
   }

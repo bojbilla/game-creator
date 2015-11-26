@@ -13,6 +13,7 @@ import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
 
@@ -25,7 +26,6 @@ object WhenDidYouShareThisPost {
 class WhenDidYouShareThisPost(db: DefaultDB) extends TimeQuestionGenerator {
   def receive = {
     case CreateQuestion(userId, itemId) =>
-      import scala.concurrent.ExecutionContext.Implicits.global
       val client = sender()
       val query = BSONDocument(
         "userId" -> userId,
@@ -39,14 +39,16 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends TimeQuestionGenerator {
               val dateString = post.createdTime.getOrElse("1970-01-01'T'00:00:00+0000")
               val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
               val actualDate = formatter.parseDateTime(dateString)
-              val (min, max, unit) = generateRange(actualDate)
               val step = 1
               val threshold = 0
               val postSubject = QuestionGenerator.subjectFromPost(post)
-              val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouShareThisPost, Some(postSubject),
-                actualDate.toString(formatter), min.toString(formatter), max.toString(formatter), min.toString(formatter),
-                unit, step, threshold)
-              client ! FinishedQuestionCreation(tlQuestion)
+              generateRange(actualDate) match {
+                case (min, max, unit) =>
+                  val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouShareThisPost, Some(postSubject),
+                    actualDate.toString(formatter), min.toString(formatter), max.toString(formatter),
+                    min.toString(formatter), unit, step, threshold)
+                  client ! FinishedQuestionCreation(tlQuestion)
+              }
             case None =>
               client ! NotEnoughData(s"Post not found : $itemId")
           }

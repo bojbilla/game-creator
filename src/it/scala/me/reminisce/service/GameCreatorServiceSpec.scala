@@ -20,6 +20,7 @@ import spray.http.HttpHeaders.Accept
 import spray.http.MediaTypes._
 import spray.http.{HttpMethods, HttpRequest, HttpResponse, StatusCodes}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.util.Properties._
@@ -27,7 +28,6 @@ import scala.util.Properties._
 class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) with MongoEmbedDatabase
 with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit def json4sFormats: Formats = DefaultFormats
 

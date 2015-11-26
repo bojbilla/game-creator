@@ -16,12 +16,11 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
 class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
 
   "StatsHandler" must {

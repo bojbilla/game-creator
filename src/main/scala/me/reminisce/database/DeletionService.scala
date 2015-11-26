@@ -11,6 +11,7 @@ import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
 
@@ -98,7 +99,6 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
   }
 
   def onCollections(client: ActorRef)(handle: List[String] => Unit)(default: () => Unit): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     database.collectionNames.onComplete {
       case Success(collectionNames) =>
         val filteredCollectionNames = collectionNames.filter(!_.startsWith("system."))

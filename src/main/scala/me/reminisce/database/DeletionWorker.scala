@@ -6,6 +6,7 @@ import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.MongoDBEr
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
 object DeletionWorker {
@@ -34,7 +35,6 @@ class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging
   }
 
   def delete(selector: BSONDocument, client: ActorRef) = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     collection.remove(selector).onComplete {
       case Success(lastError) =>
         client ! DeletionResult(ok = lastError.ok)
@@ -46,7 +46,6 @@ class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging
   }
 
   def dropCollection(client: ActorRef) = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     collection.drop().onComplete {
       case Success(e) =>
         client ! DeletionResult(ok = true)

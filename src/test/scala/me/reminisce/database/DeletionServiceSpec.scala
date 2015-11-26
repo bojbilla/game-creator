@@ -13,12 +13,12 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
 class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   "DeletionService" must {
     "delete user without error." in {

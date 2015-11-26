@@ -14,7 +14,7 @@ object TileGenerator {
     Props(new TileGenerator(database))
 
   // The List[(String, String)] is for (itemId, itemType)
-  case class CreateTile(userId: String, choices: List[(QuestionKind, DataType, List[(String, String)])], `type`: QuestionKind = Misc)
+  case class CreateTile(userId: String, choices: List[(QuestionKind, DataType, List[(String, String)])], tpe: QuestionKind = Misc)
 
   case class FinishedTileCreation(userId: String, tile: Tile)
 
@@ -46,47 +46,47 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
       context.become(awaitingQuestions(client, userId, tpe, List[GameQuestion]()))
   }
 
-  def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): ActorRef = {
-    val (kind, tpe, item) = kindTypeWithItem
-    kind match {
-      case Order =>
-        tpe match {
-          case LikeNumber =>
-            item.headOption match {
-              case Some((_, "Post")) =>
-                context.actorOf(OrderByPostLikesNumber.props(db))
-              case _ =>
-                context.actorOf(OrderByPageLikes.props(db))
-            }
-          case PostCommentsNumber =>
-            context.actorOf(OrderByPostCommentsNumber.props(db))
-          case Time =>
-            item.headOption match {
-              case Some((_, "Post")) =>
-                context.actorOf(OrderByPostTime.props(db))
-              case _ =>
-                context.actorOf(OrderByPageLikeTime.props(db))
-            }
-        }
-      case MultipleChoice =>
-        tpe match {
-          case PostWhoLiked =>
-            context.actorOf(WhoLikedYourPost.props(db))
-          case PostWhoCommented =>
-            context.actorOf(WhoMadeThisCommentOnYourPost.props(db))
-          case PageWhichLiked =>
-            context.actorOf(WhichPageDidYouLike.props(db))
-        }
-      case Timeline =>
-        item.headOption match {
-          case Some((_, "Post")) =>
-            context.actorOf(WhenDidYouShareThisPost.props(db))
-          case _ =>
-            context.actorOf(WhenDidYouLikeThisPage.props(db))
-        }
-      case Geolocation =>
-        context.actorOf(WhichCoordinatesWereYouAt.props(db))
-    }
+  def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): ActorRef = kindTypeWithItem match {
+    case (kind, tpe, item) =>
+      kind match {
+        case Order =>
+          tpe match {
+            case LikeNumber =>
+              item.headOption match {
+                case Some((_, "Post")) =>
+                  context.actorOf(OrderByPostLikesNumber.props(db))
+                case _ =>
+                  context.actorOf(OrderByPageLikes.props(db))
+              }
+            case PostCommentsNumber =>
+              context.actorOf(OrderByPostCommentsNumber.props(db))
+            case Time =>
+              item.headOption match {
+                case Some((_, "Post")) =>
+                  context.actorOf(OrderByPostTime.props(db))
+                case _ =>
+                  context.actorOf(OrderByPageLikeTime.props(db))
+              }
+          }
+        case MultipleChoice =>
+          tpe match {
+            case PostWhoLiked =>
+              context.actorOf(WhoLikedYourPost.props(db))
+            case PostWhoCommented =>
+              context.actorOf(WhoMadeThisCommentOnYourPost.props(db))
+            case PageWhichLiked =>
+              context.actorOf(WhichPageDidYouLike.props(db))
+          }
+        case Timeline =>
+          item.headOption match {
+            case Some((_, "Post")) =>
+              context.actorOf(WhenDidYouShareThisPost.props(db))
+            case _ =>
+              context.actorOf(WhenDidYouLikeThisPage.props(db))
+          }
+        case Geolocation =>
+          context.actorOf(WhichCoordinatesWereYouAt.props(db))
+      }
   }
 
   def awaitingQuestions(client: ActorRef, userId: String, qType: QuestionKind, questions: List[GameQuestion]): Receive = {

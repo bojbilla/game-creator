@@ -84,7 +84,7 @@ def print_response(response, print_text=True, fields=None):
             if f in json_response:
                 print(f + ": " + json_response[f])
             else:
-                print("Field", f, "not found.")
+                print("Field \"" + f + "\" not found.")
 
 
 def fetch_request(user):
@@ -98,7 +98,8 @@ def fetch_for_users():
     fetch_requests = [fetch_request(user) for user in users_list]
     p = multiprocessing.Pool(len(fetch_requests))
     responses = p.map(requests.get, fetch_requests)
-    [print_response(response) for response in responses]
+    for response in responses:
+        print_response(response)
 
 
 def board_request(user):

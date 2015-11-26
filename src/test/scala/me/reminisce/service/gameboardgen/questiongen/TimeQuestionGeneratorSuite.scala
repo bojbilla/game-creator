@@ -13,29 +13,39 @@ class TimeQuestionGeneratorSuite extends FunSuite {
     val threeWeeksAgo = now - 3.week
     val fourDaysAgo = now - 4.day
 
-    val (minOneYearAgo, maxOneYearAgo, unitOneYearAgo) = TimeQuestionGenerator.generateRange(oneYearAgo)
-    assert(minOneYearAgo <= oneYearAgo)
-    assert(maxOneYearAgo >= oneYearAgo)
-    assert(unitOneYearAgo == TimeUnit.Year)
+    TimeQuestionGenerator.generateRange(oneYearAgo) match {
+      case (minOneYearAgo, maxOneYearAgo, unitOneYearAgo) =>
+        assert(minOneYearAgo <= oneYearAgo)
+        assert(maxOneYearAgo >= oneYearAgo)
+        assert(unitOneYearAgo == TimeUnit.Year)
+    }
 
-    val (minTwoYearsAgo, maxTwoYearsAgo, unitTwoYearsAgo) = TimeQuestionGenerator.generateRange(twoYearsAgo)
-    assert(minTwoYearsAgo <= twoYearsAgo)
-    assert(maxTwoYearsAgo >= twoYearsAgo)
-    assert(unitTwoYearsAgo == TimeUnit.Year)
+    TimeQuestionGenerator.generateRange(twoYearsAgo) match {
+      case (minTwoYearsAgo, maxTwoYearsAgo, unitTwoYearsAgo) =>
+        assert(minTwoYearsAgo <= twoYearsAgo)
+        assert(maxTwoYearsAgo >= twoYearsAgo)
+        assert(unitTwoYearsAgo == TimeUnit.Year)
+    }
 
-    val (minTwoMonthsAgo, maxTwoMonthsAgo, unitTwoMonthsAgo) = TimeQuestionGenerator.generateRange(twoMonthsAgo)
-    assert(minTwoMonthsAgo <= twoMonthsAgo)
-    assert(maxTwoMonthsAgo >= twoMonthsAgo)
-    assert(unitTwoMonthsAgo == TimeUnit.Month)
+    TimeQuestionGenerator.generateRange(twoMonthsAgo) match {
+      case (minTwoMonthsAgo, maxTwoMonthsAgo, unitTwoMonthsAgo) =>
+        assert(minTwoMonthsAgo <= twoMonthsAgo)
+        assert(maxTwoMonthsAgo >= twoMonthsAgo)
+        assert(unitTwoMonthsAgo == TimeUnit.Month)
+    }
 
-    val (minThreeWeeksAgo, maxThreeWeeksAgo, unitThreeWeeksAgo) = TimeQuestionGenerator.generateRange(threeWeeksAgo)
-    assert(minThreeWeeksAgo <= threeWeeksAgo)
-    assert(maxThreeWeeksAgo >= threeWeeksAgo)
-    assert(unitThreeWeeksAgo == TimeUnit.Week)
+    TimeQuestionGenerator.generateRange(threeWeeksAgo) match {
+      case (minThreeWeeksAgo, maxThreeWeeksAgo, unitThreeWeeksAgo) =>
+        assert(minThreeWeeksAgo <= threeWeeksAgo)
+        assert(maxThreeWeeksAgo >= threeWeeksAgo)
+        assert(unitThreeWeeksAgo == TimeUnit.Week)
+    }
 
-    val (minFourDaysAgo, maxFourDaysAgo, unitFourDaysAgo) = TimeQuestionGenerator.generateRange(fourDaysAgo)
-    assert(minFourDaysAgo <= fourDaysAgo)
-    assert(maxFourDaysAgo >= fourDaysAgo)
-    assert(unitFourDaysAgo == TimeUnit.Day)
+    TimeQuestionGenerator.generateRange(fourDaysAgo) match {
+      case (minFourDaysAgo, maxFourDaysAgo, unitFourDaysAgo) =>
+        assert(minFourDaysAgo <= fourDaysAgo)
+        assert(maxFourDaysAgo >= fourDaysAgo)
+        assert(unitFourDaysAgo == TimeUnit.Day)
+    }
   }
 }

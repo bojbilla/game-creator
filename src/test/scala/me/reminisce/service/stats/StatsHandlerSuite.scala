@@ -7,6 +7,7 @@ import me.reminisce.mongodb.StatsEntities.{ItemStats, UserStats}
 import me.reminisce.service.gameboardgen.GameboardEntities.QuestionKind._
 import me.reminisce.service.gameboardgen.questiongen.QuestionGenerationConfig
 import me.reminisce.service.stats.StatsDataTypes.{PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoLiked}
+import me.reminisce.testutils.AssertHelpers._
 import org.joda.time.DateTime
 import org.scalatest.FunSuite
 
@@ -24,7 +25,10 @@ class StatsHandlerSuite extends FunSuite {
 
     val newType = "T4"
     val newTypeCount = 3
-    val incType = map.toList.head._1
+    val incType = map.toList.headOption match {
+      case Some((tpe, count)) => tpe
+      case None => fail("Something went terribly wrong.")
+    }
     val incTypeCount = 2
 
 
@@ -56,13 +60,13 @@ class StatsHandlerSuite extends FunSuite {
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
     val timeIsHere = StatsHandler.availableDataTypes(storyAndTime)
     assert(timeIsHere.nonEmpty && timeIsHere.size == 1)
-    assert(timeIsHere.head == StatsDataTypes.Time)
+    listHeadAssert(timeIsHere)(tpe => tpe == StatsDataTypes.Time)(() => fail("Type not defined."))
 
     val messageAndTime = Post("id", from = None, message = Some("message"), story = None, place = None, likes = None,
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
     val timeIsAlsoHere = StatsHandler.availableDataTypes(messageAndTime)
     assert(timeIsAlsoHere.nonEmpty && timeIsAlsoHere.size == 1)
-    assert(timeIsAlsoHere.head == StatsDataTypes.Time)
+    listHeadAssert(timeIsAlsoHere)(tpe => tpe == StatsDataTypes.Time)(() => fail("Type not defined."))
   }
 
   test("Geolocation data type.") {
@@ -99,7 +103,7 @@ class StatsHandlerSuite extends FunSuite {
       likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
     val dataTypes = StatsHandler.availableDataTypes(p5)
     assert(dataTypes.nonEmpty && dataTypes.size == 1)
-    assert(dataTypes.head == StatsDataTypes.PostGeolocation)
+    listHeadAssert(dataTypes)(tpe => tpe == StatsDataTypes.PostGeolocation)(() => fail("Type not defined."))
   }
 
   test("WhoCommented and CommentsNumber data types.") {
@@ -185,8 +189,8 @@ class StatsHandlerSuite extends FunSuite {
     val oldDataTypes = Map((PostGeolocation.name, 2), (PostWhoCommented.name, 4), (PostWhoLiked.name, 13)) // linked with below counts
     val newDataTypes = List((PostWhoLiked.name, 7), (PostCommentsNumber.name, 17)) // prime number is important to test the rounding
     val newItemsStats = newDataTypes.flatMap {
-        cpl => (1 to cpl._2).map {
-          _ => ItemStats(userId = userId, itemId = s"item$userId", itemType = "Post", dataTypes = List(cpl._1), dataCount = 1)
+        case (tpe, count) => (1 to count).map {
+          any => ItemStats(userId = userId, itemId = s"item$userId", itemType = "Post", dataTypes = List(tpe), dataCount = 1)
         }
       }
 

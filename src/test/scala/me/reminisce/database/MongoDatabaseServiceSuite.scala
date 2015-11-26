@@ -10,8 +10,8 @@ class MongoDatabaseServiceSuite extends FunSuite {
   test("Convert a page to an FBPage") {
     val convertedAllNone = MongoDatabaseService.pageToFBPage(PageTestsData.allNone)
     assert(convertedAllNone.pageId == PageTestsData.pageId)
-    assert(convertedAllNone.photos == None)
-    assert(convertedAllNone.name == None)
+    assert(convertedAllNone.photos.isEmpty)
+    assert(convertedAllNone.name.isEmpty)
     assert(convertedAllNone.likesNumber == 0)
 
     val fbPage = MongoDatabaseService.pageToFBPage(PageTestsData.page)
@@ -25,21 +25,20 @@ class MongoDatabaseServiceSuite extends FunSuite {
       case Some(p) =>
         val fbTags = p.tags
         fbTags match {
-          case Some(t) =>
-            assert(t.length == 2)
-            val fbTag1 = t.head
+          case Some(fbTag1 :: fbTag2 :: Nil) =>
             assert(fbTag1.id == Some(PageTestsData.tag1Id))
             assert(fbTag1.name == Some(PageTestsData.tag1Name))
             assert(fbTag1.createdTime == Some(PageTestsData.tag1Date))
             assert(fbTag1.x == Some(PageTestsData.tag1X))
             assert(fbTag1.y == Some(PageTestsData.tag1Y))
 
-            val fbTag2 = t.last
             assert(fbTag2.id == Some(PageTestsData.tag2Id))
             assert(fbTag2.name == Some(PageTestsData.tag2Name))
             assert(fbTag2.createdTime == Some(PageTestsData.tag2Date))
             assert(fbTag2.x == Some(PageTestsData.tag2X))
             assert(fbTag2.y == Some(PageTestsData.tag2Y))
+          case Some(t) =>
+            fail(s"Wrong number of tags extracted : ${t.length}.")
           case None =>
             fail("Tags not extracted.")
         }
@@ -63,18 +62,18 @@ class MongoDatabaseServiceSuite extends FunSuite {
     val convertedAllNone = MongoDatabaseService.postToFBPost(PostTestsData.allNone, PostTestsData.userId)
     assert(convertedAllNone.postId == PostTestsData.postId)
     assert(convertedAllNone.userId == PostTestsData.userId)
-    assert(convertedAllNone.message == None)
-    assert(convertedAllNone.story == None)
-    assert(convertedAllNone.place == None)
-    assert(convertedAllNone.createdTime == None)
-    assert(convertedAllNone.from == None)
-    assert(convertedAllNone.likes == None)
-    assert(convertedAllNone.likesCount == None)
-    assert(convertedAllNone.`type` == None)
-    assert(convertedAllNone.link == None)
-    assert(convertedAllNone.attachments == None)
-    assert(convertedAllNone.comments == None)
-    assert(convertedAllNone.commentsCount == None)
+    assert(convertedAllNone.message.isEmpty)
+    assert(convertedAllNone.story.isEmpty)
+    assert(convertedAllNone.place.isEmpty)
+    assert(convertedAllNone.createdTime.isEmpty)
+    assert(convertedAllNone.from.isEmpty)
+    assert(convertedAllNone.likes.isEmpty)
+    assert(convertedAllNone.likesCount.isEmpty)
+    assert(convertedAllNone.tpe.isEmpty)
+    assert(convertedAllNone.link.isEmpty)
+    assert(convertedAllNone.attachments.isEmpty)
+    assert(convertedAllNone.comments.isEmpty)
+    assert(convertedAllNone.commentsCount.isEmpty)
 
     val fbPost = MongoDatabaseService.postToFBPost(PostTestsData.post, PostTestsData.userId)
     assert(fbPost.userId == PostTestsData.userId)
@@ -83,7 +82,7 @@ class MongoDatabaseServiceSuite extends FunSuite {
     assert(fbPost.story == Some(PostTestsData.postStory))
     assert(fbPost.createdTime == Some(PostTestsData.postCreatedTime))
     assert(fbPost.likesCount == Some(PostTestsData.rootLikes.data.getOrElse(List()).length))
-    assert(fbPost.`type` == Some(PostTestsData.postType))
+    assert(fbPost.tpe == Some(PostTestsData.postType))
     assert(fbPost.link == Some(PostTestsData.postLink))
     assert(fbPost.commentsCount == Some(PostTestsData.rootComments.data.getOrElse(List()).length))
 
@@ -112,24 +111,21 @@ class MongoDatabaseServiceSuite extends FunSuite {
     }
 
     fbPost.likes match {
-      case Some(likes) =>
-        assert(likes.length == 2)
-        val like1 = likes.head
-        val like2 = likes.last
+      case Some(like1 :: like2 :: Nil) =>
         assert(like1.userId == PostTestsData.likeId1)
         assert(like1.userName == PostTestsData.likeName1)
 
         assert(like2.userId == PostTestsData.likeId2)
         assert(like2.userName == PostTestsData.likeName2)
+      case Some(likes) =>
+        fail(s"Wrong number of likes extracted : ${likes.length}")
       case None =>
         fail("Likes not extracted.")
     }
 
     fbPost.attachments match {
-      case Some(attachments) =>
-        assert(attachments.length == 2)
-        val attach1 = attachments.head
-        assert(attach1.`type` == Some(PostTestsData.attachmentType1))
+      case Some(attach1 :: attach2 :: Nil) =>
+        assert(attach1.tpe == Some(PostTestsData.attachmentType1))
         assert(attach1.description == Some(PostTestsData.attachmentDescription1))
         attach1.media match {
           case Some(media) =>
@@ -140,8 +136,7 @@ class MongoDatabaseServiceSuite extends FunSuite {
             fail("Media1 not extracted.")
         }
 
-        val attach2 = attachments(1)
-        assert(attach2.`type` == Some(PostTestsData.attachmentType2))
+        assert(attach2.tpe == Some(PostTestsData.attachmentType2))
         assert(attach2.description == Some(PostTestsData.attachmentDescription2))
         attach2.media match {
           case Some(media) =>
@@ -151,27 +146,27 @@ class MongoDatabaseServiceSuite extends FunSuite {
           case None =>
             fail("Media2 not extracted.")
         }
+      case Some(attachments) =>
+        fail(s"Wrong number of attachments extracted : ${attachments.length}")
       case None =>
         fail("Attachments not extracted.")
     }
 
     fbPost.comments match {
-      case Some(comments) =>
-        assert(comments.length == 2)
-
-        val comm1 = comments.head
+      case Some(comm1 :: comm2 :: Nil) =>
         assert(comm1.from.userId == PostTestsData.commFromId1)
         assert(comm1.from.userName == PostTestsData.commFromName1)
         assert(comm1.id == PostTestsData.comment1Id)
         assert(comm1.likeCount == PostTestsData.commLikesCount1)
         assert(comm1.message == PostTestsData.commMess1)
 
-        val comm2 = comments.last
         assert(comm2.from.userId == PostTestsData.commFromId2)
         assert(comm2.from.userName == PostTestsData.commFromName2)
         assert(comm2.id == PostTestsData.comment2Id)
         assert(comm2.likeCount == PostTestsData.commLikesCount2)
         assert(comm2.message == PostTestsData.commMess2)
+      case Some(comments) =>
+        fail(s"Wrong number of comments extracted : ${comments.length}")
       case None =>
         fail("Comments not extracted.")
     }

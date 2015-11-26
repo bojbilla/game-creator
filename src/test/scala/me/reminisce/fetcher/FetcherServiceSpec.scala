@@ -13,12 +13,12 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
 class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   "FetcherService" must {
     "not fetch when a concurrent fetch has been issued." in {

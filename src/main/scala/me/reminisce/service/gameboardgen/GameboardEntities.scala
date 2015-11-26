@@ -9,11 +9,6 @@ import me.reminisce.service.gameboardgen.GameboardEntities.TimeUnit.TimeUnit
 
 object GameboardEntities {
 
-  object Status extends Enumeration {
-    type Status = Value
-    val New, Used = Value
-  }
-
   object SpecificQuestionType extends Enumeration {
     type SpecificQuestionType = Value
     val TLWhenDidYouShareThisPost = Value("TLWhenDidYouShareThisPost")

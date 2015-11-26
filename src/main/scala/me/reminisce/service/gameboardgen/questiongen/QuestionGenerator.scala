@@ -27,7 +27,7 @@ object QuestionGenerator {
   case class NotEnoughData(message: String)
 
   def subjectFromPost(post: FBPost): PostSubject = {
-    post.`type` match {
+    post.tpe match {
       case Some(tpe) =>
         tpe match {
           case "photo" =>
@@ -69,12 +69,11 @@ object QuestionGenerator {
   }
 
   def srcFromAttachments(attachmentOpt: Option[List[FBAttachment]]): Option[String] = {
-    attachmentOpt.flatMap {
-      attachmentList =>
-        attachmentList.head.media.map {
-          m => m.src
-        }
-    }
+    for {
+      attachmentList <- attachmentOpt
+      attachment <- attachmentList.headOption
+      media <- attachment.media
+    } yield media.src
   }
 
   def subjectFromPage(page: FBPage): PageSubject = {

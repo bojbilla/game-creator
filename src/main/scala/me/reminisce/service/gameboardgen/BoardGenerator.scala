@@ -102,7 +102,7 @@ object BoardGenerator {
   def drawUniformlyFromBags[T](bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int = 1): List[T] = {
 
     @tailrec
-    def tailRecDraw(bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int, acc : List[T] = Nil) : List[T] = {
+    def tailRecDraw(bagSizes: List[Int], bagTypes: List[T], quantity: Int, drawnQuantity: Int, acc: List[T] = Nil): List[T] = {
       if (quantity > 0) {
         val prunedSizesTypes = bagSizes.zip(bagTypes).filter { case (size, tpe) => size >= drawnQuantity }
         val prunedSizes = prunedSizesTypes.map { case (size, tpe) => size }
