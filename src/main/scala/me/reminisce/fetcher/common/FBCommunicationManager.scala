@@ -9,12 +9,11 @@ import spray.http.HttpHeaders.Accept
 import spray.http.MediaTypes._
 import spray.http.{HttpRequest, HttpResponse}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 
 abstract class FBCommunicationManager extends Actor with ActorLogging {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val formats = DefaultFormats
 

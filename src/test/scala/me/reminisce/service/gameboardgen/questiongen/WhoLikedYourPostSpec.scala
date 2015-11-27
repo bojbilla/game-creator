@@ -28,7 +28,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Strangely there is no userStats."))
+      testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
     }
 
     "not create question when there is no post." in {
@@ -43,7 +43,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Post not found : $itemId"))
+      testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
     }
 
     "not create question when there is no likes for post." in {
@@ -63,7 +63,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"No likes on post : $itemId"))
+      testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
     }
 
     "not create question when there is not enough non-likers for post." in {
@@ -86,7 +86,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Not enough non likers for post $itemId and user $userId"))
+      testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
     }
 
     "create a valid question when the data is correctly setup." in {

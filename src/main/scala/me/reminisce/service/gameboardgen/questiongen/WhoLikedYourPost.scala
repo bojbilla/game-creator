@@ -12,7 +12,8 @@ import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
-import scala.util.{Failure, Random, Success}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Random
 
 
 object WhoLikedYourPost {
@@ -27,50 +28,42 @@ class WhoLikedYourPost(database: DefaultDB) extends QuestionGenerator {
 
   def receive = {
     case CreateQuestion(userId, itemId) =>
-      import scala.concurrent.ExecutionContext.Implicits.global
       val client = sender()
       // Note : if this question has been picked, it can only be if a UserStats exists
 
       val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
-      userCollection.find(BSONDocument("userId" -> userId)).one[UserStats].onComplete {
-        case Success(userStatsOpt) =>
-          userStatsOpt match {
-            case Some(userStats) =>
-              val postCollection = database[BSONCollection](MongoDatabaseService.fbPostsCollection)
-              postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost].onComplete {
-                case Success(postOpt) =>
-                  postOpt match {
-                    case Some(post) =>
-                      val postSubject = subjectFromPost(post)
-                      post.likes match {
-                        case Some(likes) =>
-                          val liker = Random.shuffle(likes).head
-                          if ((userStats.likers -- likes.toSet).size < 3) {
-                            client ! NotEnoughData(s"Not enough non likers for post $itemId and user $userId")
-                          } else {
-                            val choices = (liker :: Random.shuffle((userStats.likers -- likes.toSet).toList).take(3)) map {
-                              choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
-                            }
-                            val answer = choices.head
-                            val shuffled = Random.shuffle(choices)
-                            val gameQuestion = MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
-                            client ! FinishedQuestionCreation(gameQuestion)
-                          }
-                        case None =>
-                          client ! NotEnoughData(s"No likes on post : $itemId") // this should be investigated
-                      }
-
-                    case None =>
-                      client ! NotEnoughData(s"Post not found : $itemId") // this should be investigated
-                  }
-                case Failure(e) =>
-                  client ! MongoDBError(s"${e.getMessage}")
+      (for {
+        userStatsOpt <- userCollection.find(BSONDocument("userId" -> userId)).one[UserStats]
+        postCollection = database[BSONCollection](MongoDatabaseService.fbPostsCollection)
+        postOpt <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost]
+      }
+        yield {
+          val gameQuestionOpt =
+            for {
+              userStats <- userStatsOpt
+              post <- postOpt
+              likes <- post.likes
+              liker <- Random.shuffle(likes).headOption
+              if !((userStats.likers -- likes.toSet).size < 3)
+              choices = (liker :: Random.shuffle((userStats.likers -- likes.toSet).toList).take(3)) map {
+                choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
               }
+              answer <- choices.headOption
+              shuffled = Random.shuffle(choices)
+              postSubject = subjectFromPost(post)
+            }
+              yield {
+                MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
+              }
+          gameQuestionOpt match {
+            case Some(q) =>
+              client ! FinishedQuestionCreation(q)
             case None =>
-              client ! NotEnoughData(s"Strangely there is no userStats.")
+              client ! NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers.")
           }
-        case Failure(e) =>
+        }) onFailure {
+        case e =>
           client ! MongoDBError(s"${e.getMessage}")
       }
 

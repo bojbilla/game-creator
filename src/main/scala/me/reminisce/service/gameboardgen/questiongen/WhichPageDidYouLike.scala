@@ -11,6 +11,7 @@ import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Random, Success}
 
 
@@ -25,7 +26,6 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
 
   def receive = {
     case CreateQuestion(userId, itemId) =>
-      import scala.concurrent.ExecutionContext.Implicits.global
       val client = sender()
       val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
       val likesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
@@ -66,7 +66,8 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
         case None =>
           client ! NotEnoughData(s"Page not found. $itemId")
       }
-    case x => log.error(s"WhichPageDidYouLike received a unexpected message $x")
+    case any =>
+      log.error(s"WhichPageDidYouLike received a unexpected message $any")
   }
 
 }

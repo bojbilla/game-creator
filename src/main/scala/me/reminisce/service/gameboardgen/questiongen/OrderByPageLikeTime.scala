@@ -47,7 +47,7 @@ class OrderByPageLikeTime(db: DefaultDB) extends OrderQuestionGenerator {
       log.error(s"OrderByPageLikeTime received an unknown message : $any.")
   }
 
-  def generateQuestion(userId: String, pages: List[FBPage], pageLikes: List[FBPageLike]): OrderQuestion = {
+  private def generateQuestion(userId: String, pages: List[FBPage], pageLikes: List[FBPageLike]): OrderQuestion = {
     val timedPages = pages.map {
       p =>
         pageLikes.find(pl => pl.pageId == p.pageId) match {
@@ -59,8 +59,10 @@ class OrderByPageLikeTime(db: DefaultDB) extends OrderQuestionGenerator {
     }
     val orderedTimedPages = timedPages.take(itemsToOrder).sortBy { case (page, likedTime) => likedTime.getMillis }
     val ordered = orderedTimedPages.map { case (page, likedTime) => subjectFromPage(page) }
-    val (subjectsWithId, answer) = OrderQuestionGenerator.generateSubjectsWithId(ordered)
-    OrderQuestion(userId, Order, ORDPageLikeTime, None, subjectsWithId, answer)
+    OrderQuestionGenerator.generateSubjectsWithId(ordered) match {
+      case (subjectsWithId, answer) =>
+        OrderQuestion(userId, Order, ORDPageLikeTime, None, subjectsWithId, answer)
+    }
   }
 
 }

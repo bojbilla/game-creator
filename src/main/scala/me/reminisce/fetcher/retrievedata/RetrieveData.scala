@@ -1,8 +1,9 @@
 package me.reminisce.fetcher.retrievedata
 
 import akka.actor.{Actor, ActorContext}
-import akka.event.LogSource
+import akka.event.{LogSource, Logging}
 import me.reminisce.fetcher.FacebookServiceConfig
+import me.reminisce.fetcher.retrievedata.MyLogger._
 import org.json4s.DefaultFormats
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
@@ -24,8 +25,6 @@ abstract class RetrieveData extends Actor {
 
   implicit def actorRefFactory: ActorContext = context
 
-  import MyLogger._
-  import akka.event.Logging
 
   val log = Logging(context.system, this)
   implicit val formats = DefaultFormats

@@ -14,7 +14,12 @@ object RemHelper {
   val fields = "fields"
 
   implicit def uriWithParams(uri: String, params: Map[String, Any]): String = {
-    val start = s"""$uri?${params.head._1}=${params.head._2}"""
+    val start = params.headOption match {
+      case Some((k, v)) =>
+        s"""$uri?$k=$v"""
+      case None =>
+        s"""$uri"""
+    }
     params.tail.foldLeft(start) {
       case (acc, (k, v)) => s"""$acc&$k=${v.toString}"""
     }

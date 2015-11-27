@@ -15,7 +15,7 @@ class QuestionGeneratorSuite extends FunSuite {
 
     val messgaeOpt = if (message != "") Some(message) else None
     val storyopt = if (story != "") Some(story) else None
-    FBPost(postId = "NONE", userId = "NONE", `type` = Some(postType),
+    FBPost(postId = "NONE", userId = "NONE", tpe = Some(postType),
       attachments = attachments,
       message = messgaeOpt,
       story = storyopt,

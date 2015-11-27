@@ -25,8 +25,7 @@ object MongoDBEntities {
   }
 
   //the facebook page_id can't be used as a mongodb id as its too short
-  case class FBPage(id: Option[BSONObjectID], pageId: String, name: Option[String], photos: Option[FBPhoto], likesNumber: Int) {
-  }
+  case class FBPage(id: Option[BSONObjectID], pageId: String, name: Option[String], photos: Option[FBPhoto], likesNumber: Int)
 
   object FBPage {
     implicit val fbPageFormat = Macros.handler[FBPage]
@@ -56,7 +55,7 @@ object MongoDBEntities {
     implicit val fbMediaFormat = Macros.handler[FBMedia]
   }
 
-  case class FBAttachment(description: Option[String] = None, media: Option[FBMedia] = None, `type`: Option[String] = None)
+  case class FBAttachment(description: Option[String] = None, media: Option[FBMedia] = None, tpe: Option[String] = None)
 
   object FBAttachment {
     implicit val fbAttachmentFormat = Macros.handler[FBAttachment]
@@ -104,7 +103,7 @@ object MongoDBEntities {
                     from: Option[FBFrom] = None,
                     likes: Option[List[FBLike]] = None,
                     likesCount: Option[Int] = None,
-                    `type`: Option[String] = None,
+                    tpe: Option[String] = None,
                     link: Option[String] = None,
                     attachments: Option[List[FBAttachment]] = None,
                     comments: Option[List[FBComment]] = None,
@@ -123,10 +122,7 @@ object StatsEntities {
                        userId: String,
                        dataTypeCounts: Map[String, Int] = Map(),
                        questionCounts: Map[String, Int] = Map(),
-                       likers: Set[FBLike] = Set()) {
-
-  }
-
+                       likers: Set[FBLike] = Set())
 
   object UserStats {
 
@@ -134,7 +130,7 @@ object StatsEntities {
       new BSONDocumentWriter[Map[String, Int]] {
         def write(mapIntString: Map[String, Int]): BSONDocument = {
           val elements = mapIntString.toStream.map {
-            tuple => tuple._1 -> intWriter.write(tuple._2)
+            case (key, value) => key -> intWriter.write(value)
           }
           BSONDocument(elements)
         }
@@ -145,7 +141,7 @@ object StatsEntities {
       new BSONDocumentReader[Map[String, Int]] {
         def read(doc: BSONDocument): Map[String, Int] = {
           val elements = doc.elements.map {
-            tuple => tuple._1 -> intReader.read(tuple._2.seeAsOpt[BSONInteger].get)
+            case (key, value) => key -> intReader.read(value.seeAsOpt[BSONInteger].get)
           }
           elements.toMap
         }
