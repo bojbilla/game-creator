@@ -114,7 +114,6 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
   }
 
   def saveLastFetchTime(collection: BSONCollection): Unit = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     val time = DateTime.now
     val selector = BSONDocument("userId" -> userId)
 
