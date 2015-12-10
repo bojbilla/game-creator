@@ -28,6 +28,8 @@ class RetrieveTaggedPosts extends RetrieveData {
       val retriever = context.actorOf(RetrieveEntitiesService.props[Post](defaultFilter[Post]))
       retriever ! RetrieveEntities(params1)
       context.become(awaitResponse(client))
+    case any =>
+      log.error(s"Uknown message : $any.")
   }
 
   def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {

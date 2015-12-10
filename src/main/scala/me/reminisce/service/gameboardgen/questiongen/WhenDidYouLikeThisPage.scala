@@ -68,6 +68,8 @@ class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
           client ! MongoDBError(s"${e.getMessage}")
       }
 
+    case any =>
+      log.error(s"Uknown message : $any.")
   }
 
 }

@@ -109,6 +109,8 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
         }
       case Failure(e) =>
         client ! InternalError(s"Database error : $e.")
+      case any =>
+        client ! InternalError(s"Unknown error: $any.")
     }
   }
 

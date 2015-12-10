@@ -87,6 +87,8 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
         converted.extract[FBPageLikeWithoutDate] match {
           case FBPageLikeWithoutDate(id, userId, pageId, likeTime) =>
             FBPageLike(id, userId, pageId, formatter.parseDateTime(likeTime))
+          case _ =>
+            throw new IllegalArgumentException("Impossible match case.")
         }
     }
     storeObjects(db, "fbPageLikes", pageLikes)

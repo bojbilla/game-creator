@@ -61,6 +61,8 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
                   }
                 case Failure(e) =>
                   client ! MongoDBError(s"${e.getMessage}")
+                case any =>
+                  client ! MongoDBError(s"Unknown error : $any.")
               }
           }
         case None =>

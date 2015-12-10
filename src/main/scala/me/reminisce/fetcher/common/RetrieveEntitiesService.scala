@@ -116,6 +116,11 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
         log.error(s"Facebook didn't respond \npath:$path\n  ${error.toString}")
         client ! NotEnoughFound(Vector[T]())
         context.become(receive)
+
+      case _ =>
+        log.error(s"Facebook didn't respond \npath:$path.")
+        client ! NotEnoughFound(Vector[T]())
+        context.become(receive)
     }
   }
 

@@ -34,6 +34,8 @@ class OrderByPostLikesNumber(db: DefaultDB) extends OrderQuestionGenerator {
             }
           }
       }
+    case any =>
+      log.error(s"OrderByPostLikesNumber received an unsupported message: $any.")
   }
 
 }

@@ -44,6 +44,8 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
           }
       }
       context.become(awaitingQuestions(client, userId, tpe, List[GameQuestion]()))
+    case any =>
+      log.error(s"Tile generator received an unsupported message: $any.")
   }
 
   def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): ActorRef = kindTypeWithItem match {

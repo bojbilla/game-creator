@@ -106,6 +106,8 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
       case Success(list) => f(list)
       case Failure(e) =>
         client ! MongoDBError(s"${e.getMessage}")
+      case any =>
+        client ! MongoDBError(s"Uknown error : $any.")
     }
   }
 
@@ -119,6 +121,8 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
       case Success(list) => f(list)
       case Failure(e) =>
         client ! MongoDBError(s"${e.getMessage}")
+      case any =>
+        client ! MongoDBError(s"Uknown error : $any.")
     }
   }
 
@@ -139,6 +143,8 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
       case Success(list) => f(list)
       case Failure(e) =>
         client ! MongoDBError(s"${e.getMessage}")
+      case any =>
+        client ! MongoDBError(s"Uknown error : $any.")
     }
   }
 
@@ -148,6 +154,8 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
       case Success(opt) => f(opt)
       case Failure(e) =>
         client ! MongoDBError(s"${e.getMessage}")
+      case any =>
+        client ! MongoDBError(s"Uknown error : $any.")
     }
   }
 }

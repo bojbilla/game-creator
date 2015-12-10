@@ -41,6 +41,8 @@ class OrderByPageLikeTime(db: DefaultDB) extends OrderQuestionGenerator {
           client ! message
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")
+        case any =>
+          client ! MongoDBError(s"$any")
       }
 
     case any =>

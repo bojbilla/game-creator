@@ -155,6 +155,8 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
             pagesCollection, userStatsCollection, itemsStatsCollection)
         case Failure(e) =>
           log.error(s"Database could not be reached : $e.")
+        case any =>
+          log.error(s"Unknown database error: $any.")
       }
     case TransientPostsStats(fbPosts) =>
       saveTransientPostsStats(fbPosts, db[BSONCollection](MongoDatabaseService.itemsStatsCollection))

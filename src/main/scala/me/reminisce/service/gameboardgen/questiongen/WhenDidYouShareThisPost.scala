@@ -54,7 +54,11 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends TimeQuestionGenerator {
           }
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")
+        case any =>
+          client ! MongoDBError(s"Unknown error: $any.")
       }
+    case any =>
+      log.error(s"OrderByPageLikes received unknown message: $any.")
   }
 
 }

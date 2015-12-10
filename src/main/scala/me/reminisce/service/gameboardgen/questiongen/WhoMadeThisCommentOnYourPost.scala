@@ -47,6 +47,8 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
           }
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")
+        case any =>
+          client ! MongoDBError(s"Unkown database error : $any.")
       }
     case any =>
       log.error(s"Unexpected message received : $any")

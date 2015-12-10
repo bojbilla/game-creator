@@ -42,6 +42,8 @@ class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging
           log.error(s"Error while deleting : ${lastError.getMessage()}")
       case Failure(e) =>
         client ! MongoDBError(s"Database error in deletion worker : $e --- ${collection.name}")
+      case any =>
+        client ! MongoDBError(s"Unknown database error: $any.")
     }
   }
 
@@ -51,6 +53,9 @@ class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging
         client ! DeletionResult(ok = true)
       case Failure(e) =>
         log.error(s"Error while dropping ${collection.name} : $e")
+        client ! DeletionResult(ok = false)
+      case any =>
+        log.error(s"Unknown error while dropping ${collection.name} : $any")
         client ! DeletionResult(ok = false)
     }
   }

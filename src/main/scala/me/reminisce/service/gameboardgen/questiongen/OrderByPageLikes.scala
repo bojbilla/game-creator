@@ -34,6 +34,8 @@ class OrderByPageLikes(db: DefaultDB) extends OrderQuestionGenerator {
             }
           }
       }
+    case any =>
+      log.error(s"OrderByPageLikes received unknown message: $any.")
   }
 
 }

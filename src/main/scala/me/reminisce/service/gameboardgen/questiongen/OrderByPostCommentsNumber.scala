@@ -34,6 +34,8 @@ class OrderByPostCommentsNumber(db: DefaultDB) extends OrderQuestionGenerator {
             }
           }
       }
+    case any =>
+      log.error(s"OrderByPostCommentsNumber received an unknown message : $any.")
   }
 
 }

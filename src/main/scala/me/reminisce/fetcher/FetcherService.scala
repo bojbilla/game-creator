@@ -94,6 +94,10 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
           log.error(s"Facebook didn't respond \npath:$checkPath\n  ${error.toString}")
           client ! GraphAPIUnreachable(s"Could not reach Facebook graph API.")
           currentlyFetching.remove(userId)
+        case any =>
+          log.error(s"Facebook didn't respond \npath:$checkPath\n Unknown error: $any.")
+          client ! GraphAPIUnreachable(s"Could not reach Facebook graph API.")
+          currentlyFetching.remove(userId)
       }
     } else {
       client ! AlreadyFresh(s"Data for user $userId is fresh.")

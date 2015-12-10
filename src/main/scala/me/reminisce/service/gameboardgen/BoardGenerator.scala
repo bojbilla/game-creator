@@ -169,6 +169,8 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
       case Success(opt) => f(opt)
       case Failure(e) =>
         client ! FailedBoardGeneration(s"MongoDB error : ${e.getMessage}.")
+      case any =>
+        client ! FailedBoardGeneration(s"Unknown database error: $any.")
     }
   }
 
@@ -178,6 +180,8 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
       case Success(list) => f(list)
       case Failure(e) =>
         client ! FailedBoardGeneration(s"MongoDB error : ${e.getMessage}.")
+      case any =>
+        client ! FailedBoardGeneration(s"Unknown database error: $any.")
     }
   }
 
@@ -193,6 +197,8 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
       case Success(list) => f(list)
       case Failure(e) =>
         client ! FailedBoardGeneration(s"MongoDB error : ${e.getMessage}.")
+      case any =>
+        client ! FailedBoardGeneration(s"Unknown database error: $any.")
     }
   }
 
@@ -202,6 +208,8 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
       case Success(list) => f(Random.shuffle(list))
       case Failure(e) =>
         client ! FailedBoardGeneration(s"MongoDB error : ${e.getMessage}.")
+      case any =>
+        client ! FailedBoardGeneration(s"Unlnown database error: $any.")
     }
   }
 

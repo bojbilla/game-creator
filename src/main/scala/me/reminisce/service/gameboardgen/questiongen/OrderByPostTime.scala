@@ -40,6 +40,8 @@ class OrderByPostTime(db: DefaultDB) extends OrderQuestionGenerator {
             }
           }
       }
+    case any =>
+      log.error(s"Uknown message : $any.")
   }
 
 }

@@ -28,6 +28,7 @@ class RetrieveLikedPages extends RetrieveData {
       retriever ! RetrieveEntities(params1)
       val client = sender()
       context.become(awaitResponse(client))
+    case _ => log.error("RetrieveLikedPages received unexpected message")
   }
 
   def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {

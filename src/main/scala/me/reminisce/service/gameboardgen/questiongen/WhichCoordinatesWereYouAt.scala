@@ -57,6 +57,8 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
           }
         case Failure(e) =>
           client ! MongoDBError(s"${e.getMessage}")
+        case any =>
+          client ! MongoDBError(s"$any")
       }
     case any =>
       log.error(s"Wrong message received $any.")
