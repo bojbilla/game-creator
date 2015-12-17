@@ -31,7 +31,7 @@ class RetrieveLikedPages extends RetrieveData {
     case _ => log.error("RetrieveLikedPages received unexpected message")
   }
 
-  def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {
+  private def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {
     case PartialResult(entities) =>
       context.become(awaitResponse(client, entityCount + entities.length))
       client ! PartialLikedPagesResult(entities.asInstanceOf[Vector[Page]])

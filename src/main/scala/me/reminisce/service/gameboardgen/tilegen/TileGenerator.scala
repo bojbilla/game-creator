@@ -48,7 +48,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
       log.error(s"Tile generator received an unsupported message: $any.")
   }
 
-  def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): ActorRef = kindTypeWithItem match {
+  private def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): ActorRef = kindTypeWithItem match {
     case (kind, tpe, item) =>
       kind match {
         case Order =>
@@ -91,7 +91,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
       }
   }
 
-  def awaitingQuestions(client: ActorRef, userId: String, qType: QuestionKind, questions: List[GameQuestion]): Receive = {
+  private def awaitingQuestions(client: ActorRef, userId: String, qType: QuestionKind, questions: List[GameQuestion]): Receive = {
     case FinishedQuestionCreation(q) =>
       val newQuestions = q :: questions
       sender() ! PoisonPill

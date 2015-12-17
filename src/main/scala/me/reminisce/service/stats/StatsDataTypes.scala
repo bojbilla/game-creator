@@ -59,24 +59,6 @@ object StatsDataTypes {
       List()
   }
 
-  def pageOrPost(dataType: DataType): List[String] = dataType match {
-    case Time =>
-      List("Page", "Post")
-    case PostGeolocation =>
-      List("Post")
-    case PostWhoCommented =>
-      List("Post")
-    case PostWhoLiked =>
-      List("Post")
-    case PostCommentsNumber =>
-      List("Post")
-    case PageWhichLiked =>
-      List("Page")
-    case LikeNumber =>
-      List("Page", "Post")
-    case _ =>
-      List()
-  }
 
   def stringToType(typeName: String): DataType = typeName match {
     case PostGeolocation.name => PostGeolocation

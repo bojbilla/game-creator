@@ -54,7 +54,7 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
       log.error(s"Unexpected message received : $any")
   }
 
-  def getCandidatesComments(comments: List[FBComment]): List[FBComment] = {
+  private def getCandidatesComments(comments: List[FBComment]): List[FBComment] = {
     val fromsSet: Set[FBFrom] = comments.map {
       comm => comm.from
     }.toSet
@@ -67,8 +67,8 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
     }.toList
   }
 
-  def generateQuestion(userId: String, selectedComments: List[FBComment],
-                       rightOne: FBComment, post: FBPost): MultipleChoiceQuestion = {
+  private def generateQuestion(userId: String, selectedComments: List[FBComment],
+                               rightOne: FBComment, post: FBPost): MultipleChoiceQuestion = {
     val shuffled = Random.shuffle(selectedComments)
     val answer = shuffled.indexOf(rightOne)
     val shuffledPossibilities = shuffled.map {

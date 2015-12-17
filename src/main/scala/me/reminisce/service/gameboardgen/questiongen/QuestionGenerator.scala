@@ -87,10 +87,10 @@ object QuestionGenerator {
 }
 
 abstract class QuestionGenerator extends Actor with ActorLogging {
-  def getDocuments[T](db: DefaultDB,
-                      collection: BSONCollection,
-                      query: BSONDocument, quantity: Int)
-                     (implicit reader: BSONDocumentReader[T]): Future[List[T]] = {
+  protected def getDocuments[T](db: DefaultDB,
+                                collection: BSONCollection,
+                                query: BSONDocument, quantity: Int)
+                               (implicit reader: BSONDocumentReader[T]): Future[List[T]] = {
     val futureCount = db.command(Count(collection.name, Some(query)))
     futureCount.flatMap { count =>
       val skip = if (count - quantity > 0) Random.nextInt(count - quantity) else 0
@@ -100,7 +100,7 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
     }
   }
 
-  def fetchPosts(postsCollection: BSONCollection, userId: String, postIds: List[String], client: ActorRef)(f: List[FBPost] => Unit): Unit = {
+  protected def fetchPosts(postsCollection: BSONCollection, userId: String, postIds: List[String], client: ActorRef)(f: List[FBPost] => Unit): Unit = {
     val query = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> postIds))
     postsCollection.find(query).cursor[FBPost].collect[List]().onComplete {
       case Success(list) => f(list)
@@ -111,7 +111,7 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
     }
   }
 
-  def fetchPages(pagesCollection: BSONCollection, pageIds: List[String]): Future[List[FBPage]] = {
+  protected def fetchPages(pagesCollection: BSONCollection, pageIds: List[String]): Future[List[FBPage]] = {
     val query = BSONDocument("pageId" -> BSONDocument("$in" -> pageIds))
     pagesCollection.find(query).cursor[FBPage].collect[List]()
   }
@@ -126,8 +126,8 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
     }
   }
 
-  def fetchLikedPages(pageLikesCollection: BSONCollection, userId: String,
-                      pageIds: Option[List[String]]): Future[List[FBPageLike]] = {
+  protected def fetchLikedPages(pageLikesCollection: BSONCollection, userId: String,
+                                pageIds: Option[List[String]]): Future[List[FBPageLike]] = {
     val query = pageIds match {
       case Some(list) =>
         BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$in" -> list))
@@ -137,8 +137,8 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
     pageLikesCollection.find(query).cursor[FBPageLike].collect[List]()
   }
 
-  def fetchLikedPages(pageLikesCollection: BSONCollection, userId: String, client: ActorRef, pageIds: Option[List[String]] = None)
-                     (f: List[FBPageLike] => Unit): Unit = {
+  protected def fetchLikedPages(pageLikesCollection: BSONCollection, userId: String, client: ActorRef, pageIds: Option[List[String]] = None)
+                               (f: List[FBPageLike] => Unit): Unit = {
     fetchLikedPages(pageLikesCollection, userId: String, pageIds).onComplete {
       case Success(list) => f(list)
       case Failure(e) =>
@@ -148,7 +148,7 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
     }
   }
 
-  def fetchPage(pagesCollection: BSONCollection, userId: String, client: ActorRef)(f: Option[FBPage] => Unit): Unit = {
+  protected def fetchPage(pagesCollection: BSONCollection, userId: String, client: ActorRef)(f: Option[FBPage] => Unit): Unit = {
     val query = BSONDocument("pageId" -> userId)
     pagesCollection.find(query).one[FBPage].onComplete {
       case Success(opt) => f(opt)

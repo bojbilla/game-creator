@@ -51,7 +51,7 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
       log.error("Fetcher worker received an unexpected message.")
   }
 
-  def awaitResults(client: ActorRef, userId: String, workers: Set[ActorRef], foundPosts: Set[String], foundPages: Set[String]): Receive = {
+  private def awaitResults(client: ActorRef, userId: String, workers: Set[ActorRef], foundPosts: Set[String], foundPages: Set[String]): Receive = {
 
     case PartialLikedPagesResult(pages) =>
       val newFoundPages = pages.map(page => page.id).toSet ++ foundPages
@@ -90,8 +90,8 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
   }
 
-  def verifyDone(client: ActorRef, userId: String, workers: Set[ActorRef], newWorkers: Set[ActorRef],
-                 oldWorkers: Set[ActorRef], foundPosts: Set[String], foundPages: Set[String]) = {
+  private def verifyDone(client: ActorRef, userId: String, workers: Set[ActorRef], newWorkers: Set[ActorRef],
+                         oldWorkers: Set[ActorRef], foundPosts: Set[String], foundPages: Set[String]) = {
     val newWorkersSet = workers ++ newWorkers -- oldWorkers
     if (newWorkersSet.isEmpty) {
       client ! FinishedFetching(userId)
@@ -106,11 +106,11 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
     context.children.foreach(r => r ! PoisonPill)
   }
 
-  def mongoSaver(userId: String): ActorRef = {
+  private def mongoSaver(userId: String): ActorRef = {
     context.actorOf(MongoDatabaseService.props(userId, database))
   }
 
-  def statsHandler(userId: String): ActorRef = {
+  private def statsHandler(userId: String): ActorRef = {
     context.actorOf(StatsHandler.props(userId, database))
   }
 

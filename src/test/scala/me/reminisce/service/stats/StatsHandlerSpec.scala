@@ -78,7 +78,7 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
         Map("LikeNumber" -> 1, "PostWhoCommented" -> 1, "PostGeolocation" -> 1, "Time" -> 1, "PostCommentsNumber" -> 1),
         Map("Order" -> 0, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 1), Set(FBLike("1", "me")))
 
-      assert(userStats.exists(_ == expectedUserStats))
+      assert(userStats.contains(expectedUserStats))
     }
 
     "Generate new stats correctly" in {
@@ -135,7 +135,7 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
           "PostCommentsNumber" -> 2), Map("Order" -> 42, "MultipleChoice" -> 3, "Geolocation" -> 2, "Timeline" -> 22),
         Set(FBLike("1", "me"), FBLike("2", "me2"), FBLike("3", "me3"), FBLike("4", "me4")))
 
-      assert(userStats.exists(_ == expectedUserStats))
+      assert(userStats.contains(expectedUserStats))
     }
   }
 }

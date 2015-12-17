@@ -32,7 +32,7 @@ class RetrieveTaggedPosts extends RetrieveData {
       log.error(s"Uknown message : $any.")
   }
 
-  def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {
+  private def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {
     case PartialResult(entities) =>
       context.become(awaitResponse(client, entityCount + entities.length))
       client ! PartialTaggedPostsResult(entities.asInstanceOf[Vector[Post]])

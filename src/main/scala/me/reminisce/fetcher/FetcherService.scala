@@ -69,12 +69,12 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
 
   }
 
-  def hasToFetch(currentTime: DateTime, lastFetched: DateTime): Boolean = {
+  private def hasToFetch(currentTime: DateTime, lastFetched: DateTime): Boolean = {
     currentTime - 1.days > lastFetched
   }
 
-  def conditionalFetch(currentTime: DateTime, lastFetched: DateTime, userId: String, accessToken: String,
-                       client: ActorRef) = {
+  private def conditionalFetch(currentTime: DateTime, lastFetched: DateTime, userId: String, accessToken: String,
+                               client: ActorRef) = {
     if (hasToFetch(currentTime, lastFetched)) {
       val checkPath = s"$facebookPath/$userId?access_token=$accessToken"
       val validityCheck = pipelineRawJson(Get(checkPath))

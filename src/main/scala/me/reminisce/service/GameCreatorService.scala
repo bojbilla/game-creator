@@ -82,23 +82,23 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
   }
 
 
-  def createBoard(message: RestMessage, userId: String): Route = {
+  private def createBoard(message: RestMessage, userId: String): Route = {
     log.info(s"Creating game board for user $userId.")
     val generator = context.actorOf(GameGenerator.props(db, userId))
     ctx => perRequest(ctx, generator, message)
   }
 
-  def fetchData(message: RestMessage): Route = {
+  private def fetchData(message: RestMessage): Route = {
     val fetcherService = context.actorOf(FetcherService.props(db))
     ctx => perRequest(ctx, fetcherService, message)
   }
 
-  def removeUser(message: RestMessage, userId: String): Route = {
+  private def removeUser(message: RestMessage, userId: String): Route = {
     val deletionService = context.actorOf(DeletionService.props(db))
     ctx => perRequest(ctx, deletionService, message)
   }
 
-  def dropDatabase(message: RestMessage): Route = {
+  private def dropDatabase(message: RestMessage): Route = {
     val deletionService = context.actorOf(DeletionService.props(db))
     ctx => perRequest(ctx, deletionService, message)
   }

@@ -165,7 +165,7 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
   }
 
 
-  def saveTransientPostsStats(fbPosts: List[Post], itemsStatsCollection: BSONCollection): Unit = {
+  private def saveTransientPostsStats(fbPosts: List[Post], itemsStatsCollection: BSONCollection): Unit = {
     fbPosts.foreach {
       post =>
         val selector = BSONDocument("userId" -> userId, "itemId" -> post.id)

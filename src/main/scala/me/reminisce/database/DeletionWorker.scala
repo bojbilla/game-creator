@@ -34,7 +34,7 @@ class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging
       log.error("Deleter service received an unexpected message.")
   }
 
-  def delete(selector: BSONDocument, client: ActorRef) = {
+  private def delete(selector: BSONDocument, client: ActorRef) = {
     collection.remove(selector).onComplete {
       case Success(lastError) =>
         client ! DeletionResult(ok = lastError.ok)
@@ -47,7 +47,7 @@ class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging
     }
   }
 
-  def dropCollection(client: ActorRef) = {
+  private def dropCollection(client: ActorRef) = {
     collection.drop().onComplete {
       case Success(e) =>
         client ! DeletionResult(ok = true)

@@ -7,14 +7,14 @@ import me.reminisce.database.DatabaseTester
 import me.reminisce.server.ServerServiceActor
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
-import org.scalatest.DoNotDiscover
+import org.scalatest.{BeforeAndAfterEach, DoNotDiscover}
 import spray.client.pipelining._
 import spray.http.{HttpMethods, HttpRequest, HttpResponse, StatusCodes}
 
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
+class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") with BeforeAndAfterEach {
 
   case class SimpleMessageFormat(message: String)
 
@@ -22,12 +22,16 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
 
   implicit def json4sFormats: Formats = DefaultFormats
 
+  override def afterEach(): Unit ={
+    Thread.sleep(200)
+  }
+
   "ServerServiceActor" must {
     "try to fetch." in {
       val fetchRequest = new HttpRequest(uri = "/fetchData?user_id=XXX&access_token=XXX")
       assert(fetchRequest.method == HttpMethods.GET)
       testService ! fetchRequest
-      val responseOpt = Option(receiveOne(Duration(2, TimeUnit.SECONDS)))
+      val responseOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
       responseOpt match {
         case Some(response) =>
           assert(response.isInstanceOf[HttpResponse])

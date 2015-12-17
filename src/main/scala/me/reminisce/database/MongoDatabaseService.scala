@@ -87,7 +87,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     case any => log.error(s"MongoDB Service received unexpected message : $any")
   }
 
-  def saveFBPagesToDB(pages: List[Page]): Unit = {
+  private def saveFBPagesToDB(pages: List[Page]): Unit = {
     val fbPageCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     pages.foreach { p =>
@@ -104,7 +104,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
   }
 
 
-  def saveFBPostToDB(posts: List[Post], collection: BSONCollection): Unit = {
+  private def saveFBPostToDB(posts: List[Post], collection: BSONCollection): Unit = {
     posts.foreach { p =>
       val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
       collection.update(selector, postToFBPost(p, userId), safeLastError, upsert = true).onFailure {
@@ -113,7 +113,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     }
   }
 
-  def saveLastFetchTime(collection: BSONCollection): Unit = {
+  private def saveLastFetchTime(collection: BSONCollection): Unit = {
     val time = DateTime.now
     val selector = BSONDocument("userId" -> userId)
 

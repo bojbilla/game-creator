@@ -40,7 +40,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
   }
 
 
-  def getCreatorFromStrategy(strategy: String): ActorRef = strategy match {
+  private def getCreatorFromStrategy(strategy: String): ActorRef = strategy match {
     case "uniform" =>
       context.actorOf(Props(new UniformBoardGenerator(database, userId)))
     case "choose" =>
@@ -53,8 +53,8 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
 
 
   // Awaits feedback from the FetcherService and the tile creators
-  def awaitFeedBack(client: ActorRef, worker: ActorRef, tiles: List[Tile],
-                    fetcherAcked: Boolean = false, isTokenStale: Boolean = false, strategy: String = ""): Receive = {
+  private def awaitFeedBack(client: ActorRef, worker: ActorRef, tiles: List[Tile],
+                            fetcherAcked: Boolean = false, isTokenStale: Boolean = false, strategy: String = ""): Receive = {
     case FinishedBoardGeneration(receivedTiles, strat) =>
       context.become(awaitFeedBack(client, worker, receivedTiles, fetcherAcked, isTokenStale, strat))
       verifyAndAnswer(client, receivedTiles, fetcherAcked, isTokenStale, strat)
@@ -86,7 +86,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
       log.error(s"GameGenerator received an unknown message : $any.")
   }
 
-  def verifyAndAnswer(client: ActorRef, tiles: List[Tile], ack: Boolean, stale: Boolean, strategy: String): Unit = {
+  private def verifyAndAnswer(client: ActorRef, tiles: List[Tile], ack: Boolean, stale: Boolean, strategy: String): Unit = {
     if (tiles.length == 9 && ack) {
       client ! Board(userId, tiles, stale, strategy)
       sender() ! PoisonPill

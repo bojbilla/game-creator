@@ -33,7 +33,7 @@ class RetrievePosts extends RetrieveData {
     case _ => log.error("RetrievingTaggedPosts received unexpected message")
   }
 
-  def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {
+  private def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {
     case FinishedRetrievingEntities(entities) =>
       log.info(s"Received ${entityCount + entities.length} posts.")
       client ! FinishedRetrievingPosts(entities.asInstanceOf[Vector[Post]])

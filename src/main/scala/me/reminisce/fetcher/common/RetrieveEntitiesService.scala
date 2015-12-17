@@ -72,7 +72,7 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
       log.error(s"RetrieveEntitiesService received an unexpected message : $any.")
   }
 
-  def retrieveEntities(): Receive = {
+  private def retrieveEntities(): Receive = {
     case GetEntities(client, path, minimum, count) =>
       handleGetEntities(client, path, minimum, count)
     case NotEnoughRetrieved(client, paging, minimum, count, entities: Vector[T]) =>

@@ -25,7 +25,7 @@ class StrategyChooser(database: DefaultDB, userId: String) extends BoardGenerato
     }
   }
 
-  def getCreatorFromUserStats(userStatsOpt: Option[UserStats]): ActorRef = userStatsOpt match {
+  private def getCreatorFromUserStats(userStatsOpt: Option[UserStats]): ActorRef = userStatsOpt match {
     case None =>
       log.info(s"Random generator chosen for user $userId.")
       context.actorOf(Props(new FullRandomBoardGenerator(database, userId)))
@@ -34,7 +34,7 @@ class StrategyChooser(database: DefaultDB, userId: String) extends BoardGenerato
       context.actorOf(Props(new UniformBoardGenerator(database, userId)))
   }
 
-  def awaitFeedBack(client: ActorRef): Receive = {
+  private def awaitFeedBack(client: ActorRef): Receive = {
     case FinishedBoardGeneration(tiles, strat) =>
       client ! FinishedBoardGeneration(tiles, "chooser/" + strat)
     case FailedBoardGeneration(message) =>

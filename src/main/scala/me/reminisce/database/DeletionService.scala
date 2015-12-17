@@ -51,7 +51,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
       sender() ! ActionForbidden(s"Deletion service received an unexpected message : $any.")
   }
 
-  def awaitFeedBack(client: ActorRef, workers: Set[ActorRef], results: Set[Boolean]): Receive = {
+  private def awaitFeedBack(client: ActorRef, workers: Set[ActorRef], results: Set[Boolean]): Receive = {
     case MongoDBError(m) =>
       workers.foreach(w => w ! PoisonPill)
       client ! InternalError(m)
@@ -61,7 +61,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
       log.error(s"Deletion service received an unexpected message : $any.")
   }
 
-  def removeUser(userId: String, client: ActorRef) = {
+  private def removeUser(userId: String, client: ActorRef) = {
     val selector = BSONDocument("userId" -> userId)
     foreachCollection(client) {
       worker =>
@@ -69,7 +69,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     }
   }
 
-  def removeExtraLikes(userId: String, actualLikes: Set[String], client: ActorRef): Unit = {
+  private def removeExtraLikes(userId: String, actualLikes: Set[String], client: ActorRef): Unit = {
     val pageLikeCollection = database[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     val selector = BSONDocument("userId" -> userId,
       "pageId" -> BSONDocument("$nin" -> actualLikes.toList)
@@ -79,14 +79,14 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     worker ! DeleteSelectorMatch(selector)
   }
 
-  def clearDatabase(client: ActorRef): Unit = {
+  private def clearDatabase(client: ActorRef): Unit = {
     foreachCollection(client) {
       worker =>
         worker ! DropCollection()
     }
   }
 
-  def verifyDone(client: ActorRef, workers: Set[ActorRef], results: Set[Boolean]) = {
+  private def verifyDone(client: ActorRef, workers: Set[ActorRef], results: Set[Boolean]) = {
     if (workers.isEmpty) {
       val errors = results.filter(!_)
       if (errors.isEmpty) {
@@ -98,7 +98,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     context.become(awaitFeedBack(client, workers, results))
   }
 
-  def onCollections(client: ActorRef)(handle: List[String] => Unit)(default: () => Unit): Unit = {
+  private def onCollections(client: ActorRef)(handle: List[String] => Unit)(default: () => Unit): Unit = {
     database.collectionNames.onComplete {
       case Success(collectionNames) =>
         val filteredCollectionNames = collectionNames.filter(!_.startsWith("system."))
@@ -114,7 +114,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     }
   }
 
-  def foreachCollection(client: ActorRef)(handleWithWorkers: ActorRef => Unit): Unit = {
+  private def foreachCollection(client: ActorRef)(handleWithWorkers: ActorRef => Unit): Unit = {
     onCollections(client) {
       collectionNames =>
         val workers = collectionNames.map {
