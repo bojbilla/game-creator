@@ -17,7 +17,7 @@ class MongoDatabaseServiceSuite extends FunSuite {
     val fbPage = MongoDatabaseService.pageToFBPage(PageTestsData.page)
 
     assert(fbPage.pageId == PageTestsData.pageId)
-    assert(fbPage.name == Some(PageTestsData.pageName))
+    assert(fbPage.name.contains(PageTestsData.pageName))
     assert(fbPage.likesNumber == PageTestsData.likes)
 
     val fbPhoto = fbPage.photos
@@ -26,17 +26,17 @@ class MongoDatabaseServiceSuite extends FunSuite {
         val fbTags = p.tags
         fbTags match {
           case Some(fbTag1 :: fbTag2 :: Nil) =>
-            assert(fbTag1.id == Some(PageTestsData.tag1Id))
-            assert(fbTag1.name == Some(PageTestsData.tag1Name))
-            assert(fbTag1.createdTime == Some(PageTestsData.tag1Date))
-            assert(fbTag1.x == Some(PageTestsData.tag1X))
-            assert(fbTag1.y == Some(PageTestsData.tag1Y))
+            assert(fbTag1.id.contains(PageTestsData.tag1Id))
+            assert(fbTag1.name.contains(PageTestsData.tag1Name))
+            assert(fbTag1.createdTime.contains(PageTestsData.tag1Date))
+            assert(fbTag1.x.contains(PageTestsData.tag1X))
+            assert(fbTag1.y.contains(PageTestsData.tag1Y))
 
-            assert(fbTag2.id == Some(PageTestsData.tag2Id))
-            assert(fbTag2.name == Some(PageTestsData.tag2Name))
-            assert(fbTag2.createdTime == Some(PageTestsData.tag2Date))
-            assert(fbTag2.x == Some(PageTestsData.tag2X))
-            assert(fbTag2.y == Some(PageTestsData.tag2Y))
+            assert(fbTag2.id.contains(PageTestsData.tag2Id))
+            assert(fbTag2.name.contains(PageTestsData.tag2Name))
+            assert(fbTag2.createdTime.contains(PageTestsData.tag2Date))
+            assert(fbTag2.x.contains(PageTestsData.tag2X))
+            assert(fbTag2.y.contains(PageTestsData.tag2Y))
           case Some(t) =>
             fail(s"Wrong number of tags extracted : ${t.length}.")
           case None =>
@@ -44,8 +44,8 @@ class MongoDatabaseServiceSuite extends FunSuite {
         }
 
         assert(p.id == PageTestsData.photoId)
-        assert(p.source == Some(PageTestsData.photoSource))
-        assert(p.createdTime == Some(PageTestsData.photoCreatedTime))
+        assert(p.source.contains(PageTestsData.photoSource))
+        assert(p.createdTime.contains(PageTestsData.photoCreatedTime))
       case None =>
         fail("Photo not extracted.")
     }
@@ -78,26 +78,26 @@ class MongoDatabaseServiceSuite extends FunSuite {
     val fbPost = MongoDatabaseService.postToFBPost(PostTestsData.post, PostTestsData.userId)
     assert(fbPost.userId == PostTestsData.userId)
     assert(fbPost.postId == PostTestsData.postId)
-    assert(fbPost.message == Some(PostTestsData.postMessage))
-    assert(fbPost.story == Some(PostTestsData.postStory))
-    assert(fbPost.createdTime == Some(PostTestsData.postCreatedTime))
-    assert(fbPost.likesCount == Some(PostTestsData.rootLikes.data.getOrElse(List()).length))
-    assert(fbPost.tpe == Some(PostTestsData.postType))
-    assert(fbPost.link == Some(PostTestsData.postLink))
-    assert(fbPost.commentsCount == Some(PostTestsData.rootComments.data.getOrElse(List()).length))
+    assert(fbPost.message.contains(PostTestsData.postMessage))
+    assert(fbPost.story.contains(PostTestsData.postStory))
+    assert(fbPost.createdTime.contains(PostTestsData.postCreatedTime))
+    assert(fbPost.likesCount.contains(PostTestsData.rootLikes.data.getOrElse(List()).length))
+    assert(fbPost.tpe.contains(PostTestsData.postType))
+    assert(fbPost.link.contains(PostTestsData.postLink))
+    assert(fbPost.commentsCount.contains(PostTestsData.rootComments.data.getOrElse(List()).length))
 
     fbPost.place match {
       case Some(place) =>
-        assert(place.id == Some(PostTestsData.placeId))
+        assert(place.id.contains(PostTestsData.placeId))
         assert(place.name == PostTestsData.placeName)
-        assert(place.createdTime == Some(PostTestsData.placeCreated))
+        assert(place.createdTime.contains(PostTestsData.placeCreated))
         val loc = place.location
-        assert(loc.city == Some(PostTestsData.locationCity))
-        assert(loc.country == Some(PostTestsData.locationCountry))
+        assert(loc.city.contains(PostTestsData.locationCity))
+        assert(loc.country.contains(PostTestsData.locationCountry))
         assert(loc.latitude == PostTestsData.locationLatitude)
         assert(loc.longitude == PostTestsData.locationLongitude)
-        assert(loc.street == Some(PostTestsData.locationStreet))
-        assert(loc.zip == Some(PostTestsData.locationZip))
+        assert(loc.street.contains(PostTestsData.locationStreet))
+        assert(loc.zip.contains(PostTestsData.locationZip))
       case None =>
         fail("Place not extracted.")
     }
@@ -125,8 +125,8 @@ class MongoDatabaseServiceSuite extends FunSuite {
 
     fbPost.attachments match {
       case Some(attach1 :: attach2 :: Nil) =>
-        assert(attach1.tpe == Some(PostTestsData.attachmentType1))
-        assert(attach1.description == Some(PostTestsData.attachmentDescription1))
+        assert(attach1.tpe.contains(PostTestsData.attachmentType1))
+        assert(attach1.description.contains(PostTestsData.attachmentDescription1))
         attach1.media match {
           case Some(media) =>
             assert(media.height == PostTestsData.attachImgHeight1)
@@ -136,8 +136,8 @@ class MongoDatabaseServiceSuite extends FunSuite {
             fail("Media1 not extracted.")
         }
 
-        assert(attach2.tpe == Some(PostTestsData.attachmentType2))
-        assert(attach2.description == Some(PostTestsData.attachmentDescription2))
+        assert(attach2.tpe.contains(PostTestsData.attachmentType2))
+        assert(attach2.description.contains(PostTestsData.attachmentDescription2))
         attach2.media match {
           case Some(media) =>
             assert(media.height == PostTestsData.attachImgHeight2)

@@ -159,7 +159,7 @@ class QuestionGeneratorSuite extends FunSuite {
     val list1 = List(attachment1, attachment2)
     val list2 = List(attachment2, attachment1)
 
-    assert(QuestionGenerator.srcFromAttachments(Some(list1)) == Some(source))
+    assert(QuestionGenerator.srcFromAttachments(Some(list1)).contains(source))
     assert(QuestionGenerator.srcFromAttachments(Some(list2)).isEmpty)
   }
 
@@ -190,6 +190,6 @@ class QuestionGeneratorSuite extends FunSuite {
     assert(subject.`type` == SubjectType.PageSubject)
     assert(subject.name == "PageName")
     assert(subject.pageId == "PageId")
-    assert(subject.photoUrl == Some("PhotoUrl"))
+    assert(subject.photoUrl.contains("PhotoUrl"))
   }
 }
