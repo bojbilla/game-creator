@@ -49,6 +49,16 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
 
     "clear database only in dev mode." in {
       val db = newDb()
+
+      //sample data to be deleted
+      val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
+
+      val userId = "TestUser"
+      val time = DateTime.now
+
+      val update = BSONDocument("userId" -> userId, "date" -> time)
+
+      Await.result(collection.save(update, safeLastError), Duration(10, TimeUnit.SECONDS))
       val actorRef = TestActorRef(DeletionService.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, ClearDatabase())

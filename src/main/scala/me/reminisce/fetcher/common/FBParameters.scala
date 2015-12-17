@@ -11,22 +11,7 @@ case class FBParameters(access_token: Option[String] = None,
                         offset: Int = 0,
                         limit: Int = 100,
                         minimalEntities: Int = 1,
-                        redirect: Boolean = false) {
-
-  def params: Map[String, String] = {
-    val map =
-      Map(RemHelper.since -> (since.getMillis / 1000).toString,
-        RemHelper.until -> (until.getMillis / 1000).toString,
-        RemHelper.offset -> offset.toString,
-        RemHelper.limit -> limit.toString,
-        RemHelper.redirect -> redirect.toString
-      )
-    access_token match {
-      case Some(access) => map + (RemHelper.accessTokenParam -> access)
-      case None => map
-    }
-  }
-}
+                        redirect: Boolean = false)
 
 case class FBSimpleParameters(userId: Option[String] = None,
                               access_token: Option[String] = None,
