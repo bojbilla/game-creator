@@ -3,39 +3,44 @@ package me.reminisce.service.gameboardgen.questiongen
 import com.github.nscala_time.time.Imports._
 import me.reminisce.service.gameboardgen.GameboardEntities.TimeUnit
 import me.reminisce.service.gameboardgen.GameboardEntities.TimeUnit.TimeUnit
-import org.joda.time.{Days, Months, Weeks, Years}
 
 import scala.util.Random
 
 object TimeQuestionGenerator {
-  def generateRange(actualDate: DateTime): (DateTime, DateTime, TimeUnit) = {
+  val periodValuesToUnits = Array(TimeUnit.Year, TimeUnit.Month, TimeUnit.Week, TimeUnit.Day)
+
+  def generateRange(actualDate: DateTime): (DateTime, DateTime, DateTime, TimeUnit, Int) = {
     val currentTime = DateTime.now
-    val yearsDiff = Years.yearsBetween(actualDate, currentTime).getYears
-    val monthsDiff = Months.monthsBetween(actualDate, currentTime).getMonths
-    val weeksDiff = Weeks.weeksBetween(actualDate, currentTime).getWeeks
-    val daysDiff = Days.daysBetween(actualDate, currentTime).getDays
-
-
-    val params = if (yearsDiff > 0) {
-      (1.year, yearsDiff, TimeUnit.Year)
-    } else if (monthsDiff > 0) {
-      (1.month, monthsDiff, TimeUnit.Month)
-    } else if (weeksDiff > 0) {
-      (1.week, weeksDiff, TimeUnit.Week)
-    } else {
-      (1.day, daysDiff, TimeUnit.Day)
-    }
-    params match {
-      case (stepSize, difference, unit) =>
-        //difference because for years, months, weeks etc... it can never be 0 ago
-        val maxStepsForward = List[Int](difference - 1, 4).min
-        val stepsForward = if (maxStepsForward > 0) Random.nextInt(maxStepsForward) else 0
-
-        val min = actualDate - stepSize.multipliedBy(4 - stepsForward)
-        val max = actualDate + stepSize.multipliedBy(stepsForward)
-        (min, max, unit)
+    val step = new Period(actualDate.getMillis, actualDate.getMillis + (currentTime.getMillis - actualDate.getMillis) / QuestionGenerationConfig.timelineStepsNumber)
+    step.getValues.zip(periodValuesToUnits).find { case (stepSize, unit) => stepSize > 0 } match {
+      case Some((stepSize, unit)) =>
+        val maxNumber = Random.nextInt(QuestionGenerationConfig.timelineStepsNumber + 1)
+        val defaultNumber = Random.nextInt(QuestionGenerationConfig.timelineStepsNumber + 1)
+        val minNumber = QuestionGenerationConfig.timelineStepsNumber - maxNumber
+        val period = unitToPeriod(unit)
+        val min = actualDate - period.multipliedBy(stepSize).multipliedBy(minNumber)
+        val default = min + period.multipliedBy(stepSize).multipliedBy(defaultNumber)
+        val max = actualDate + period.multipliedBy(stepSize).multipliedBy(maxNumber)
+        (min, default, max, unit, stepSize)
+      case None =>
+        val min = actualDate - 1.day.multipliedBy(QuestionGenerationConfig.timelineStepsNumber)
+        val defaultNumber = Random.nextInt(QuestionGenerationConfig.timelineStepsNumber + 1)
+        val default = min + 1.day.multipliedBy(defaultNumber)
+        (min, default, actualDate, TimeUnit.Day, 1)
     }
   }
+
+  def unitToPeriod(unit: TimeUnit): Period = unit match {
+    case TimeUnit.Year =>
+      1.year
+    case TimeUnit.Month =>
+      1.month
+    case TimeUnit.Week =>
+      1.week
+    case _ =>
+      1.day
+  }
+
 }
 
 abstract class TimeQuestionGenerator extends QuestionGenerator

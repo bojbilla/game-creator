@@ -39,14 +39,13 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends TimeQuestionGenerator {
               val dateString = post.createdTime.getOrElse("1970-01-01'T'00:00:00+0000")
               val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
               val actualDate = formatter.parseDateTime(dateString)
-              val step = 1
               val threshold = 0
               val postSubject = QuestionGenerator.subjectFromPost(post)
               generateRange(actualDate) match {
-                case (min, max, unit) =>
+                case (min, default, max, unit, step) =>
                   val tlQuestion = TimelineQuestion(userId, Timeline, TLWhenDidYouShareThisPost, Some(postSubject),
                     actualDate.toString(formatter), min.toString(formatter), max.toString(formatter),
-                    min.toString(formatter), unit, step, threshold)
+                    default.toString(formatter), unit, step, threshold)
                   client ! FinishedQuestionCreation(tlQuestion)
               }
             case None =>

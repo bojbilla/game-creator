@@ -7,24 +7,20 @@ import me.reminisce.database.DatabaseTester
 import me.reminisce.server.ServerServiceActor
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
-import org.scalatest.{BeforeAndAfterEach, DoNotDiscover}
+import org.scalatest.DoNotDiscover
 import spray.client.pipelining._
 import spray.http.{HttpMethods, HttpRequest, HttpResponse, StatusCodes}
 
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") with BeforeAndAfterEach {
+class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
 
   case class SimpleMessageFormat(message: String)
 
   val testService = TestActorRef[ServerServiceActor]
 
   implicit def json4sFormats: Formats = DefaultFormats
-
-  override def afterEach(): Unit ={
-    Thread.sleep(200)
-  }
 
   "ServerServiceActor" must {
     "try to fetch." in {

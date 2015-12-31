@@ -47,14 +47,13 @@ class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
               yield {
                 val actualDate = pageLike.likeTime
                 generateRange(actualDate) match {
-                  case (min, max, unit) =>
-                    val step = 1
+                  case (min, default, max, unit, step) =>
                     val threshold = 0
                     val pageSubject = QuestionGenerator.subjectFromPage(maybePage.get)
                     val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
                     TimelineQuestion(userId, Timeline, TLWhenDidYouLikeThisPage, Some(pageSubject),
                       actualDate.toString(formatter), min.toString(formatter), max.toString(formatter),
-                      min.toString(formatter), unit, step, threshold)
+                      default.toString(formatter), unit, step, threshold)
                 }
               }
           tlQuestionOpt match {
