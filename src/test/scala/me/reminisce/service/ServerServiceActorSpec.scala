@@ -66,8 +66,9 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
       val feedbackOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
       val status = extractStatus(feedbackOpt)
       status match {
-        case StatusCodes.OK => assert(ApplicationConfiguration.appMode == "DEV")
-        case StatusCodes.Forbidden => assert(ApplicationConfiguration.appMode != "DEV")
+        case StatusCodes.OK =>
+        case StatusCodes.Forbidden =>
+          fail("This should not be forbidden.")
         case StatusCodes.InternalServerError =>
           cancel("This test is canceled due to a 500 error that may arise when testing in a docker container," +
             " if you are not running in such a container, you should NOT ignore this.")
