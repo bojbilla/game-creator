@@ -1,10 +1,10 @@
 package me.reminisce.database
 
-import me.reminisce.fetcher.FetcherServiceSpec
-import me.reminisce.service.ServerServiceActorSpec
-import me.reminisce.service.gameboardgen.GameboardGeneratorSpec
-import me.reminisce.service.gameboardgen.questiongen._
-import me.reminisce.service.stats.StatsHandlerSpec
+import me.reminisce.fetching.FetcherServiceSpec
+import me.reminisce.gameboard.board.GameboardGeneratorSpec
+import me.reminisce.gameboard.questions._
+import me.reminisce.server.ServerServiceActorSpec
+import me.reminisce.stats.StatsHandlerSpec
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suites}
 
 // This class will run all the database related tests so that the db can be closed after all are ran

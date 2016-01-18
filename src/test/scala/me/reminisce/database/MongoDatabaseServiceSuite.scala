@@ -1,7 +1,7 @@
 package me.reminisce.database
 
 import com.github.nscala_time.time.Imports._
-import me.reminisce.fetcher.common.GraphResponses._
+import me.reminisce.fetching.config.GraphResponses._
 import org.scalatest.FunSuite
 
 

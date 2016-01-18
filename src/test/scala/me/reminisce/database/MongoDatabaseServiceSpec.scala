@@ -1,8 +1,8 @@
 package me.reminisce.database
 
 import akka.testkit.TestActorRef
+import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SaveLastFetchedTime}
-import me.reminisce.mongodb.MongoDBEntities._
 import me.reminisce.testutils.Retry
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover

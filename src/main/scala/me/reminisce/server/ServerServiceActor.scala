@@ -1,8 +1,6 @@
 package me.reminisce.server
 
 import akka.actor.{Actor, ActorLogging}
-import me.reminisce.ApplicationConfiguration
-import me.reminisce.service.GameCreatorServiceActor
 import org.json4s.{DefaultFormats, Formats}
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 

@@ -2,8 +2,8 @@ package me.reminisce.database
 
 import com.github.nscala_time.time.Imports._
 import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
-import me.reminisce.mongodb.MongoDBEntities.{FBPage, FBPageLike, FBPost}
-import me.reminisce.mongodb.StatsEntities.{ItemStats, UserStats}
+import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike, FBPost}
+import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 import reactivemongo.api.collections.default.BSONCollection

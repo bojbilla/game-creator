@@ -40,7 +40,7 @@ lazy val `game-creator` = project.in(file(".")).configs(IntegrationTest).
   enablePlugins(BuildInfoPlugin).
   settings(
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
-    buildInfoPackage := "me.reminisce"
+    buildInfoPackage := "me.reminisce.server"
   )
 
 buildInfoOptions += BuildInfoOption.BuildTime

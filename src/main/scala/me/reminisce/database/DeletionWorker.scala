@@ -2,7 +2,7 @@ package me.reminisce.database
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import me.reminisce.database.DeletionWorker.{DeleteSelectorMatch, DeletionResult, DropCollection}
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.MongoDBError
+import me.reminisce.gameboard.questions.QuestionGenerator.MongoDBError
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
 

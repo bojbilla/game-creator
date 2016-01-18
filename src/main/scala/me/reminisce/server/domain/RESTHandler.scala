@@ -2,10 +2,10 @@ package me.reminisce.server.domain
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{OneForOneStrategy, _}
+import me.reminisce.gameboard.questions.QuestionGenerator.FinishedQuestionCreation
 import me.reminisce.server.domain.Domain.{ActionForbidden, Error}
 import me.reminisce.server.domain.RESTHandler.{WithActorRef, WithProps}
 import me.reminisce.server.jsonserializer.GameCreatorFormatter
-import me.reminisce.service.gameboardgen.questiongen.QuestionGenerator.FinishedQuestionCreation
 import spray.http.StatusCode
 import spray.http.StatusCodes._
 import spray.httpx.Json4sSupport

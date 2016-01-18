@@ -2,9 +2,9 @@ package me.reminisce.database
 
 import akka.actor.Props
 import com.github.nscala_time.time.Imports._
+import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.MongoDatabaseService._
-import me.reminisce.fetcher.common.GraphResponses.{Page, Post}
-import me.reminisce.mongodb.MongoDBEntities._
+import me.reminisce.fetching.config.GraphResponses.{Page, Post}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONInteger}

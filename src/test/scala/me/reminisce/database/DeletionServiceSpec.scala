@@ -3,9 +3,9 @@ package me.reminisce.database
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
-import me.reminisce.ApplicationConfiguration
 import me.reminisce.database.DeletionService.{ClearDatabase, RemoveExtraLikes, RemoveUser}
-import me.reminisce.mongodb.MongoDBEntities._
+import me.reminisce.database.MongoDBEntities._
+import me.reminisce.server.ApplicationConfiguration
 import me.reminisce.server.domain.Domain.{ActionForbidden, Done}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
