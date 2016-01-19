@@ -8,7 +8,7 @@ import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
 import me.reminisce.database.{DatabaseTester, MongoDBEntities, MongoDatabaseService, StatsEntities}
 import me.reminisce.fetching.config.GraphResponses._
-import me.reminisce.stats.StatsHandler.{FinalStats, TransientPostsStats}
+import me.reminisce.stats.StatsGenerator.{FinalStats, TransientPostsStats}
 import me.reminisce.testutils.Retry
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
@@ -20,15 +20,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
+class StatsGeneratorSpec extends DatabaseTester("StatsGeneratorSpec") {
 
 
-  "StatsHandler" must {
+  "StatsGenerator" must {
     "Save \"on the fly\" stats." in {
       val db = newDb()
       val itemsStatsCollection = db[BSONCollection](MongoDatabaseService.itemsStatsCollection)
 
-      val ref = TestActorRef(StatsHandler.props(StatsTestData.userId, db))
+      val ref = TestActorRef(StatsGenerator.props(StatsTestData.userId, db))
       ref ! TransientPostsStats(StatsTestData.posts)
 
       val postIds = StatsTestData.posts.map(p => p.id)
@@ -65,7 +65,7 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
           Await.result(postCollection.update(selector, post, upsert = true), Duration(10, TimeUnit.SECONDS))
       }
 
-      val ref = TestActorRef(StatsHandler.props(StatsTestData.userId, db))
+      val ref = TestActorRef(StatsGenerator.props(StatsTestData.userId, db))
       ref ! FinalStats(Set(), Set())
 
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
@@ -122,7 +122,7 @@ class StatsHandlerSpec extends DatabaseTester("OrderByPageLikesSpec") {
       val fbPostIds = fbPosts.map(post => post.postId).toSet
       val fbPageIds = StatsTestData.pages.map(page => page.pageId).toSet
 
-      val ref = TestActorRef(StatsHandler.props(StatsTestData.userId, db))
+      val ref = TestActorRef(StatsGenerator.props(StatsTestData.userId, db))
       ref ! FinalStats(fbPostIds, fbPageIds)
 
       //likers is supposed to grow

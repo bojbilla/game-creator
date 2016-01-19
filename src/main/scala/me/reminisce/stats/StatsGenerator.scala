@@ -8,7 +8,7 @@ import me.reminisce.fetching.config.GraphResponses.Post
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.Order
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
 import me.reminisce.stats.StatsDataTypes._
-import me.reminisce.stats.StatsHandler._
+import me.reminisce.stats.StatsGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -18,15 +18,30 @@ import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-object StatsHandler {
+/**
+  * Factory for [[me.reminisce.stats.StatsGenerator]], case classes for message passing and useful methods
+  */
+object StatsGenerator {
 
   case class FinalStats(fbPosts: Set[String], fbPages: Set[String])
 
   case class TransientPostsStats(fbPosts: List[Post])
 
+  /**
+    * Create a stats generator
+    * @param userId user for which the stats are generated
+    * @param db database holding the data
+    * @return props for the created actor
+    */
   def props(userId: String, db: DefaultDB): Props =
-    Props(new StatsHandler(userId, db))
+    Props(new StatsGenerator(userId, db))
 
+  /**
+    * Adds a new type (or some quantity of new items of a type already accounted for) to a map holding counts for each type
+    * @param typeAndCount new type
+    * @param oldMap map containing counts
+    * @return new map
+    */
   private def addTypeToMap(typeAndCount: (String, Int), oldMap: Map[String, Int]): Map[String, Int] = typeAndCount match {
     case (tpe, count) =>
       if (oldMap.contains(tpe)) {
@@ -36,6 +51,12 @@ object StatsHandler {
       }
   }
 
+  /**
+    * Adds new types  (or some quantity of new items of types already accounted for) to a map holding counts for each type
+    * @param typesAndCounts new type
+    * @param oldMap map containing counts
+    * @return new map
+    */
   @tailrec
   def addTypesToMap(typesAndCounts: List[(String, Int)], oldMap: Map[String, Int]): Map[String, Int] = {
     typesAndCounts match {
@@ -44,12 +65,22 @@ object StatsHandler {
     }
   }
 
-  // This method is meant to be used to compute transient stats on posts
+  /**
+    * gets the available data types on a given post. Only uses the post itself and odes NOT take into account already
+    * stored posts (this is partial stats).
+    * @param post post to handle
+    * @return a list of data types
+    */
   def availableDataTypes(post: Post): List[DataType] = {
     List(hasTimeData(post), hasGeolocationData(post), hasWhoCommentedData(post),
       hasCommentNumber(post), hasLikeNumber(post)).flatten
   }
 
+  /**
+    * Checks if post has time data
+    * @param post post to handle
+    * @return a data type option
+    */
   private def hasTimeData(post: Post): Option[DataType] = {
     if ((post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) && post.created_time.nonEmpty)
       Some(Time)
@@ -57,6 +88,11 @@ object StatsHandler {
       None
   }
 
+  /**
+    * Checks if post has geolocation data
+    * @param post post to handle
+    * @return a data type option
+    */
   private def hasGeolocationData(post: Post): Option[DataType] = {
     post.place.flatMap(place => place.location.flatMap(
       location => location.latitude.flatMap(lat => location.longitude.map(
@@ -65,6 +101,11 @@ object StatsHandler {
     ))
   }
 
+  /**
+    * Checks if post has enough comments for a "who commented" question
+    * @param post post to handle
+    * @return a data type option
+    */
   private def hasWhoCommentedData(post: Post): Option[DataType] = {
     val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
       FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
@@ -80,6 +121,11 @@ object StatsHandler {
     }
   }
 
+  /**
+    * Checks if post has comments
+    * @param post post to handle
+    * @return a data type option
+    */
   private def hasCommentNumber(post: Post): Option[DataType] = {
     val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
       FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
@@ -91,6 +137,11 @@ object StatsHandler {
     }
   }
 
+  /**
+    * Checks if post has likes
+    * @param post post to handle
+    * @return a data type option
+    */
   private def hasLikeNumber(post: Post): Option[DataType] = {
     val likeCount = post.likes.flatMap(root => root.data).getOrElse(List()).size
     if (likeCount > 0) {
@@ -100,6 +151,14 @@ object StatsHandler {
     }
   }
 
+  /**
+    * Get item stats for user id and item id in a list of item stats. Returns a default value if nothing is found
+    * @param userId user to look for
+    * @param itemId item to look for
+    * @param itemType type of the item
+    * @param itemsStats list of items stats
+    * @return found item stats
+    */
   def getItemStats(userId: String, itemId: String, itemType: String, itemsStats: List[ItemStats]): ItemStats = {
     itemsStats.filter(is => is.userId == userId && is.itemId == itemId) match {
       case Nil =>
@@ -110,6 +169,13 @@ object StatsHandler {
     }
   }
 
+  /**
+    * Aggregates new post likers and new items stats and the old counts in the old user stats to create new user stats
+    * @param newLikers new post likers
+    * @param newItemsStats new items stats
+    * @param userStats old user stats
+    * @return new user stats
+    */
   def userStatsWithNewCounts(newLikers: Set[FBLike], newItemsStats: List[ItemStats], userStats: UserStats): UserStats = {
     val newDataTypes = newItemsStats.foldLeft(userStats.dataTypeCounts) {
       case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
@@ -139,8 +205,20 @@ object StatsHandler {
 
 }
 
-class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
+/**
+  * Statistics generator
+  * @param userId user for which the statistics are computed
+  * @param db database to store the stats in
+  */
+class StatsGenerator(userId: String, db: DefaultDB) extends DatabaseService {
 
+  /**
+    * Entry point of this actor. Handles the following messages:
+    * - FinalStats(fbPosts, fbPages): aggregates statistics using old user stats and the not read items stats in the
+    * database
+    * - TransientPostsStats(fbPosts): save partial stats for posts
+    * @return Nothing
+    */
   def receive = {
     case FinalStats(fbPosts, fbPages) =>
       val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
@@ -165,6 +243,11 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
   }
 
 
+  /**
+    * Stores the available data types (partial) for posts into the database
+    * @param fbPosts posts to analyse
+    * @param itemsStatsCollection collection in which to store the stats
+    */
   private def saveTransientPostsStats(fbPosts: List[Post], itemsStatsCollection: BSONCollection): Unit = {
     fbPosts.foreach {
       post =>
@@ -176,6 +259,19 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
 
   }
 
+  /**
+    * If there are posts or pages in fbPostsIds and fbPagesIds, use those items to finalize the stats (this time taking
+    * into account everything such as post likers, number of similar data types to compute the number of order questions
+    * etc...) otherwise only aggregates the not read ones in the database (initially the items stats are stored as not
+    * read because they were not aggregated completely with old user stats).
+    * @param fbPostsIds ids of posts to handle
+    * @param fbPagesIds ids of pages to handle
+    * @param userStats old user stats
+    * @param postCollection collection containing posts
+    * @param pagesCollection collection containing pages
+    * @param userStatsCollection collection containing user stats
+    * @param itemsStatsCollection collection containing items stats
+    */
   private def finalizeStats(fbPostsIds: List[String], fbPagesIds: List[String], userStats: UserStats,
                             postCollection: BSONCollection, pagesCollection: BSONCollection, userStatsCollection: BSONCollection,
                             itemsStatsCollection: BSONCollection): Unit = {
@@ -222,6 +318,16 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     }
   }
 
+  /**
+    * Concretely performs the aggregation
+    * @param fbPosts posts to handle
+    * @param fbPages pages to handle
+    * @param notLikedPagesCount number of pages not liked
+    * @param userStats old user stats
+    * @param itemsStats old items stats
+    * @param itemsStatsCollection collection for items stats
+    * @param userStatsCollection collection for user stats
+    */
   private def finalizeStats(fbPosts: List[FBPost], fbPages: List[FBPage], notLikedPagesCount: Int, userStats: UserStats,
                             itemsStats: List[ItemStats], itemsStatsCollection: BSONCollection,
                             userStatsCollection: BSONCollection): Unit = {
@@ -251,8 +357,14 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     userStatsCollection.update(selector, newUserStats, upsert = true)
   }
 
-  // The stats in question can only be posts. Pages are only generated with the read flag to true as those items are
-  // only generated during stats finalization.
+  /**
+    * Aggregates not read items stats with the user stats.
+    * @param fbPosts handled posts
+    * @param itemsStats not read items stats
+    * @param userStats old user stats
+    * @param itemsStatsCollection collection containing items stats
+    * @param userStatsCollection collection containing user stats
+    */
   private def dealWithOldStats(fbPosts: List[FBPost], itemsStats: List[ItemStats], userStats: UserStats,
                                itemsStatsCollection: BSONCollection, userStatsCollection: BSONCollection): Unit = {
 
@@ -282,6 +394,11 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
 
   }
 
+  /**
+    * Gets likes from a list of posts
+    * @param fbPosts posts to handle
+    * @return list of likes
+    */
   private def accumulateLikes(fbPosts: List[FBPost]): Set[FBLike] = {
     fbPosts.foldLeft(Set[FBLike]()) {
       (acc: Set[FBLike], post: FBPost) => {
@@ -293,6 +410,13 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     }
   }
 
+  /**
+    * Update post items stats based on the number of likers
+    * @param fbPosts posts to handle
+    * @param likers likers
+    * @param itemsStats items stats to update
+    * @return list of updated items stats
+    */
   private def updatePostsStats(fbPosts: List[FBPost], likers: Set[FBLike],
                                itemsStats: List[ItemStats]): List[ItemStats] = {
     fbPosts.flatMap {
@@ -308,6 +432,12 @@ class StatsHandler(userId: String, db: DefaultDB) extends DatabaseService {
     }
   }
 
+  /**
+    * Updates pages stats based on the number of not liked pages
+    * @param fbPages pages to handle
+    * @param notLikedPagesCount number of not liked pages
+    * @return list of items stats
+    */
   private def updatePagesStats(fbPages: List[FBPage], notLikedPagesCount: Int): List[ItemStats] = {
     val newDataListing =
       if (notLikedPagesCount >= 3) {

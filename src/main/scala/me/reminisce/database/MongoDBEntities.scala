@@ -4,6 +4,9 @@ import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDBEntities.FBLike
 import reactivemongo.bson._
 
+/**
+  * Defines all the facebook objects which will be stored in MongoDB and the serialization routines are defined
+  */
 object MongoDBEntities {
 
   implicit object BSONDateTimeHandler extends BSONHandler[BSONDateTime, DateTime] {
@@ -116,6 +119,9 @@ object MongoDBEntities {
 
 }
 
+/**
+  * Defines all the stats entities which will be stored in the database along with the serialization routines
+  */
 object StatsEntities {
 
   case class UserStats(id: Option[BSONObjectID] = None,

@@ -11,11 +11,11 @@ import me.reminisce.testutils.AssertHelpers._
 import org.joda.time.DateTime
 import org.scalatest.FunSuite
 
-class StatsHandlerSuite extends FunSuite {
+class StatsGeneratorSuite extends FunSuite {
 
   test("Adding a new question type to a map of type -> count.") {
     val map = Map[String, Int](("T1", 2), ("T2", 4), ("T3", 11))
-    val noExtension = StatsHandler.addTypesToMap(List(), map)
+    val noExtension = StatsGenerator.addTypesToMap(List(), map)
     assert(noExtension.size == map.size)
     map.foreach {
       case (k, v) =>
@@ -32,7 +32,7 @@ class StatsHandlerSuite extends FunSuite {
     val incTypeCount = 2
 
 
-    val extended = StatsHandler.addTypesToMap(List[(String, Int)]((newType, newTypeCount), (incType, incTypeCount)), map)
+    val extended = StatsGenerator.addTypesToMap(List[(String, Int)]((newType, newTypeCount), (incType, incTypeCount)), map)
 
     assert(extended.size == map.size + 1)
     map.foreach {
@@ -49,7 +49,7 @@ class StatsHandlerSuite extends FunSuite {
   test("Empty post data types.") {
     val emptyPost = Post("id", from = None, message = None, story = None, place = None, likes = None, `type` = None,
       link = None, created_time = None, attachments = None, comments = None)
-    val emptyTypes = StatsHandler.availableDataTypes(emptyPost)
+    val emptyTypes = StatsGenerator.availableDataTypes(emptyPost)
     assert(emptyTypes.isEmpty)
   }
 
@@ -58,13 +58,13 @@ class StatsHandlerSuite extends FunSuite {
     val now = DateTime.now.toString(formatter)
     val storyAndTime = Post("id", from = None, message = None, story = Some("story"), place = None, likes = None,
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
-    val timeIsHere = StatsHandler.availableDataTypes(storyAndTime)
+    val timeIsHere = StatsGenerator.availableDataTypes(storyAndTime)
     assert(timeIsHere.nonEmpty && timeIsHere.size == 1)
     listHeadAssert(timeIsHere)(tpe => tpe == StatsDataTypes.Time)(() => fail("Type not defined."))
 
     val messageAndTime = Post("id", from = None, message = Some("message"), story = None, place = None, likes = None,
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
-    val timeIsAlsoHere = StatsHandler.availableDataTypes(messageAndTime)
+    val timeIsAlsoHere = StatsGenerator.availableDataTypes(messageAndTime)
     assert(timeIsAlsoHere.nonEmpty && timeIsAlsoHere.size == 1)
     listHeadAssert(timeIsAlsoHere)(tpe => tpe == StatsDataTypes.Time)(() => fail("Type not defined."))
   }
@@ -73,35 +73,35 @@ class StatsHandlerSuite extends FunSuite {
     val pl1 = Place(id = None, name = None, location = None, created_time = None)
     val p1 = Post("id", from = None, message = None, story = None, place = Some(pl1),
       likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsHandler.availableDataTypes(p1).isEmpty)
+    assert(StatsGenerator.availableDataTypes(p1).isEmpty)
 
     val l1 = Location(city = None, country = None, latitude = None, longitude = None, street = None,
       zip = None)
     val pl2 = Place(id = None, name = None, location = Some(l1), created_time = None)
     val p2 = Post("id", from = None, message = None, story = None, place = Some(pl2),
       likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsHandler.availableDataTypes(p2).isEmpty)
+    assert(StatsGenerator.availableDataTypes(p2).isEmpty)
 
     val l2 = Location(city = None, country = None, latitude = Some(1.0), longitude = None, street = None,
       zip = None)
     val pl3 = Place(id = None, name = None, location = Some(l2), created_time = None)
     val p3 = Post("id", from = None, message = None, story = None, place = Some(pl3),
       likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsHandler.availableDataTypes(p3).isEmpty)
+    assert(StatsGenerator.availableDataTypes(p3).isEmpty)
 
     val l3 = Location(city = None, country = None, latitude = None, longitude = Some(1.2), street = None,
       zip = None)
     val pl4 = Place(id = None, name = None, location = Some(l3), created_time = None)
     val p4 = Post("id", from = None, message = None, story = None, place = Some(pl4),
       likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsHandler.availableDataTypes(p4).isEmpty)
+    assert(StatsGenerator.availableDataTypes(p4).isEmpty)
 
     val l4 = Location(city = None, country = None, latitude = Some(1.0), longitude = Some(1.2), street = None,
       zip = None)
     val pl5 = Place(id = None, name = None, location = Some(l4), created_time = None)
     val p5 = Post("id", from = None, message = None, story = None, place = Some(pl5),
       likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    val dataTypes = StatsHandler.availableDataTypes(p5)
+    val dataTypes = StatsGenerator.availableDataTypes(p5)
     assert(dataTypes.nonEmpty && dataTypes.size == 1)
     listHeadAssert(dataTypes)(tpe => tpe == StatsDataTypes.PostGeolocation)(() => fail("Type not defined."))
   }
@@ -109,16 +109,16 @@ class StatsHandlerSuite extends FunSuite {
   test("WhoCommented and CommentsNumber data types.") {
     val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(!StatsHandler.availableDataTypes(p1).contains(StatsDataTypes.PostWhoCommented))
-    assert(!StatsHandler.availableDataTypes(p1).contains(StatsDataTypes.PostCommentsNumber))
+    assert(!StatsGenerator.availableDataTypes(p1).contains(StatsDataTypes.PostWhoCommented))
+    assert(!StatsGenerator.availableDataTypes(p1).contains(StatsDataTypes.PostCommentsNumber))
 
     val from2 = From(id = "", name = "")
     val comment2 = Comment(id = "", from = from2, like_count = 0, message = "", attachments = None)
     val com2 = Root[List[Comment]](data = Option(List(comment2)), paging = None, summary = None)
     val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = Some(com2))
-    assert(!StatsHandler.availableDataTypes(p2).contains(StatsDataTypes.PostWhoCommented))
-    assert(!StatsHandler.availableDataTypes(p2).contains(StatsDataTypes.PostCommentsNumber))
+    assert(!StatsGenerator.availableDataTypes(p2).contains(StatsDataTypes.PostWhoCommented))
+    assert(!StatsGenerator.availableDataTypes(p2).contains(StatsDataTypes.PostCommentsNumber))
 
     val from3 = From(id = "3", name = "")
     val comment3 = Comment(id = "3", from = from3, like_count = 0, message = "", attachments = None)
@@ -129,20 +129,20 @@ class StatsHandlerSuite extends FunSuite {
     val com3 = Root[List[Comment]](data = Option(List(comment2, comment3, comment4, comment5)), paging = None, summary = None)
     val p3 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = Some(com3))
-    assert(StatsHandler.availableDataTypes(p3).contains(StatsDataTypes.PostWhoCommented))
-    assert(StatsHandler.availableDataTypes(p3).contains(StatsDataTypes.PostCommentsNumber))
+    assert(StatsGenerator.availableDataTypes(p3).contains(StatsDataTypes.PostWhoCommented))
+    assert(StatsGenerator.availableDataTypes(p3).contains(StatsDataTypes.PostCommentsNumber))
   }
 
   test("LikesNumber data type.") {
     val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(!StatsHandler.availableDataTypes(p1).contains(StatsDataTypes.LikeNumber))
+    assert(!StatsGenerator.availableDataTypes(p1).contains(StatsDataTypes.LikeNumber))
 
     val like1 = Like("1", "")
     val likes1 = Root[List[Like]](data = Some(List(like1)), paging = None, summary = None)
     val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = Some(likes1),
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsHandler.availableDataTypes(p2).contains(StatsDataTypes.LikeNumber))
+    assert(StatsGenerator.availableDataTypes(p2).contains(StatsDataTypes.LikeNumber))
   }
 
   test("Extract item stats from list of items stats.") {
@@ -164,7 +164,7 @@ class StatsHandlerSuite extends FunSuite {
         nb => ItemStats(None, users(nb), items(nb), types(nb), dataTypes(nb), counts(nb), readForStats = true)
       }.toList
 
-    val empty = StatsHandler.getItemStats("Ha", "He", "Hi", stats)
+    val empty = StatsGenerator.getItemStats("Ha", "He", "Hi", stats)
     assert(empty.userId == "Ha")
     assert(empty.itemId == "He")
     assert(empty.itemType == "Hi")
@@ -172,7 +172,7 @@ class StatsHandlerSuite extends FunSuite {
     assert(empty.dataCount == 0)
 
     val findThis = itemsNumber / 2
-    val foundIt = StatsHandler.getItemStats(users(findThis), items(findThis), types(findThis), stats)
+    val foundIt = StatsGenerator.getItemStats(users(findThis), items(findThis), types(findThis), stats)
     assert(foundIt.userId == users(findThis))
     assert(foundIt.itemId == items(findThis))
     assert(foundIt.itemType == types(findThis))
@@ -201,7 +201,7 @@ class StatsHandlerSuite extends FunSuite {
     val userStats = UserStats(userId = userId, dataTypeCounts = oldDataTypes, questionCounts = oldQuestionCounts,
       likers = oldLikers)
 
-    val newUserStats = StatsHandler.userStatsWithNewCounts(newLikers, newItemsStats, userStats)
+    val newUserStats = StatsGenerator.userStatsWithNewCounts(newLikers, newItemsStats, userStats)
 
     assert(userStats.userId == newUserStats.userId)
     assert(newUserStats.likers == newLikers)

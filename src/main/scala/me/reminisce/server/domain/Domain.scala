@@ -2,9 +2,9 @@ package me.reminisce.server.domain
 
 trait RestMessage
 
-
-// Domain objects
-
+/**
+  * Case class for the rest messages
+  */
 object Domain {
 
   case class Done(message: String) extends RestMessage

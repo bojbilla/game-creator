@@ -6,7 +6,10 @@ import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
+/**
+  * The actor handling the http request in this application. It handles the requests according to the
+  * routes defined in [[me.reminisce.server.GameCreatorService]]
+  */
 class ServerServiceActor extends Actor with GameCreatorServiceActor with ActorLogging {
   override def actorRefFactory = context
 
@@ -20,6 +23,9 @@ class ServerServiceActor extends Actor with GameCreatorServiceActor with ActorLo
 
   override implicit def json4sFormats: Formats = DefaultFormats
 
+  /**
+    * Cascades the shutdown to the mongo driver.
+    */
   override def postStop(): Unit = {
     connection.close()
     driver.system.shutdown()

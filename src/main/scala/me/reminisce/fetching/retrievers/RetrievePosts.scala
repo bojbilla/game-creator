@@ -5,7 +5,14 @@ import me.reminisce.fetching.config.GraphResponses.Post
 import me.reminisce.fetching.retrievers.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, PartialResult, RetrieveEntities}
 import me.reminisce.fetching.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
 
+/**
+  * Factory for [[me.reminisce.fetching.retrievers.RetrievePosts]] and case classes definition for message passing
+  */
 object RetrievePosts {
+  /**
+    * Creates a retrieve posts actor
+    * @return props for the created actor
+    */
   def props(): Props =
     Props(new RetrievePosts())
 
@@ -17,6 +24,11 @@ object RetrievePosts {
 
 class RetrievePosts extends RetrieveData {
 
+  /**
+    * Entry point for this actor, handles the RetrieveEntities(params) message by creating a RetrieveEntitiesService
+    * with the suitable parameters and requesting a data retrieval
+    * @return Nothing
+    */
   def receive = {
     case RetrieveEntities(params) =>
       val client = sender()
@@ -31,6 +43,15 @@ class RetrievePosts extends RetrieveData {
     case _ => log.error("RetrievingTaggedPosts received unexpected message")
   }
 
+  /**
+    * Awaits the response from the RetrieveEntitiesService. Handles the following messages:
+    * - PartialResult(entities): a partial result, sends it back to client
+    * - FinishedRetrievingEntities(entities): last retrieved entities, sends it to client
+    * - NotEnoughData(entities): not enough data was found, sends the found ones to client
+    * @param client original requester
+    * @param entityCount current retrieved entities count
+    * @return Nothing
+    */
   private def awaitResponse(client: ActorRef, entityCount: Int = 0): Receive = {
     case FinishedRetrievingEntities(entities) =>
       log.info(s"Received ${entityCount + entities.length} posts.")

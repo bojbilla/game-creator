@@ -4,7 +4,7 @@ import me.reminisce.fetching.FetcherServiceSpec
 import me.reminisce.gameboard.board.GameboardGeneratorSpec
 import me.reminisce.gameboard.questions._
 import me.reminisce.server.ServerServiceActorSpec
-import me.reminisce.stats.StatsHandlerSpec
+import me.reminisce.stats.StatsGeneratorSpec
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suites}
 
 // This class will run all the database related tests so that the db can be closed after all are ran
@@ -13,7 +13,7 @@ class DatabaseTests extends Suites(new OrderByPageLikesSpec, new OrderByPageLike
   new OrderByPostLikesNumberSpec, new OrderByPostTimeSpec, new WhenDidYouLikeThisPageSpec,
   new WhenDidYouShareThisPostSpec, new WhichCoordinatesWereYouAtSpec, new WhichPageDidYouLikeSpec, new WhoLikedYourPostSpec,
   new WhoMadeThisCommentOnYourPostSpec, new FetcherServiceSpec, new MongoDatabaseServiceSpec, new DeletionServiceSpec,
-  new StatsHandlerSpec, new GameboardGeneratorSpec, new ServerServiceActorSpec)
+  new StatsGeneratorSpec, new GameboardGeneratorSpec, new ServerServiceActorSpec)
 with BeforeAndAfterAll with BeforeAndAfterEach {
 
   override def afterAll() = {

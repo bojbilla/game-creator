@@ -12,7 +12,14 @@ import reactivemongo.core.commands.GetLastError
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+/**
+  * Factory for [[me.reminisce.database.MongoDatabaseService]], collection names definition, case class for message
+  * passing and data conversion methods
+  */
 object MongoDatabaseService {
+  /**
+    * Collection names definitions
+    */
   val fbPagesCollection = "fbPages"
   val fbPageLikesCollection = "fbPageLikes"
   val fbPostsCollection = "fbPosts"
@@ -20,8 +27,17 @@ object MongoDatabaseService {
   val userStatisticsCollection = "userStatistics"
   val itemsStatsCollection = "itemsStats"
 
+  /**
+    * MongoDB LastError object to be used while inserting in order to have safer insertion
+    */
   val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
 
+  /**
+    * Creates a database service actor
+    * @param userId userId of the user fdor which the data is stored
+    * @param db database into which data is inserted
+    * @return props for the created MongoDatabaseService
+    */
   def props(userId: String, db: DefaultDB): Props =
     Props(new MongoDatabaseService(userId, db))
 
@@ -31,6 +47,11 @@ object MongoDatabaseService {
 
   case class SaveLastFetchedTime()
 
+  /**
+    * Converts a [[me.reminisce.fetching.config.GraphResponses.Page]] to a [[me.reminisce.database.MongoDBEntities.FBPage]]
+    * @param page page to convert
+    * @return FBPage resulting from the conversion
+    */
   def pageToFBPage(page: Page): FBPage = {
     val photo = page.photos.flatMap(photoRoot => photoRoot.data.map(photo => photo))
     val fbPhoto = photo.map { photo =>
@@ -45,12 +66,25 @@ object MongoDatabaseService {
     FBPage(None, page.id, page.name, fbPhoto, page.likes.getOrElse(0))
   }
 
+  /**
+    * Extracts a [[me.reminisce.database.MongoDBEntities.FBPageLike]] from a
+    * [[me.reminisce.fetching.config.GraphResponses.Page]]
+    * @param page page from which information is extracted
+    * @param userId id of the user who liked the page
+    * @return the extracted FBPageLike
+    */
   def pageToFBPageLike(page: Page, userId: String): FBPageLike = {
     val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
     val date = formatter.parseDateTime(page.created_time)
     FBPageLike(None, userId, page.id, date)
   }
 
+  /**
+    * Converts a [[me.reminisce.fetching.config.GraphResponses.Post]] to a [[me.reminisce.database.MongoDBEntities.FBPost]]
+    * @param post post to convert
+    * @param userId user who made the post
+    * @return FBPost resulting from the conversion
+    */
   def postToFBPost(post: Post, userId: String): FBPost = {
     val likes = post.likes.flatMap(root => root.data.map(likes => likes.map(l => FBLike(l.id, l.name))))
     val likeCount = likes.map(likesList => likesList.length)
@@ -77,6 +111,13 @@ object MongoDatabaseService {
 
 class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseService {
 
+  /**
+    * Entry point of the service, handles the following messages:
+    * - SaveFBPage(pages): save the pages
+    * - SaveFBPost(posts): save the posts
+    * - SaveLastFetchedTime: save current time as last fetched time
+    * @return Nothing
+    */
   def receive = {
     case SaveFBPage(pages) =>
       saveFBPagesToDB(pages)
@@ -87,6 +128,10 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     case any => log.error(s"MongoDB Service received unexpected message : $any")
   }
 
+  /**
+    * Converts and saves pages, extracts and saves the page likes
+    * @param pages pages to work on
+    */
   private def saveFBPagesToDB(pages: List[Page]): Unit = {
     val fbPageCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
@@ -103,7 +148,11 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     }
   }
 
-
+  /**
+    * Converts and saves posts
+    * @param posts posts to work on
+    * @param collection collection in which the posts are saved
+    */
   private def saveFBPostToDB(posts: List[Post], collection: BSONCollection): Unit = {
     posts.foreach { p =>
       val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
@@ -113,6 +162,10 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     }
   }
 
+  /**
+    * Saves the current time as last fetched time
+    * @param collection collection in which the time is stored
+    */
   private def saveLastFetchTime(collection: BSONCollection): Unit = {
     val time = DateTime.now
     val selector = BSONDocument("userId" -> userId)

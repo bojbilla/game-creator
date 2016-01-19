@@ -2,8 +2,7 @@ package me.reminisce.gameboard.questions
 
 import akka.actor.Props
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
-import me.reminisce.gameboard.board.GameboardEntities
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.OrderQuestion
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
@@ -15,14 +14,32 @@ import reactivemongo.api.collections.default.BSONCollection
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-
+/**
+  * Factory for [[me.reminisce.gameboard.questions.OrderByPageLikeTime]]
+  */
 object OrderByPageLikeTime {
 
+  /**
+    * Creates an OrderByPageLikeTime question generator
+    * @param database database from which to take the data
+    * @return props for the created actor
+    */
   def props(database: DefaultDB): Props =
     Props(new OrderByPageLikeTime(database))
 }
 
+/**
+  * OrderByPageLikeTime question generator
+  * @param db database from which to take the data
+  */
 class OrderByPageLikeTime(db: DefaultDB) extends OrderQuestionGenerator {
+
+  /**
+    * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
+    * necessary items from the database and creating a question. If some items are non conform to what is expected,
+    * missing or there is an error while contacting the database, the error is reported to the client.
+    * @return Nothing
+    */
   def receive = {
     case CreateQuestionWithMultipleItems(userId, itemIds) =>
       val client = sender()
@@ -50,6 +67,13 @@ class OrderByPageLikeTime(db: DefaultDB) extends OrderQuestionGenerator {
       log.error(s"OrderByPageLikeTime received an unknown message : $any.")
   }
 
+  /**
+    * Generate a question
+    * @param userId user for which the question is meant
+    * @param pages pages choice
+    * @param pageLikes page likes corresponding to the pages
+    * @return an order question
+    */
   private def generateQuestion(userId: String, pages: List[FBPage], pageLikes: List[FBPageLike]): OrderQuestion = {
     val timedPages = pages.map {
       p =>

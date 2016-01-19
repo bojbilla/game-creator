@@ -14,7 +14,9 @@ import reactivemongo.bson.BSONDocument
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-
+/**
+  * Factory for [[me.reminisce.database.DeletionService]] and case class definitions for message passing.
+  */
 object DeletionService {
 
   case class ClearDatabase() extends RestMessage
@@ -23,12 +25,32 @@ object DeletionService {
 
   case class RemoveExtraLikes(userId: String, actualLikes: Set[String]) extends RestMessage
 
+  /**
+    * Creates a deletion service actors
+    * @param database the database on which the service must operate
+    * @return props for the generated deletion service
+    */
   def props(database: DefaultDB): Props =
     Props(new DeletionService(database))
 }
 
+/**
+  * A deletion service actor which can delete parts of the data in a database
+  * @constructor create a deletion service operating on a database
+  * @param database a reference to the database on which the service operates
+  */
 class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
 
+  /**
+    * Entry point of the service. Handles the following messages :
+    * - RemoveUser("userId") to remove all data from user "userId"
+    * - RemoveExtraLikes("userId", actualLikes) to remove the pages not liked anymore based on the actualLikes list
+    * - ClearDatabase() to clear the whole database, only possible if
+    * [[me.reminisce.server.ApplicationConfiguration.appMode]] is "DEV"
+    *
+    * Creates a worker and then waits on feedback.
+    * @return Nothing
+    */
   def receive = {
     case RemoveUser(userId) =>
       log.info(s"Removing user $userId from database.")
@@ -51,6 +73,13 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
       sender() ! ActionForbidden(s"Deletion service received an unexpected message : $any.")
   }
 
+  /**
+    * Waiting on feedback from the workers until there is no worker left
+    * @param client the original deletion requester
+    * @param workers the currently working workers
+    * @param results an aggregation of the deletion results sent by the workers
+    * @return Nothing
+    */
   private def awaitFeedBack(client: ActorRef, workers: Set[ActorRef], results: Set[Boolean]): Receive = {
     case MongoDBError(m) =>
       workers.foreach(w => w ! PoisonPill)
@@ -61,6 +90,11 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
       log.error(s"Deletion service received an unexpected message : $any.")
   }
 
+  /**
+    * Creates workers and requests the deletion of every piece of data from that user.
+    * @param userId userId of the user to delete
+    * @param client the original requester for deletion
+    */
   private def removeUser(userId: String, client: ActorRef) = {
     val selector = BSONDocument("userId" -> userId)
     foreachCollection(client) {
@@ -69,6 +103,12 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     }
   }
 
+  /**
+    * Creates workers and request them to delete the extra likes for a particular user
+    * @param userId the handled user
+    * @param actualLikes the actual likes of the user
+    * @param client the original deletion requester
+    */
   private def removeExtraLikes(userId: String, actualLikes: Set[String], client: ActorRef): Unit = {
     val pageLikeCollection = database[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     val selector = BSONDocument("userId" -> userId,
@@ -79,6 +119,10 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     worker ! DeleteSelectorMatch(selector)
   }
 
+  /**
+    * Create workers to delete each collection
+    * @param client the original deletion requester
+    */
   private def clearDatabase(client: ActorRef): Unit = {
     foreachCollection(client) {
       worker =>
@@ -86,6 +130,12 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     }
   }
 
+  /**
+    * Verifies if the work is done , if so it reports back to client.
+    * @param client original deletion requester
+    * @param workers currently working workers
+    * @param results aggregated deletion results
+    */
   private def verifyDone(client: ActorRef, workers: Set[ActorRef], results: Set[Boolean]) = {
     if (workers.isEmpty) {
       val errors = results.filter(!_)
@@ -98,6 +148,12 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     context.become(awaitFeedBack(client, workers, results))
   }
 
+  /**
+    * Performs operation defined by handle on every collection if there is at least one, otherwise calls default
+    * @param client original requester
+    * @param handle performs operations on a list of collection names
+    * @param default default operation if there is no collection
+    */
   private def onCollections(client: ActorRef)(handle: List[String] => Unit)(default: () => Unit): Unit = {
     database.collectionNames.onComplete {
       case Success(collectionNames) =>
@@ -114,6 +170,11 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     }
   }
 
+  /**
+    * Calls the handleWithWorkers routine on a worker for each collection found
+    * @param client original requester
+    * @param handleWithWorkers operation to perform on a worker constructed for a particular collection
+    */
   private def foreachCollection(client: ActorRef)(handleWithWorkers: ActorRef => Unit): Unit = {
     onCollections(client) {
       collectionNames =>

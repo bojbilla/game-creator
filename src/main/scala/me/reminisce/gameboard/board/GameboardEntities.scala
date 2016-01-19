@@ -8,10 +8,13 @@ import me.reminisce.gameboard.board.GameboardEntities.TimeUnit.TimeUnit
 import me.reminisce.server.domain.RestMessage
 
 /**
-  * Created by daroud on 1/18/16.
+  * Defines the data types used to represend a game board.
   */
 object GameboardEntities {
 
+  /**
+    * Specific question type (combination of question kind and data type). Used only for display purposes.
+    */
   object SpecificQuestionType extends Enumeration {
     type SpecificQuestionType = Value
     val TLWhenDidYouShareThisPost = Value("TLWhenDidYouShareThisPost")
@@ -36,6 +39,9 @@ object GameboardEntities {
     val Misc = Value("Misc")
   }
 
+  /**
+    * Time units used in Timeline questions
+    */
   object TimeUnit extends Enumeration {
     type TimeUnit = Value
     val Day = Value("Day")
@@ -54,6 +60,10 @@ object GameboardEntities {
     val CommentSubject = Value("Comment")
   }
 
+  /**
+    * Abstract subject, a subject represents a facebook item
+    * @param `type` type of the subject
+    */
   abstract sealed class Subject(`type`: SubjectType)
 
   abstract sealed class PostSubject(`type`: SubjectType, text: String, from: Option[FBFrom]) extends Subject(`type`)
@@ -80,6 +90,13 @@ object GameboardEntities {
   case class CommentSubject(comment: String, post: PostSubject, `type`: SubjectType = SubjectType.CommentSubject) extends Subject(`type`)
 
 
+  /**
+    * Abstract game question
+    * @param userId user for which the question is
+    * @param kind kind of question (See [[me.reminisce.gameboard.board.GameboardEntities.QuestionKind]]
+    * @param `type` type of question (See [[me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType]]
+    * @param subject subject of the question (See [[me.reminisce.gameboard.board.GameboardEntities.Subject]]
+    */
   abstract sealed class GameQuestion(userId: String, kind: QuestionKind, `type`: SpecificQuestionType, subject: Option[Subject])
 
   case class MultipleChoiceQuestion(userId: String,

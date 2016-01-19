@@ -1,5 +1,8 @@
 package me.reminisce.gameboard.questions
 
+/**
+  * Question generation configuration
+  */
 object QuestionGenerationConfig {
 
   val orderingItemsNumber = 3

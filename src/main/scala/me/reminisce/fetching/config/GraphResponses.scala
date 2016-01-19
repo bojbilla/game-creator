@@ -4,6 +4,9 @@ import com.github.nscala_time.time.Imports._
 import me.reminisce.server.domain.RestMessage
 import org.json4s.DefaultFormats
 
+/**
+  * Defines classes to hold the information parsed from the JSONs returned by Facebook when fetching data.
+  */
 object GraphResponses {
   implicit val formats = DefaultFormats
 

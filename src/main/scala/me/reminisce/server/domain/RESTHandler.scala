@@ -13,7 +13,9 @@ import spray.routing.RequestContext
 
 import scala.concurrent.duration._
 
-
+/**
+  * Defines an actor handling rest messages
+  */
 trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCreatorFormatter {
 
   import context._
@@ -25,8 +27,14 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
   def message: RestMessage
 
   setReceiveTimeout(10.seconds)
+  // sends the request to an actor
   target ! message
 
+  /**
+    * Defines the way rest messages are handled (translated to a call to the
+    * [[me.reminisce.server.domain.RESTHandler.complete]] method)
+    * @return
+    */
   def receive = {
     case FinishedQuestionCreation(q) => complete(OK, q)
     case error: Error => complete(NotFound, error)
@@ -41,6 +49,12 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
     case x => log.info("Per request received strange message " + x)
   }
 
+  /**
+    * Complete the request with the given message and status
+    * @param status status of the response
+    * @param obj response content
+    * @tparam T type of the content
+    */
   def complete[T <: AnyRef](status: StatusCode, obj: T) = {
     r.complete(status, obj)
     stop(self)
@@ -54,6 +68,9 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
     }
 }
 
+/**
+  * [[me.reminisce.server.domain.RESTHandler]] implementations
+  */
 object RESTHandler {
 
   case class WithActorRef(r: RequestContext, target: ActorRef, message: RestMessage) extends RESTHandler
@@ -64,12 +81,29 @@ object RESTHandler {
 
 }
 
+/**
+  * Factory for [[me.reminisce.server.domain.RESTHandler]]
+  */
 trait RESTHandlerCreator {
   this: Actor =>
 
+  /**
+    * Creates a rest handler
+    * @param r request context to handle
+    * @param target target actor to handle the request
+    * @param message request to send
+    * @return reference to created rest handler
+    */
   def perRequest(r: RequestContext, target: ActorRef, message: RestMessage) =
     context.actorOf(Props(new WithActorRef(r, target, message)))
 
+  /**
+    * Creates a rest handler
+    * @param r request context to handle
+    * @param props props for the target actor to handle the request
+    * @param message request to send
+    * @return reference to created rest handler
+    */
   def perRequest(r: RequestContext, props: Props, message: RestMessage) =
     context.actorOf(Props(new WithProps(r, props, message)))
 }

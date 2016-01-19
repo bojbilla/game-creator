@@ -9,6 +9,9 @@ import reactivemongo.bson.BSONDocument
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
+/**
+  * Factory for [[me.reminisce.database.DeletionWorker]] and case class definitions for message passing
+  */
 object DeletionWorker {
 
   case class DeleteSelectorMatch(selector: BSONDocument)
@@ -17,12 +20,28 @@ object DeletionWorker {
 
   case class DeletionResult(ok: Boolean)
 
+  /**
+    * Creates a worker which operates on a particular collection
+    * @param collection collection to perform actions on
+    * @return props for the created worker
+    */
   def props(collection: BSONCollection): Props =
     Props(new DeletionWorker(collection))
 }
 
+/**
+  * A deletion worker which can delete data on a particular collection
+  * @constructor create a worker to operate on a collection
+  * @param collection collection to operate on
+  */
 class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging {
 
+  /**
+    * Message handling, handles the following messages:
+    * - DeleteSelectorMatch(selector): deletes everything matching selector
+    * - DropCollection(): drops the collection
+    * @return Nothing
+    */
   def receive = {
     case DeleteSelectorMatch(selector) =>
       val client = sender()
@@ -34,6 +53,11 @@ class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging
       log.error("Deleter service received an unexpected message.")
   }
 
+  /**
+    * Deletes everything that matches selector
+    * @param selector the selector to be matched
+    * @param client the service requesting deletion
+    */
   private def delete(selector: BSONDocument, client: ActorRef) = {
     collection.remove(selector).onComplete {
       case Success(lastError) =>
@@ -47,6 +71,10 @@ class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging
     }
   }
 
+  /**
+    * Drops the collection
+    * @param client the service requesting the deletion
+    */
   private def dropCollection(client: ActorRef) = {
     collection.drop().onComplete {
       case Success(e) =>

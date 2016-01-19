@@ -2,9 +2,11 @@ package me.reminisce.server
 
 import scala.util.Properties._
 
+
 object ApplicationConfiguration {
 
   // Development ? Release ?
+  // For now, only the database wiping is prohibited when not in DEV mode
   val appMode = envOrElse("GAME_CREATOR_MODE", "DEV")
 
   val hostName = envOrElse("GAME_CREATOR_HOST", "localhost")

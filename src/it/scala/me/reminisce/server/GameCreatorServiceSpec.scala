@@ -5,9 +5,8 @@ import java.util.concurrent.TimeUnit
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
 import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
-import me.reminisce.database.{StatsEntities, MongoDatabaseService}
-import StatsEntities.UserStats
-import me.reminisce.server.ServerServiceActor
+import me.reminisce.database.MongoDatabaseService
+import me.reminisce.database.StatsEntities.UserStats
 import me.reminisce.server.TestHelpers._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}

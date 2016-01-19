@@ -5,9 +5,9 @@ import org.json4s.DefaultFormats
 
 import scala.concurrent.duration._
 
-case class FacebookAppConfig(appId: String, appSecret: String)
-
-
+/**
+  * Contains the configuration for the service contacting Facebook.
+  */
 object FacebookServiceConfig {
   implicit val formats = DefaultFormats
   val facebookStorageFolder = "facebookStorage"

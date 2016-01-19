@@ -5,13 +5,13 @@ import java.util.concurrent.ConcurrentHashMap
 import akka.actor._
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDBEntities.LastFetched
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.MongoDatabaseService.SaveLastFetchedTime
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
 import me.reminisce.fetching.FetcherService._
 import me.reminisce.server.domain.Domain.{AlreadyFresh, Done, GraphAPIInvalidToken, GraphAPIUnreachable}
 import me.reminisce.server.domain.{Domain, RestMessage}
-import me.reminisce.stats.StatsHandler
-import me.reminisce.stats.StatsHandler.FinalStats
+import me.reminisce.stats.StatsGenerator
+import me.reminisce.stats.StatsGenerator.FinalStats
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -21,7 +21,13 @@ import spray.http.StatusCodes._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
+/**
+  * Factory for [[me.reminisce.fetching.FetcherService]] and case classes for message passing
+  */
 object FetcherService {
+  /**
+    * The fetcher can not fetch for a user more than once concurrently
+    */
   private val currentlyFetching = new ConcurrentHashMap[String, Boolean]()
 
   case class FetchData(userId: String, accessToken: String) extends RestMessage
@@ -30,12 +36,28 @@ object FetcherService {
 
   case class FinishedFetching(userId: String)
 
+  /**
+    * Creates a fetcher service
+    * @param database the database in which the data will be stored
+    * @return props for the created fetcher service
+    */
   def props(database: DefaultDB): Props =
     Props(new FetcherService(database))
 }
 
+/**
+  * Fetcher service actor, it is the main supervisor of the fetching process
+  * @param database the database to store the data in
+  */
 class FetcherService(database: DefaultDB) extends FBCommunicationManager {
 
+  /**
+    * Service entry point handles the following messages:
+    * - FetchData(userId, accessToken): request for fetching data for user with ID userId and token accessToken
+    * - FinishedFetching(userId): report from the worker that the fetching process is done, stores current time as
+    * last fetched time
+    * @return Nothing
+    */
   def receive = {
     case FetchData(userId, accessToken) =>
       val client = sender()
@@ -68,10 +90,26 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
 
   }
 
+  /**
+    * Determines if one has to fetch or not based on last time the data was fetched
+    * @param currentTime current time
+    * @param lastFetched last time data was fetched
+    * @return if fetching must be done or not
+    */
   private def hasToFetch(currentTime: DateTime, lastFetched: DateTime): Boolean = {
     currentTime - 1.days > lastFetched
   }
 
+  /**
+    * Requests fetching to a worker if the last fetched was long enough in the past, if not sends an AlreadyFresh message
+    * to the requester. If fetching does not occur, a stats update is still requested (some items might not have been
+    * aggregated in stats yet).
+    * @param currentTime current time
+    * @param lastFetched last time data was fetched
+    * @param userId user for which we want data
+    * @param accessToken access token of the user
+    * @param client original fetch requester
+    */
   private def conditionalFetch(currentTime: DateTime, lastFetched: DateTime, userId: String, accessToken: String,
                                client: ActorRef) = {
     if (hasToFetch(currentTime, lastFetched)) {
@@ -101,7 +139,7 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
     } else {
       client ! AlreadyFresh(s"Data for user $userId is fresh.")
       currentlyFetching.remove(userId)
-      val statsHandler = context.actorOf(StatsHandler.props(userId, database))
+      val statsHandler = context.actorOf(StatsGenerator.props(userId, database))
       statsHandler ! FinalStats(Set(), Set())
       log.info(s"Requesting stats update for user $userId.")
     }

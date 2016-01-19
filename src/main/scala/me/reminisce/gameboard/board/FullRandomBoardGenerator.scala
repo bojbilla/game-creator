@@ -14,8 +14,18 @@ import scala.util.Random
 
 object FullRandomBoardGenerator
 
+/**
+  * Implementation of a random board generator using fully random drawers
+  * @param database database in which the data is stored
+  * @param userId user for which the board is generated
+  */
 class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends RandomBoardGenerator(database, userId, "random") {
 
+  /**
+    * Create the game board and choses the right generateBoard method to call depending on the existence of user
+    * statistics or not
+    * @param client the board requester
+    */
   def createGame(client: ActorRef): Unit = {
     val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)
     val selector = BSONDocument("userId" -> userId)
@@ -27,8 +37,14 @@ class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends Rand
     }
   }
 
+  /**
+    * Implementation of the generate board method (see [[me.reminisce.gameboard.board.RandomBoardGenerator.generateBoard]])
+    * without having user statistics
+    * @param client original board requester
+    */
   private def generateBoard(client: ActorRef): Unit = {
     // As order cannot be generated only from one question, we exclude the types that only lead to this kind of question
+    // (because we cannot have a guarantee of the number of available items as we do not have user stats)
     // PostWhoLiked is also excluded as it cannot be generated without UserStats (even though this type should not be
     // marked as available on an item if no UserStats was generated)
     //TODO : RE-ENABLE GEOLOCATION

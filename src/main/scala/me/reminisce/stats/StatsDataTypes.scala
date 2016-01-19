@@ -3,6 +3,9 @@ package me.reminisce.stats
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.QuestionKind
 
+/**
+  * Defines the data types necessary to generate stats.
+  */
 object StatsDataTypes {
 
   abstract class DataType(id: String) {
@@ -27,6 +30,11 @@ object StatsDataTypes {
   case object Time extends DataType("Time")
 
 
+  /**
+    * Possible data types for a given question kind
+    * @param questionKind question kind
+    * @return list of data types
+    */
   def possibleTypes(questionKind: QuestionKind): List[DataType] = questionKind match {
     case QuestionKind.MultipleChoice =>
       List(PostWhoLiked, PostWhoCommented, PageWhichLiked)
@@ -40,6 +48,11 @@ object StatsDataTypes {
       List()
   }
 
+  /**
+    * Possible question kinds for given data type
+    * @param dataType data type
+    * @return list of question kinds
+    */
   def possibleKind(dataType: DataType): List[QuestionKind] = dataType match {
     case Time =>
       List(QuestionKind.Timeline, QuestionKind.Order)
@@ -59,7 +72,11 @@ object StatsDataTypes {
       List()
   }
 
-
+  /**
+    * Converts a string naming a data type to a DataType object
+    * @param typeName type name as a string
+    * @return a DataType object
+    */
   def stringToType(typeName: String): DataType = typeName match {
     case PostGeolocation.name => PostGeolocation
 

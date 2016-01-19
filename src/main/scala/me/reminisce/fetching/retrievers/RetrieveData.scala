@@ -11,6 +11,9 @@ import spray.http.{HttpRequest, HttpResponse}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
+/**
+  * Custom logging class
+  */
 object MyLogger {
   implicit val logSource: LogSource[AnyRef] = new LogSource[AnyRef] {
     def genString(o: AnyRef): String = o.getClass.getName
@@ -19,6 +22,10 @@ object MyLogger {
   }
 }
 
+/**
+  * Basic abstract retriever actor class
+  * Defines a few routines and values useful for the child classes
+  */
 abstract class RetrieveData extends Actor {
   implicit def dispatcher: ExecutionContextExecutor = context.dispatcher
 

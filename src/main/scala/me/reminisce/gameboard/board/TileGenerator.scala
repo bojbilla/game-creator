@@ -3,13 +3,21 @@ package me.reminisce.gameboard.board
 import akka.actor.{ActorRef, PoisonPill, Props}
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.{GameQuestion, _}
-import me.reminisce.gameboard.board.TileGenerator.{FinishedTileCreation, FailedTileCreation, CreateTile}
+import me.reminisce.gameboard.board.TileGenerator.{CreateTile, FailedTileCreation, FinishedTileCreation}
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import me.reminisce.gameboard.questions._
 import me.reminisce.stats.StatsDataTypes._
 import reactivemongo.api.DefaultDB
 
+/**
+  * Factory for [[me.reminisce.gameboard.board.TileGenerator]] and case classes for message passing
+  */
 object TileGenerator {
+  /**
+    * Creates a tile generator actor
+    * @param database the database from which the data is read
+    * @return props for the created tile generator
+    */
   def props(database: DefaultDB): Props =
     Props(new TileGenerator(database))
 
@@ -23,8 +31,11 @@ object TileGenerator {
 }
 
 class TileGenerator(db: DefaultDB) extends QuestionGenerator {
-  val limit = 10
-
+  /**
+    * This actor's entry point, handles the CreateTile(userId, choices, tpe) message. For each choice it instantiates the
+    * appropriate question generator and requests a question generation.
+    * @return Nothing
+    */
   def receive = {
 
     case CreateTile(userId, choices, tpe) =>
@@ -48,6 +59,11 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
       log.error(s"Tile generator received an unsupported message: $any.")
   }
 
+  /**
+    * Determines which question has to be generated based on the QuestionKind and the DataType
+    * @param kindTypeWithItem a tuple representing a question
+    * @return a question generator
+    */
   private def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): ActorRef = kindTypeWithItem match {
     case (kind, tpe, item) =>
       kind match {
@@ -91,6 +107,18 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
       }
   }
 
+  /**
+    * Waits on feedback from the generator workers. The parameters hold this actor's state Handles the following messages:
+    * - FinishedQuestionCreation(q): a generator finished creating the question. Add the question to the questions list,
+    * checks if three questions were created and if so, reports back to client
+    * - MongoDBError(message): an error occurred while contacting the database, report to the client
+    * - NotEnoughData(message): there was not enough data, report to the client
+    * @param client tile requester
+    * @param userId user for which the questions are created
+    * @param qType tile question type (can be Misc)
+    * @param questions already generated questions
+    * @return Nothing
+    */
   private def awaitingQuestions(client: ActorRef, userId: String, qType: QuestionKind, questions: List[GameQuestion]): Receive = {
     case FinishedQuestionCreation(q) =>
       val newQuestions = q :: questions

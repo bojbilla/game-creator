@@ -12,8 +12,10 @@ import spray.http.{HttpRequest, HttpResponse}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+/**
+  * Defines a basic actor communicating with facebook
+  */
 abstract class FBCommunicationManager extends Actor with ActorLogging {
-
 
   implicit val formats = DefaultFormats
 

@@ -17,10 +17,24 @@ import scala.util.Random
 
 object RandomBoardGenerator
 
+/**
+  * Abstract implmentation of a random board generator
+  * @param database database in which the data is stored
+  * @param userId user for which the board is generated
+  * @param strategy strategy used to generate this board, depends on the actual random used
+  */
 abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strategy: String) extends BoardGenerator(database, userId) {
 
   val orderingItemsNumber = QuestionGenerationConfig.orderingItemsNumber
 
+  /**
+    * Awaits feedback from workers. Handles the following messages:
+    * - FinishedTileCreation(usrId, tile): a tile was created, add it to tiles and check if all the tiles are done
+    * - FailedTIleCreation(message): failed to generate a tile, report to client
+    * @param client original requester
+    * @param tiles already generated tiles
+    * @return Nothing
+    */
   protected def awaitFeedBack(client: ActorRef, tiles: List[Tile]): Receive = {
     case FinishedTileCreation(usrId, tile) =>
       val newTiles = tile :: tiles
@@ -38,6 +52,15 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
   }
 
 
+  /**
+    * Board generation logic based on the user stats. As this is a random generation, we use two random drawers,
+    * one to decide the question kinds and one to decide the data types associated with the kinds. The actual drawers
+    * can be fully random or biased.
+    * @param userStats generated statistics about the user
+    * @param client original requester
+    * @param randomKindDrawer random drawer for question kinds
+    * @param randomTypeDrawer random drawer for data types
+    */
   protected def generateBoard(userStats: UserStats, client: ActorRef)
                              (randomKindDrawer: (List[Int], List[QuestionKind], Int, Int) => List[QuestionKind],
                               randomTypeDrawer: (List[Int], List[DataType], Int, Int) => List[DataType]): Unit = {
@@ -84,9 +107,17 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
 
   }
 
-  protected def generateWithKindTypePairs(alreadyFound: List[(QuestionKind, DataType, List[(String, String)])],
+  /**
+    * Generates a list of (QuestionKind, DataType, List[(String, String)]) tuples which define questions. See
+    * [[me.reminisce.gameboard.board.BoardGenerator.generateTiles]] for an explanation on the format.
+    * @param alreadyGenerated already generated questions
+    * @param pairsKindType remaining (QuestionKind, DataType) pairs
+    * @param client original requester
+    */
+  protected def generateWithKindTypePairs(alreadyGenerated: List[(QuestionKind, DataType, List[(String, String)])],
                                           pairsKindType: List[(QuestionKind, DataType)], client: ActorRef): Unit = pairsKindType match {
     case (cKind, cType) :: tail =>
+      //Partitions into two : the ones matching the same kind/type as the head and the rest
       pairsKindType.partition { case (kind, dType) => (kind == cKind) && (dType == cType) } match {
         case (current, rest) =>
           val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
@@ -96,15 +127,18 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
               cKind match {
                 case Order =>
                   if (listItemsStats.length >= orderingItemsNumber * current.length) {
+                    // groups the retrieved stats by item type
                     val groups = listItemsStats.groupBy(is => is.itemType).toList.map {
                       case (itemType, list) => list.map(itemStats => (itemStats.itemId, itemStats.itemType))
                     }
+                    // generate buckets of items to order
                     val randomBuckets = Random.shuffle(groups.flatMap(list => createBuckets[(String, String)](list, orderingItemsNumber)))
                     if (randomBuckets.length >= current.length) {
+                      // associate the (kind, type) tuples with a bucket
                       val newFound = current.zip(randomBuckets).map {
                         case ((kind, dType), v) => (kind, dType, v)
                       }
-                      generateWithKindTypePairs(alreadyFound ++ newFound, rest, client)
+                      generateWithKindTypePairs(alreadyGenerated ++ newFound, rest, client)
                     } else {
                       client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
                     }
@@ -113,10 +147,11 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
                   }
                 case _ =>
                   if (listItemsStats.length >= current.length) {
+                    //associate the (kind, type) tuples to values
                     val newFound = current.zip(listItemsStats.map(is => (is.itemId, is.itemType))).map {
                       case ((kind, dType), v) => (kind, dType, List(v))
                     }
-                    generateWithKindTypePairs(alreadyFound ++ newFound, rest, client)
+                    generateWithKindTypePairs(alreadyGenerated ++ newFound, rest, client)
                   } else {
                     client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
                   }
@@ -124,10 +159,17 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
           }
       }
     case _ =>
-      sendOrders(client, alreadyFound)
+      sendOrders(client, alreadyGenerated)
 
   }
 
+  /**
+    * Based on the generating questions, generates CreateTile orders for each tile (see
+    * [[me.reminisce.gameboard.board.TileGenerator]]) and sends them to workers
+    * @param client original requester
+    * @param orders questions generated by
+    *               [[me.reminisce.gameboard.board.RandomBoardGenerator.generateWithKindTypePairs]]
+    */
   protected def sendOrders(client: ActorRef, orders: List[(QuestionKind, DataType, List[(String, String)])]): Unit = {
     val tiles = generateTiles(orders, client)
     if (tiles.length != 9) {
