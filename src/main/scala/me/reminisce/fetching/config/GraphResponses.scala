@@ -21,6 +21,7 @@ object GraphResponses {
                   message: Option[String],
                   story: Option[String],
                   place: Option[Place],
+                  full_picture: Option[String] = None,
                   likes: Option[Root[List[Like]]],
                   `type`: Option[String],
                   link: Option[String],

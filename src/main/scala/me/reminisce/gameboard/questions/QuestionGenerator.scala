@@ -40,8 +40,14 @@ object QuestionGenerator {
         tpe match {
           case "photo" =>
             val text = textFromPost(post)
-            val imageUrl = srcFromAttachments(post.attachments)
+            val attachUrl = srcFromAttachments(post.attachments)
             val facebookImageUrl = post.link
+            val imageUrl = attachUrl match {
+              case Some(url) =>
+                Some(url)
+              case None =>
+                post.picture
+            }
             ImagePostSubject(text, imageUrl, facebookImageUrl, from = post.from)
           case "video" =>
             val text = textFromPost(post)

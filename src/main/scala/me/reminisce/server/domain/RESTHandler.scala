@@ -46,7 +46,9 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
     case internalError: Domain.InternalError => complete(InternalServerError, internalError)
     case forbidden: ActionForbidden => complete(Forbidden, forbidden)
     case res: RestMessage => complete(OK, res)
-    case x => log.info("Per request received strange message " + x)
+    case x =>
+      log.info("Per request received strange message " + x)
+      complete(InternalServerError, "The request resulted in an unexpected answer.")
   }
 
   /**

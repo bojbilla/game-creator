@@ -108,6 +108,7 @@ object MongoDBEntities {
                     likesCount: Option[Int] = None,
                     tpe: Option[String] = None,
                     link: Option[String] = None,
+                    picture: Option[String] = None,
                     attachments: Option[List[FBAttachment]] = None,
                     comments: Option[List[FBComment]] = None,
                     commentsCount: Option[Int] = None)

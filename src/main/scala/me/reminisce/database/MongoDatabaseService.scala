@@ -105,7 +105,7 @@ object MongoDatabaseService {
       ))
     )))
     FBPost(None, userId, post.id, post.message, post.story, fbPlace, post.created_time, fbFrom,
-      likes, likeCount, post.`type`, post.link, fbAttachments, fbComments, fbCommentsCount)
+      likes, likeCount, post.`type`, post.link, post.full_picture, fbAttachments, fbComments, fbCommentsCount)
   }
 }
 

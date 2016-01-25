@@ -1,8 +1,6 @@
 package me.reminisce.gameboard.questions
 
-import me.reminisce.database.MongoDBEntities
 import me.reminisce.database.MongoDBEntities._
-import me.reminisce.gameboard.board.GameboardEntities
 import me.reminisce.gameboard.board.GameboardEntities._
 import org.scalatest.FunSuite
 
