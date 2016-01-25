@@ -8,13 +8,17 @@ import multiprocessing
 
 facebook_api_path = "https://graph.facebook.com/v2.2"
 
+# Path to get an access token for the application administration
+# requires the app id and the app secret
 app_access_token_path = facebook_api_path + "/oauth/access_token?client_id={}&client_secret={}" \
                                             "&grant_type=client_credentials"
 
+# Path to get the test users list, requires an access token for the application
 test_users_list_path = facebook_api_path + "/{}/accounts/test-users?access_token={}"
 
 users_list = []
 
+# Access paths to a locally deployed game creator, the wipe route only works if it was deployed in a "DEV" environment
 game_creator_api = {
     "fetch": "http://localhost:9900/fetchData?user_id={}&access_token={}",
     "board": "http://localhost:9900/gameboard?user_id={}&access_token={}&strategy={}",
@@ -23,6 +27,11 @@ game_creator_api = {
 
 
 def setup_users_list():
+    """
+     Uses the app id and app secret to get a list of the test users with their access tokens.
+     The environment variables "FACEBOOK_APP_ID" and "FACEBOOK_APP_SECRET" must be setup properly otherwise the script
+     fails.
+    """
     global app_access_token_path, test_users_list_path, users_list
     facebook_app_id = os.environ.get("FACEBOOK_APP_ID")
     
@@ -64,6 +73,12 @@ def setup_users_list():
 
 
 def check_response(response, error_mess):
+    """
+    Check the status code of the http response and returns True iff the status was 200.
+    :param response: HTTP response
+    :param error_mess: error message to print if the status code is not 200
+    :return: response.status_code == 200
+    """
     if response.status_code != 200:
         print(error_mess, "Error code:", response.status_code, ", message:", response.text)
         return False
@@ -71,6 +86,12 @@ def check_response(response, error_mess):
 
 
 def print_response(response, print_text=True, fields=None):
+    """
+    HTTP response pretty printing
+    :param response: HTTP response to print
+    :param print_text: enables the printing of the response body entirely
+    :param fields: if print_text is False, fields of the JSON response to print
+    """
     print("Status code:", response.status_code)
 
     json_response = json.loads(response.text)
@@ -88,27 +109,52 @@ def print_response(response, print_text=True, fields=None):
 
 
 def fetch_request(user):
+    """
+    Builds a fetch request URL based on the user id and access token
+    :param user: dict containing the fields "id" and "access_token"
+    :return: the built request URL
+    """
     user_id = user["id"]
     user_token = user["access_token"]
     return game_creator_api["fetch"].format(user_id, user_token)
 
 
 def fetch_for_users():
+    """
+    Performs a fetch request to the game creator for each user in the users_list list.
+    Uses a thread pool to parallelize the requests.
+    """
     print("Requesting fetch...")
+    # Builds a list of fetch request URLS
     fetch_requests = [fetch_request(user) for user in users_list]
+    # Creates a thread pool with one thread per request
     p = multiprocessing.Pool(len(fetch_requests))
+    # p.map(f, data) applies f to each item of data, using the threads in thread pool p and returns a list of the
+    # results of the computation
     responses = p.map(requests.get, fetch_requests)
     for response in responses:
         print_response(response)
 
 
 def board_request(user):
+    """
+    Builds a game board request URL based on the user id and access token
+    :param user: dict containing the fields "id" and "access_token"
+    :return: the built request URL
+    """
     user_id = user["id"]
     user_token = user["access_token"]
     return game_creator_api["board"].format(user_id, user_token, "chooser")
 
 
 def boards(args):
+    """
+    Performs a game board request to the game creator for each user in the users_list list.
+    Uses a thread pool to parallelize the requests.
+    :param args: namespace containing additional arguments for pretty printing (verbose to enable/disable printing the
+    whole game board body, board_query specifies fields to print otherwise)
+    """
+    # See thread pool usage explained in the fetch_for_users() function
     board_requests = [board_request(user) for user in users_list]
     p = multiprocessing.Pool(len(board_requests))
     responses = zip(p.map(requests.get, board_requests), users_list)
@@ -120,12 +166,22 @@ def boards(args):
 
 
 def wipe():
+    """
+    Request the game creator to wipe its database.
+    """
     print("Deletion...")
     delete_response = requests.delete(game_creator_api["wipe"])
     print_response(delete_response)
 
 
 def check_positive_float(value):
+    """
+    Checks if the string value is a valid positive floating point number and returns it. Used for arguments parsing.
+    :param value: string to check
+    :raises argparse.ArgumentTypeError: if value is not a valid floating point number or not a positive floating point
+    number
+    :return: value as a floating point number
+    """
     try:
         float_value = float(value)
     except ValueError:
@@ -136,6 +192,10 @@ def check_positive_float(value):
 
 
 def get_parser():
+    """
+    Creates an arguments parser used to parse this scripts arguments. The usage of each flag is specified here.
+    :return: the generated arguments parser
+    """
     parser = argparse.ArgumentParser(description="Tool to test the game creator. The actions are executed in the"
                                                  " following order: wipe, fetch, board.")
     parser.add_argument("-f", "--fetch", action="store_true", help="Fetches data for all the test users.")
@@ -150,6 +210,16 @@ def get_parser():
 
 
 def main():
+    """
+    Main function in this script. Parses the argument, sets up the users list with the access tokens, then performs
+    actions in the following order:
+    1. Requests a database wipe of the wipe flag is enabled
+    2. Requests data fetching for each user if the fetch flag is enabled. If the boards flag is also enabled, sleeps
+       for the specified wait_time (if specified).
+    3. Requests a game board for each user if the board flag is enabled. The specified elements in board_query are used
+       to print particular fields instead of the whole game board.
+    :return: 0 if nothing failed
+    """
     parser = get_parser()
     args = parser.parse_args()
 
