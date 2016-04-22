@@ -49,6 +49,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
     */
   def receive = {
     case CreateBoard(accessToken, strategy) =>
+      log.info(s"Creating Gameboard with strategy: $strategy for user: $userId")
       val client = sender()
       val creator = getCreatorFromStrategy(strategy)
       val fetcherService = context.actorOf(FetcherService.props(database))

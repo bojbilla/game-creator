@@ -47,10 +47,7 @@ class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends Rand
     // (because we cannot have a guarantee of the number of available items as we do not have user stats)
     // PostWhoLiked is also excluded as it cannot be generated without UserStats (even though this type should not be
     // marked as available on an item if no UserStats was generated)
-    //TODO : RE-ENABLE GEOLOCATION
-    //For now geolocation questions are disabled
-    val excluded = (PostWhoLiked :: possibleTypes(Order).filter(t => possibleKind(t).size == 1)
-      ::: possibleTypes(Geolocation).filter(t => possibleKind(t).size == 1)).map(_.name)
+    val excluded = (PostWhoLiked :: possibleTypes(Order).filter(t => possibleKind(t).size == 1)).map(_.name)
     val selector = BSONDocument("userId" -> userId,
       "$or" -> BSONArray(
         BSONDocument("dataCount" -> BSONDocument("$gt" -> excluded.size)),

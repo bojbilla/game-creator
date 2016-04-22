@@ -80,11 +80,9 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
       val tlCount = normalizedCounts.getOrElse(Timeline.toString, 0)
       val ordCount = normalizedCounts.getOrElse(Order.toString, 0)
       val mcCount = normalizedCounts.getOrElse(MultipleChoice.toString, 0)
-      //val geoCount = normalizedCounts.getOrElse(Geolocation.toString, 0)
-
-      //TODO : RE-ENABLE GEOLOCATION
-      val selectedKinds = randomKindDrawer(List(tlCount, ordCount, mcCount),
-        List(Timeline, Order, MultipleChoice), 27, 1)
+      val geoCount = normalizedCounts.getOrElse(Geolocation.toString, 0)
+      val selectedKinds = randomKindDrawer(List(tlCount, ordCount, mcCount, geoCount),
+        List(Timeline, Order, MultipleChoice, Geolocation), 27, 1)
 
       val pairsKindType: List[(QuestionKind, DataType)] = selectedKinds.groupBy(el => el).toList.flatMap {
         case (kind, kindList) =>
