@@ -1,6 +1,7 @@
 package me.reminisce.gameboard.board
 
-import me.reminisce.database.MongoDBEntities.FBFrom
+import me.reminisce.database.MongoDBEntities.{FBFrom, FBLocation, FBPlace}
+import me.reminisce.fetching.config.GraphResponses.Place
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.QuestionKind
 import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType.SpecificQuestionType
 import me.reminisce.gameboard.board.GameboardEntities.SubjectType.SubjectType
@@ -135,7 +136,7 @@ object GameboardEntities {
                                  kind: QuestionKind,
                                  `type`: SpecificQuestionType,
                                  subject: Option[Subject],
-                                 answer: Location,
+                                 answer: FBLocation,
                                  defaultLocation: Location,
                                  range: Double) extends GameQuestion(userId, kind, `type`, subject)
 

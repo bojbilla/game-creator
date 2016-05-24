@@ -56,13 +56,13 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
               postSubject = QuestionGenerator.subjectFromPost(post)
               place <- post.place
             } yield {
-              val answer = Location(place.location.latitude, place.location.longitude)
+              val answer = place.location
               //magic numbers
               val maxDisplacement = 0.03166666666
               val minDisplacement = 0.02743473384
               val t = Random.nextDouble() * (maxDisplacement - minDisplacement) + minDisplacement
               val theta = Random.nextDouble() * 2 * math.Pi
-              val defaultLocation = Location(answer.latitude + t * math.sin(theta), answer.longitude + t * math.cos(theta))
+              val defaultLocation = Location(place.location.latitude + t * math.sin(theta), place.location.longitude + t * math.cos(theta))
               //magic number, around 2 kilometers
               val range = 0.02612831795
               GeolocationQuestion(userId, Geolocation, GeoWhatCoordinatesWereYouAt, Some(postSubject),
