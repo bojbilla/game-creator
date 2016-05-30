@@ -1,6 +1,7 @@
 package me.reminisce.gameboard.questions
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.event.Logging
 import me.reminisce.database.MongoDBEntities.{FBAttachment, FBPage, FBPageLike, FBPost}
 import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.gameboard.questions.QuestionGenerator.MongoDBError
@@ -34,12 +35,12 @@ object QuestionGenerator {
     * @param post post from which the subject must be extracted
     * @return a subject representing the page
     */
-  def subjectFromPost(post: FBPost): PostSubject = {
+  def subjectFromPost(post: FBPost, includeStory: Boolean = true): PostSubject = {
     post.tpe match {
       case Some(tpe) =>
         tpe match {
           case "photo" =>
-            val text = textFromPost(post)
+            val text = textFromPost(post, includeStory)
             val attachUrl = srcFromAttachments(post.attachments)
             val facebookImageUrl = post.link
             val imageUrl = attachUrl match {
@@ -50,21 +51,21 @@ object QuestionGenerator {
             }
             ImagePostSubject(text, imageUrl, facebookImageUrl, from = post.from)
           case "video" =>
-            val text = textFromPost(post)
+            val text = textFromPost(post, includeStory)
             val thumbnailUrl = srcFromAttachments(post.attachments)
             val url = post.link
             VideoPostSubject(text, thumbnailUrl, url, from = post.from)
           case "link" =>
-            val text = textFromPost(post)
+            val text = textFromPost(post, includeStory)
             val thumbnailUrl = srcFromAttachments(post.attachments)
             val url = post.link
             LinkPostSubject(text, thumbnailUrl, url, from = post.from)
           case _ =>
-            val text = textFromPost(post)
+            val text = textFromPost(post, includeStory)
             TextPostSubject(text, from = post.from)
         }
       case None =>
-        val text = textFromPost(post)
+        val text = textFromPost(post, includeStory)
         TextPostSubject(text, from = post.from)
     }
   }
@@ -74,15 +75,15 @@ object QuestionGenerator {
     * @param post post from which the text is extracted
     * @return the post's text
     */
-  def textFromPost(post: FBPost): String = {
+  def textFromPost(post: FBPost, includeStory: Boolean = true): String = {
     post.message match {
       case Some(message) =>
-        message + {
+        message + (if (includeStory) {
           post.story match {
             case Some(story) => "\n" + story
             case None => ""
-          }
-        }
+          } 
+        } else "")
       case None => post.story.getOrElse("")
     }
   }
@@ -119,7 +120,7 @@ object QuestionGenerator {
   * Abstract question generator
   */
 abstract class QuestionGenerator extends Actor with ActorLogging {
-
+  override val log = Logging(context.system, this)
   /**
     * Get a number of document matching a query. Skips a random number of them.
     * @param db database containing the documents

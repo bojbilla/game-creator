@@ -1,6 +1,7 @@
 package me.reminisce.gameboard.questions
 
 import akka.actor.Props
+import akka.event.Logging
 import me.reminisce.database.MongoDBEntities.FBPost
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
@@ -33,7 +34,7 @@ object WhichCoordinatesWereYouAt {
   * @param db database from which to take the data
   */
 class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
-
+  override val log = Logging(context.system, this)
   /**
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
     * necessary items from the database and creating a question. If some items are non conform to what is expected,
@@ -53,7 +54,8 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
           val questionOpt =
             for {
               post <- postOpt
-              postSubject = QuestionGenerator.subjectFromPost(post)
+              //we can't use the postSubject, as it contains the story which contains the actual location
+              postSubject = QuestionGenerator.subjectFromPost(post, includeStory = false)
               place <- post.place
             } yield {
               val answer = place.location

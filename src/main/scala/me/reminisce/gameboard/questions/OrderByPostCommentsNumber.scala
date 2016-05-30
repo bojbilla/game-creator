@@ -44,7 +44,7 @@ class OrderByPostCommentsNumber(db: DefaultDB) extends OrderQuestionGenerator {
           if (postsList.length < itemsToOrder) {
             client ! NotEnoughData(s"Not enough posts in list.")
           } else {
-            val ordered = postsList.take(itemsToOrder).sortBy(_.commentsCount).map(subjectFromPost)
+            val ordered = postsList.take(itemsToOrder).sortBy(_.commentsCount).map(p => subjectFromPost(p))
             OrderQuestionGenerator.generateSubjectsWithId(ordered) match {
               case (subjectsWithId, answer) =>
                 val gameQuestion = OrderQuestion(userId, Order, ORDPostCommentsNumber, None, subjectsWithId, answer)
