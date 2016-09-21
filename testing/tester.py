@@ -6,7 +6,7 @@ from time import sleep
 import json
 import multiprocessing
 
-facebook_api_path = "https://graph.facebook.com/v2.2"
+facebook_api_path = "https://graph.facebook.com/v2.7"
 
 # Path to get an access token for the application administration
 # requires the app id and the app secret
@@ -50,12 +50,7 @@ def setup_users_list():
     if not check_response(app_access_token_resp, "Facebook did not send access_token."):
         return 2
 
-    split_resp = app_access_token_resp.text.split('=')
-    if len(split_resp) < 2:
-        print("Response format unexpected:", app_access_token_resp.text)
-        return 3
-
-    app_access_token = split_resp[1]
+    app_access_token = json.loads(app_access_token_resp.text)["access_token"]
 
     if app_access_token is None or app_access_token == "":
         print("Empty access token.")
@@ -69,6 +64,7 @@ def setup_users_list():
         return 2
 
     users_list = test_users_list_resp.json()["data"]
+    users_list = filter(lambda u: "access_token" in u, users_list)
     return 0
 
 
