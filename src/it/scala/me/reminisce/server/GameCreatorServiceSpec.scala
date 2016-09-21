@@ -25,22 +25,17 @@ import scala.concurrent.{Await, Future}
 import scala.util.Properties._
 
 class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) with MongoEmbedDatabase
-with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
+  with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
 
-
-  implicit def json4sFormats: Formats = DefaultFormats
 
   val port = 27017
   val mongoProps: MongodProps = mongoStart(port = port)
   val driver: MongoDriver = new MongoDriver
-
   implicit val pipelineRawJson: HttpRequest => Future[HttpResponse] = (
     addHeader(Accept(`application/json`))
       ~> sendReceive
     )
-
   val testService = TestActorRef[ServerServiceActor]
-
   val testUserOpt: Option[AuthenticatedTestUser] = {
     val facebookAppId = envOrElse("FACEBOOK_APP_ID", "NONE")
     val facebookAppSecret = envOrElse("FACEBOOK_APP_SECRET", "NONE")
@@ -80,6 +75,8 @@ with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
     authenticatedUsers.headOption
   }
 
+  implicit def json4sFormats: Formats = DefaultFormats
+
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
     mongoStop(mongoProps)
@@ -91,7 +88,7 @@ with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
   "GameboardService" must {
 
     "say that the token is invalid." in {
-      val fetchRequest = new HttpRequest(uri = "/fetchData?user_id=100007638947117&access_token=XXX")
+      val fetchRequest = HttpRequest(uri = "/fetchData?user_id=100007638947117&access_token=XXX")
       assert(fetchRequest.method == HttpMethods.GET)
       testService ! fetchRequest
 
@@ -188,21 +185,28 @@ with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
           val db = connection("mydb")
           val collection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
           val selector = BSONDocument("userId" -> testUser.id)
-          val userStats = Await.result(collection.find(selector).one[UserStats], Duration(10, TimeUnit.SECONDS))
-          assert(userStats.isDefined)
+          val userStatsOpt = Await.result(collection.find(selector).one[UserStats], Duration(10, TimeUnit.SECONDS))
 
-          val gameboardRequest = Get(s"/gameboard?user_id=${testUser.id}&access_token=${testUser.accessToken}&strategy=random")
+          userStatsOpt match {
+            case Some(userStats) =>
+              val gameboardRequest = Get(s"/gameboard?user_id=${testUser.id}&access_token=${testUser.accessToken}&strategy=random")
 
-          testService ! gameboardRequest
+              testService ! gameboardRequest
 
-          val gameboardAnswerOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-          gameboardAnswerOpt match {
-            case Some(gameboardAnswer) =>
-              assert(gameboardAnswer.isInstanceOf[HttpResponse])
-              val gameboardHttpResponse = gameboardAnswer.asInstanceOf[HttpResponse]
-              assert(gameboardHttpResponse.status == StatusCodes.OK)
+              val gameboardAnswerOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+              gameboardAnswerOpt match {
+                case Some(gameboardAnswer) =>
+                  assert(gameboardAnswer.isInstanceOf[HttpResponse])
+                  val gameboardHttpResponse = gameboardAnswer.asInstanceOf[HttpResponse]
+                  assert(gameboardHttpResponse.status == StatusCodes.OK)
+                case None =>
+                  fail("Did not receive a successful gameboard.")
+              }
+
             case None =>
-              fail("Did not receive a successful gameboard.")
+              cancel("Unable to find UserStats, the test user may have been wiped from its posts. " +
+                "It may also be that the fetching failed, please make sure that other tests pass.")
+
           }
         case None =>
           fail("TestUser is not defined.")

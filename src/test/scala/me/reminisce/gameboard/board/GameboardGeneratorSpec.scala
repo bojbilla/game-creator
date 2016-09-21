@@ -3,9 +3,10 @@ package me.reminisce.gameboard.board
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
-import me.reminisce.database.MongoDBEntities.LastFetched
+import me.reminisce.database.MongoDBEntities.{FBFrom, LastFetched}
 import me.reminisce.database.{DatabaseTestHelper, DatabaseTester, MongoDatabaseService}
 import me.reminisce.gameboard.board.GameGenerator.CreateBoard
+import me.reminisce.gameboard.board.GameboardEntities.SubjectType.SubjectType
 import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.server.domain.Domain.InternalError
 import org.joda.time.DateTime
@@ -14,7 +15,6 @@ import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONInteger
 import reactivemongo.core.commands.GetLastError
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.io.Source
@@ -24,7 +24,7 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
   val testDb = "/anondb"
 
   "GameboardGenerator" must {
-    "generate random boards." in {
+    "generate valid boards." in {
       val db = newDb()
       val userId = Source.fromURL(getClass.getResource(testDb + "/userId")).getLines().toList.headOption match {
         case Some(id) =>
@@ -33,9 +33,8 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
           fail("UserId is not defined.")
       }
       DatabaseTestHelper.populateWithTestData(db, testDb)
-      val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
+      val safeLastError = GetLastError(w = Some(BSONInteger(1)))
       db[BSONCollection](MongoDatabaseService.lastFetchedCollection).save(LastFetched(None, userId, DateTime.now), safeLastError)
-      val subjects = mutable.Set[Subject]()
       (0 until 10).foreach {
         i =>
           val generator = TestActorRef(GameGenerator.props(db, userId))
@@ -49,38 +48,70 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
               assert(id == userId)
               tiles.foreach {
                 tile =>
-                  addSubjectFromQuestion(subjects, tile.question1)
-                  addSubjectFromQuestion(subjects, tile.question2)
-                  addSubjectFromQuestion(subjects, tile.question3)
+                  validateQuestion(tile.question1)
+                  validateQuestion(tile.question2)
+                  validateQuestion(tile.question3)
               }
             case any =>
               println(s"Received : $any")
           }
       }
-      assert(subjects.size > 120)
     }
   }
 
-  private def addSubjectFromQuestion(subjects: mutable.Set[Subject], question: GameQuestion): Unit = {
+  /**
+    * Validates the question, for the moment it only verifies that the subject is valid
+    *
+    * @param question question to validate
+    */
+  private def validateQuestion(question: GameQuestion): Unit = {
+
+    def validateSubject(subject: Subject): Unit = {
+      subject match {
+        case PageSubject(name: String, pageId: String, photoUrl: Option[String], tpe: SubjectType) =>
+          assert(tpe == SubjectType.PageSubject)
+          assert(name.nonEmpty)
+          assert(pageId.nonEmpty)
+        case TextPostSubject(text: String, tpe: SubjectType, from: Option[FBFrom]) =>
+          assert(tpe == SubjectType.TextPost)
+          assert(text.nonEmpty)
+        case ImagePostSubject(text: String, imageUrl: Option[String], facebookImageUrl: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
+          assert(tpe == SubjectType.ImagePost)
+          assert(text.nonEmpty)
+        case VideoPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
+          assert(tpe == SubjectType.VideoPost)
+          assert(text.nonEmpty)
+        case LinkPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
+          assert(tpe == SubjectType.LinkPost)
+          assert(text.nonEmpty)
+        case CommentSubject(comment: String, post: PostSubject, tpe: SubjectType) =>
+          assert(tpe == SubjectType.CommentSubject)
+          assert(comment.nonEmpty)
+          validateSubject(post)
+        case _ =>
+          fail("Non supported subject type.")
+      }
+    }
+
     question match {
       case TimelineQuestion(uid, kind, tpe, subject, answer, min, max, default, unit, step, threshold) =>
         subject match {
-          case Some(s) => subjects += s
+          case Some(s) => validateSubject(s)
           case None => fail("Subject not defined")
         }
       case MultipleChoiceQuestion(uid, kind, tpe, subject, choices, answer) =>
         subject match {
-          case Some(s) => subjects += s
+          case Some(s) => validateSubject(s)
           case None => fail("Subject not defined")
         }
       case GeolocationQuestion(uid, kind, tpe, subject, answer, defaultLocation, range) =>
         subject match {
-          case Some(s) => subjects += s
+          case Some(s) => validateSubject(s)
           case None => fail("Subject not defined")
         }
       case OrderQuestion(uid, kind, tpe, subject, choices, answer) =>
         subject match {
-          case Some(s) =>
+          case Some(s) => validateSubject(s)
             fail("Order question should not have a subject")
           case None =>
         }
