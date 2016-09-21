@@ -7,6 +7,7 @@ import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
 import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.StatsEntities.UserStats
+import me.reminisce.fetching.config.GraphResponses.AccessTokenResponse
 import me.reminisce.server.TestHelpers._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
@@ -48,16 +49,16 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) wit
       throw new Exception("FACEBOOK_APP_SECRET environment variable is not set.")
     }
 
-    val facebookAPIPath = "https://graph.facebook.com/v2.2"
+    val facebookAPIPath = "https://graph.facebook.com/v2.7"
 
     val appAccessTokenPath = s"$facebookAPIPath/oauth/access_token?client_id=$facebookAppId" +
       s"&client_secret=$facebookAppSecret&grant_type=client_credentials"
     val appAccessTokenFuture = pipelineRawJson(Get(appAccessTokenPath))
     val appAccessTokenResponse = Await.result(appAccessTokenFuture, Duration(10, TimeUnit.SECONDS))
     assert(appAccessTokenResponse.status == StatusCodes.OK)
-    val splitResponse = appAccessTokenResponse.entity.data.asString.split("=")
-    assert(splitResponse.length > 1)
-    val appAccessToken = splitResponse(1)
+    val jsonResponse = parse(appAccessTokenResponse.entity.asString)
+    val accessTokenResponse = jsonResponse.extract[AccessTokenResponse]
+    val appAccessToken = accessTokenResponse.access_token
     assert(appAccessToken != "")
 
     val testUsersListPath = s"$facebookAPIPath/$facebookAppId/accounts/test-users?access_token=$appAccessToken"
