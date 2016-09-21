@@ -6,12 +6,14 @@ import org.scalatest.FunSuite
 
 class TimeQuestionGeneratorSuite extends FunSuite {
   test("Testing range generation.") {
-    val now = DateTime.now
-    val oneYearAgo = now - 1.year
-    val twoYearsAgo = now - 2.year
-    val twoMonthsAgo = now - 2.month
-    val threeWeeksAgo = now - 3.week
-    val fourDaysAgo = now - 4.day
+    // Use a set date to avoid glitches with special dates like the 29th of February
+    val formatter = DateTimeFormat.forPattern("dd MMM HH:mm:ss yyyy").withZone(DateTimeZone.UTC)
+    val refDate = formatter.parseDateTime("21 Sep 17:02:02 2016")
+    val oneYearAgo = refDate - 1.year
+    val twoYearsAgo = refDate - 2.year
+    val twoMonthsAgo = refDate - 2.month
+    val threeWeeksAgo = refDate - 3.week
+    val fourDaysAgo = refDate - 4.day
 
     TimeQuestionGenerator.generateRange(oneYearAgo) match {
       case (minOneYearAgo, defaultOneYearAgo, maxOneYearAgo, unitOneYearAgo, stepOneYearAgo) =>
