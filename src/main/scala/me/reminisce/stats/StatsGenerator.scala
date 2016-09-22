@@ -277,20 +277,21 @@ class StatsGenerator(userId: String, db: DefaultDB) extends DatabaseService {
                             itemsStatsCollection: BSONCollection): Unit = {
     if ((fbPagesIds ++ fbPostsIds).nonEmpty) {
       val postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> fbPostsIds))
-      val postsCursor = postCollection.find(postSelector).cursor[FBPost]
+      val postsCursor = postCollection.find(postSelector).cursor[FBPost]()
       (for {
         fbPosts <- postsCursor.collect[List](fbPostsIds.length, stopOnError = true)
 
         pageSelector = BSONDocument("pageId" -> BSONDocument("$in" -> fbPagesIds))
-        pagesCursor = pagesCollection.find(pageSelector).cursor[FBPage]
+        pagesCursor = pagesCollection.find(pageSelector).cursor[FBPage]()
         fbPages <- pagesCursor.collect[List](fbPagesIds.length, stopOnError = true)
 
         itemStatsSelector = BSONDocument("userId" -> userId, "itemId" -> BSONDocument("$in" -> fbPostsIds))
-        itemsStatsCursor = itemsStatsCollection.find(itemStatsSelector).cursor[ItemStats]
+        itemsStatsCursor = itemsStatsCollection.find(itemStatsSelector).cursor[ItemStats]()
         itemsStats <- itemsStatsCursor.collect[List](fbPostsIds.length, stopOnError = true)
 
         queryNotLiked = BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$nin" -> fbPagesIds))
-        notLikedPagesCount <- db.command(Count(MongoDatabaseService.fbPageLikesCollection, Some(queryNotLiked)))
+        collection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
+        notLikedPagesCount <- collection.count(Some(queryNotLiked))
       } yield finalizeStats(fbPosts, fbPages, notLikedPagesCount, userStats, itemsStats, itemsStatsCollection, userStatsCollection)
         ) onFailure {
         case e =>
@@ -298,12 +299,12 @@ class StatsGenerator(userId: String, db: DefaultDB) extends DatabaseService {
       }
     } else {
       val selectOldItems = BSONDocument("userId" -> userId, "readForStats" -> false)
-      val itemsStatsCursor = itemsStatsCollection.find(selectOldItems).cursor[ItemStats]
+      val itemsStatsCursor = itemsStatsCollection.find(selectOldItems).cursor[ItemStats]()
       (for {
         itemsStats <- itemsStatsCursor.collect[List](stopOnError = true)
 
         postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> itemsStats.map(is => is.itemId)))
-        postsCursor = postCollection.find(postSelector).cursor[FBPost]
+        postsCursor = postCollection.find(postSelector).cursor[FBPost]()
         fbPosts <- postsCursor.collect[List](itemsStats.length, stopOnError = true) if itemsStats.nonEmpty
       } yield dealWithOldStats(fbPosts, itemsStats, userStats, itemsStatsCollection, userStatsCollection)
         ) onFailure {

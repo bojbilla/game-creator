@@ -81,7 +81,7 @@ class DeletionWorker(collection: BSONCollection) extends Actor with ActorLogging
     * @param client the service requesting the deletion
     */
   private def dropCollection(client: ActorRef) = {
-    collection.drop().onComplete {
+    collection.drop(failIfNotFound = false).onComplete {
       case Success(e) =>
         client ! DeletionResult(ok = true)
       case Failure(e) =>

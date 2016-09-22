@@ -22,44 +22,48 @@ class OrderByPostLikesNumberSpec extends QuestionTester("OrderByPostLikesNumberS
 
   "OrderByPostLikesNumber" must {
     "not create question when there is not enough data." in {
-      val db = newDb()
-      val itemIds = List("This user does not exist")
+      testWithDb {
+        db =>
+          val itemIds = List("This user does not exist")
 
-      val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
-      val testProbe = TestProbe()
-      testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
+          val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
+          val testProbe = TestProbe()
+          testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
+          testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
+      }
     }
 
     "create a valid question when the data is there." in {
-      val db = newDb()
-      val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+      testWithDb {
+        db =>
+          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
-      val postsNumber = QuestionGenerationConfig.orderingItemsNumber
+          val postsNumber = QuestionGenerationConfig.orderingItemsNumber
 
-      val itemIds: List[String] = (1 to postsNumber).map {
-        nb => s"Post$nb"
-      }.toList
+          val itemIds: List[String] = (1 to postsNumber).map {
+            nb => s"Post$nb"
+          }.toList
 
-      val posts = (0 until postsNumber).map {
-        nb =>
-          FBPost(None, userId, itemIds(nb), Some(s"Cool post $nb"), likesCount = Some(nb))
-      }.toList
+          val posts = (0 until postsNumber).map {
+            nb =>
+              FBPost(None, userId, itemIds(nb), Some(s"Cool post $nb"), likesCount = Some(nb))
+          }.toList
 
-      (0 until postsNumber) foreach {
-        nb =>
-          Await.result(postsCollection.update(posts(nb), posts(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
-      }
+          (0 until postsNumber) foreach {
+            nb =>
+              Await.result(postsCollection.update(posts(nb), posts(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
+          }
 
-      val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
-      val testProbe = TestProbe()
-      testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
+          val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
+          val testProbe = TestProbe()
+          testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
 
-      checkFinished[OrderQuestion](testProbe) {
-        question =>
-          orderCheck[TextPostSubject](question) {
-            case (subject, nb) =>
-              assert(subject.text == posts(nb).message.getOrElse(""))
+          checkFinished[OrderQuestion](testProbe) {
+            question =>
+              orderCheck[TextPostSubject](question) {
+                case (subject, nb) =>
+                  assert(subject.text == posts(nb).message.getOrElse(""))
+              }
           }
       }
     }

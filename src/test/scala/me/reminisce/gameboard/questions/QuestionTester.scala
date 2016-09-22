@@ -40,7 +40,7 @@ abstract class QuestionTester(actorSystemName: String) extends DatabaseTester(ac
     val subjectWithIds = question.choices
     val answer = question.answer
     answer.indices.foreach {
-      case nb =>
+      nb =>
         val a = answer(nb)
         checkOpt(subjectWithIds.find(elm => elm.uId == a)) {
           subjectWithId =>

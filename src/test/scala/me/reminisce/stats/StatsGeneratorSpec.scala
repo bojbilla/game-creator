@@ -25,117 +25,123 @@ class StatsGeneratorSpec extends DatabaseTester("StatsGeneratorSpec") {
 
   "StatsGenerator" must {
     "Save \"on the fly\" stats." in {
-      val db = newDb()
-      val itemsStatsCollection = db[BSONCollection](MongoDatabaseService.itemsStatsCollection)
+      testWithDb {
+        db =>
+          val itemsStatsCollection = db[BSONCollection](MongoDatabaseService.itemsStatsCollection)
 
-      val ref = TestActorRef(StatsGenerator.props(StatsTestData.userId, db))
-      ref ! TransientPostsStats(StatsTestData.posts)
+          val ref = TestActorRef(StatsGenerator.props(StatsTestData.userId, db))
+          ref ! TransientPostsStats(StatsTestData.posts)
 
-      val postIds = StatsTestData.posts.map(p => p.id)
-      val selector = BSONDocument("userId" -> StatsTestData.userId, "itemId" -> BSONDocument("$in" -> postIds))
+          val postIds = StatsTestData.posts.map(p => p.id)
+          val selector = BSONDocument("userId" -> StatsTestData.userId, "itemId" -> BSONDocument("$in" -> postIds))
 
-      Retry.findList[ItemStats](itemsStatsCollection, selector, 0) {
-        _.size >= StatsTestData.referenceResult.size
-      } match {
-        case List() =>
-          fail("Failed to retrieve items stats after requesting them.")
-        case stats =>
-          assert(stats.size == StatsTestData.referenceResult.size)
-          StatsTestData.referenceResult.foreach {
-            itemStats => assert(stats.contains(itemStats))
+          Retry.findList[ItemStats](itemsStatsCollection, selector, 0) {
+            _.size >= StatsTestData.referenceResult.size
+          } match {
+            case List() =>
+              fail("Failed to retrieve items stats after requesting them.")
+            case stats =>
+              assert(stats.size == StatsTestData.referenceResult.size)
+              StatsTestData.referenceResult.foreach {
+                itemStats => assert(stats.contains(itemStats))
+              }
           }
       }
     }
 
     "Deal with old stats." in {
-      val db = newDb()
-      val itemsStatsCollection = db[BSONCollection](MongoDatabaseService.itemsStatsCollection)
-      val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
-      StatsTestData.referenceResult.foreach {
-        itemStats =>
-          val selector = BSONDocument("userId" -> StatsTestData.userId, "itemId" -> itemStats.itemId)
-          Await.result(itemsStatsCollection.update(selector, itemStats, upsert = true), Duration(10, TimeUnit.SECONDS))
+      testWithDb {
+        db =>
+          val itemsStatsCollection = db[BSONCollection](MongoDatabaseService.itemsStatsCollection)
+          val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          StatsTestData.referenceResult.foreach {
+            itemStats =>
+              val selector = BSONDocument("userId" -> StatsTestData.userId, "itemId" -> itemStats.itemId)
+              Await.result(itemsStatsCollection.update(selector, itemStats, upsert = true), Duration(10, TimeUnit.SECONDS))
+          }
+
+          val fbPosts = StatsTestData.posts.map(MongoDatabaseService.postToFBPost(_, StatsTestData.userId))
+
+          fbPosts.foreach {
+            post =>
+              val selector = BSONDocument("userId" -> StatsTestData.userId, "postId" -> post.postId)
+              Await.result(postCollection.update(selector, post, upsert = true), Duration(10, TimeUnit.SECONDS))
+          }
+
+          val ref = TestActorRef(StatsGenerator.props(StatsTestData.userId, db))
+          ref ! FinalStats(Set(), Set())
+
+          val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+
+          val selector = BSONDocument("userId" -> StatsTestData.userId)
+
+          val userStats = Retry.find[UserStats](userStatsCollection, selector, 0)(_ => true)
+
+          val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",
+            Map("LikeNumber" -> 1, "PostWhoCommented" -> 1, "PostGeolocation" -> 1, "Time" -> 1, "PostCommentsNumber" -> 1),
+            Map("Order" -> 0, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 1), Set(FBLike("1", "me")))
+
+          assert(userStats.contains(expectedUserStats))
       }
-
-      val fbPosts = StatsTestData.posts.map(MongoDatabaseService.postToFBPost(_, StatsTestData.userId))
-
-      fbPosts.foreach {
-        post =>
-          val selector = BSONDocument("userId" -> StatsTestData.userId, "postId" -> post.postId)
-          Await.result(postCollection.update(selector, post, upsert = true), Duration(10, TimeUnit.SECONDS))
-      }
-
-      val ref = TestActorRef(StatsGenerator.props(StatsTestData.userId, db))
-      ref ! FinalStats(Set(), Set())
-
-      val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
-
-      val selector = BSONDocument("userId" -> StatsTestData.userId)
-
-      val userStats = Retry.find[UserStats](userStatsCollection, selector, 0)(_ => true)
-
-      val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",
-        Map("LikeNumber" -> 1, "PostWhoCommented" -> 1, "PostGeolocation" -> 1, "Time" -> 1, "PostCommentsNumber" -> 1),
-        Map("Order" -> 0, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 1), Set(FBLike("1", "me")))
-
-      assert(userStats.contains(expectedUserStats))
     }
 
     "Generate new stats correctly" in {
-      val db = newDb()
-      val itemsStatsCollection = db[BSONCollection](MongoDatabaseService.itemsStatsCollection)
-      val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
-      val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
-      val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
-      val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+      testWithDb {
+        db =>
+          val itemsStatsCollection = db[BSONCollection](MongoDatabaseService.itemsStatsCollection)
+          val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
+          val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
+          val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
 
-      StatsTestData.referenceResult.foreach {
-        itemStats =>
-          val selector = BSONDocument("userId" -> StatsTestData.userId, "itemId" -> itemStats.itemId)
-          Await.result(itemsStatsCollection.update(selector, itemStats, upsert = true), Duration(10, TimeUnit.SECONDS))
+          StatsTestData.referenceResult.foreach {
+            itemStats =>
+              val selector = BSONDocument("userId" -> StatsTestData.userId, "itemId" -> itemStats.itemId)
+              Await.result(itemsStatsCollection.update(selector, itemStats, upsert = true), Duration(10, TimeUnit.SECONDS))
+          }
+
+          val fbPosts = StatsTestData.posts.map(MongoDatabaseService.postToFBPost(_, StatsTestData.userId))
+
+          fbPosts.foreach {
+            post =>
+              val selector = BSONDocument("userId" -> StatsTestData.userId, "postId" -> post.postId)
+              Await.result(postCollection.update(selector, post, upsert = true), Duration(10, TimeUnit.SECONDS))
+          }
+
+          StatsTestData.pages.foreach {
+            page =>
+              val selector = BSONDocument("userId" -> StatsTestData.userId, "pageId" -> page.pageId)
+              Await.result(pagesCollection.update(selector, page, upsert = true), Duration(10, TimeUnit.SECONDS))
+          }
+
+          StatsTestData.pageLikes.foreach {
+            pageLike =>
+              val selector = BSONDocument("userId" -> StatsTestData.userId, "pageId" -> pageLike.pageId)
+              Await.result(pageLikesCollection.update(selector, pageLike, upsert = true), Duration(10, TimeUnit.SECONDS))
+          }
+
+          val selector = BSONDocument("userId" -> StatsTestData.userId)
+
+          Await.result(userStatsCollection.update(selector, StatsTestData.sampleUserStats, upsert = true), Duration(10, TimeUnit.SECONDS))
+
+          val fbPostIds = fbPosts.map(post => post.postId).toSet
+          val fbPageIds = StatsTestData.pages.map(page => page.pageId).toSet
+
+          val ref = TestActorRef(StatsGenerator.props(StatsTestData.userId, db))
+          ref ! FinalStats(fbPostIds, fbPageIds)
+
+          //likers is supposed to grow
+          val userStats = Retry.find[UserStats](userStatsCollection, selector, 0) {
+            _.likers.size > StatsTestData.sampleUserStats.likers.size
+          }
+
+          val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",
+            Map("LikeNumber" -> 22, "PostWhoLiked" -> 1, "PostWhoCommented" -> 2, "PostGeolocation" -> 2, "Time" -> 22,
+              "PostCommentsNumber" -> 2), Map("Order" -> 42, "MultipleChoice" -> 3, "Geolocation" -> 2, "Timeline" -> 22),
+            Set(FBLike("1", "me"), FBLike("2", "me2"), FBLike("3", "me3"), FBLike("4", "me4")))
+
+          assert(userStats.contains(expectedUserStats))
       }
-
-      val fbPosts = StatsTestData.posts.map(MongoDatabaseService.postToFBPost(_, StatsTestData.userId))
-
-      fbPosts.foreach {
-        post =>
-          val selector = BSONDocument("userId" -> StatsTestData.userId, "postId" -> post.postId)
-          Await.result(postCollection.update(selector, post, upsert = true), Duration(10, TimeUnit.SECONDS))
-      }
-
-      StatsTestData.pages.foreach {
-        page =>
-          val selector = BSONDocument("userId" -> StatsTestData.userId, "pageId" -> page.pageId)
-          Await.result(pagesCollection.update(selector, page, upsert = true), Duration(10, TimeUnit.SECONDS))
-      }
-
-      StatsTestData.pageLikes.foreach {
-        pageLike =>
-          val selector = BSONDocument("userId" -> StatsTestData.userId, "pageId" -> pageLike.pageId)
-          Await.result(pageLikesCollection.update(selector, pageLike, upsert = true), Duration(10, TimeUnit.SECONDS))
-      }
-
-      val selector = BSONDocument("userId" -> StatsTestData.userId)
-
-      Await.result(userStatsCollection.update(selector, StatsTestData.sampleUserStats, upsert = true), Duration(10, TimeUnit.SECONDS))
-
-      val fbPostIds = fbPosts.map(post => post.postId).toSet
-      val fbPageIds = StatsTestData.pages.map(page => page.pageId).toSet
-
-      val ref = TestActorRef(StatsGenerator.props(StatsTestData.userId, db))
-      ref ! FinalStats(fbPostIds, fbPageIds)
-
-      //likers is supposed to grow
-      val userStats = Retry.find[UserStats](userStatsCollection, selector, 0) {
-        _.likers.size > StatsTestData.sampleUserStats.likers.size
-      }
-
-      val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",
-        Map("LikeNumber" -> 22, "PostWhoLiked" -> 1, "PostWhoCommented" -> 2, "PostGeolocation" -> 2, "Time" -> 22,
-          "PostCommentsNumber" -> 2), Map("Order" -> 42, "MultipleChoice" -> 3, "Geolocation" -> 2, "Timeline" -> 22),
-        Set(FBLike("1", "me"), FBLike("2", "me2"), FBLike("3", "me3"), FBLike("4", "me4")))
-
-      assert(userStats.contains(expectedUserStats))
     }
   }
 }

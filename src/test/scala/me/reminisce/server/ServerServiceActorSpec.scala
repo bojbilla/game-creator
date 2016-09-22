@@ -3,7 +3,7 @@ package me.reminisce.server
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.TestActorRef
-import me.reminisce.database.DatabaseTester
+import me.reminisce.database.{DatabaseTestHelper, DatabaseTester}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatest.DoNotDiscover
@@ -16,14 +16,14 @@ import scala.concurrent.duration.Duration
 class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
 
   case class SimpleMessageFormat(message: String)
-
-  val testService = TestActorRef[ServerServiceActor]
+  val port = DatabaseTestHelper.port
+  val testService = TestActorRef(new ServerServiceActor(s"localhost:$port", "garbage"))
 
   implicit def json4sFormats: Formats = DefaultFormats
 
   "ServerServiceActor" must {
     "try to fetch." in {
-      val fetchRequest = new HttpRequest(uri = "/fetchData?user_id=XXX&access_token=XXX")
+      val fetchRequest = HttpRequest(uri = "/fetchData?user_id=XXX&access_token=XXX")
       assert(fetchRequest.method == HttpMethods.GET)
       testService ! fetchRequest
       val responseOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))

@@ -24,8 +24,10 @@ object Server extends App {
   val protocol = "http://"
   val hostName = ApplicationConfiguration.hostName
   val port = ApplicationConfiguration.serverPort
+  val mongoHost = ApplicationConfiguration.mongoHost
+  val mongoDbName = ApplicationConfiguration.mongodbName
   // create and start our service actor
-  val service = system.actorOf(Props[ServerServiceActor], "server-service")
+  val service = system.actorOf(Props(new ServerServiceActor(mongoHost, mongoDbName)), "server-service")
 
   // sets the default timezone to UTC
   DateTimeZone.setDefault(DateTimeZone.forID("UTC"))

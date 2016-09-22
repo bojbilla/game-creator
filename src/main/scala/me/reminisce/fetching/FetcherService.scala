@@ -67,7 +67,7 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
           "userId" -> userId
         )
         val currentTime = DateTime.now
-        lastFetched.find(query).cursor[LastFetched].collect[List]().map {
+        lastFetched.find(query).cursor[LastFetched]().collect[List]().map {
           list => list.map(elm => elm.date).headOption
         }.onComplete {
           case Success(Some(time)) => conditionalFetch(currentTime, time, userId, accessToken, client)

@@ -265,7 +265,7 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
     */
   protected def findSome[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
                            (implicit reader: BSONDocumentReader[T]): Unit = {
-    collection.find(selector).cursor[T].collect[List]().onComplete {
+    collection.find(selector).cursor[T]().collect[List]().onComplete {
       case Success(list) => f(list)
       case Failure(e) =>
         client ! FailedBoardGeneration(s"MongoDB error : ${e.getMessage}.")
@@ -290,10 +290,10 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
                                   collection: BSONCollection,
                                   query: BSONDocument, quantity: Int, client: ActorRef)(f: (List[T] => Unit))
                                  (implicit reader: BSONDocumentReader[T]): Unit = {
-    val futureCount = db.command(Count(collection.name, Some(query)))
+    val futureCount = collection.count(Some(query))
     futureCount.flatMap { count =>
       val skip = if (count - quantity > 0) Random.nextInt(count - quantity) else 0
-      collection.find(query).options(QueryOpts(skipN = skip)).cursor[T].collect[List](quantity)
+      collection.find(query).options(QueryOpts(skipN = skip)).cursor[T]().collect[List](quantity)
     }.onComplete {
       case Success(list) => f(list)
       case Failure(e) =>
@@ -314,7 +314,7 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
     */
   protected def findSomeRandom[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
                                  (implicit reader: BSONDocumentReader[T]): Unit = {
-    collection.find(selector).cursor[T].collect[List]().onComplete {
+    collection.find(selector).cursor[T]().collect[List]().onComplete {
       case Success(list) => f(Random.shuffle(list))
       case Failure(e) =>
         client ! FailedBoardGeneration(s"MongoDB error : ${e.getMessage}.")

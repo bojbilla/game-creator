@@ -97,7 +97,7 @@ trait RESTHandlerCreator {
     * @return reference to created rest handler
     */
   def perRequest(r: RequestContext, target: ActorRef, message: RestMessage) =
-    context.actorOf(Props(new WithActorRef(r, target, message)))
+    context.actorOf(Props(WithActorRef(r, target, message)))
 
   /**
     * Creates a rest handler
@@ -107,5 +107,5 @@ trait RESTHandlerCreator {
     * @return reference to created rest handler
     */
   def perRequest(r: RequestContext, props: Props, message: RestMessage) =
-    context.actorOf(Props(new WithProps(r, props, message)))
+    context.actorOf(Props(WithProps(r, props, message)))
 }

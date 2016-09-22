@@ -7,4 +7,4 @@
 
 The game-creator fetches the user data from Facebook, and uses the obtained data to create a game board.
 
-For futher details please refer to the [wiki](https://github.com/reminisceme/game-creator/wiki).
+For further details please refer to the [wiki](https://github.com/reminisceme/game-creator/wiki).

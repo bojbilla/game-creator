@@ -19,7 +19,7 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
   private lazy val driver: MongoDriver = new MongoDriver
   private lazy val connection: MongoConnection = driver.connection(s"localhost:$port" :: Nil)
   // this conflicts with live mongo instances
-  private val port = 27017
+  val port = 27017
   private val mongoProps: MongodProps = mongoStart(port = port)
 
   def closeConnection() = {

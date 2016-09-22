@@ -23,45 +23,49 @@ class OrderByPageLikesSpec extends QuestionTester("OrderByPageLikesSpec") {
 
   "OderByPageLikes" must {
     "not create question when there is not enough data." in {
-      val db = newDb()
-      val itemIds = List("This User does not exist")
+      testWithDb {
+        db =>
+          val itemIds = List("This User does not exist")
 
-      val actorRef = TestActorRef(OrderByPageLikes.props(db))
-      val testProbe = TestProbe()
-      testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
-      testProbe.expectMsg(NotEnoughData(s"Not enough pages in list."))
+          val actorRef = TestActorRef(OrderByPageLikes.props(db))
+          val testProbe = TestProbe()
+          testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
+          testProbe.expectMsg(NotEnoughData(s"Not enough pages in list."))
+      }
     }
 
     "create a valid question when the data is there." in {
-      val db = newDb()
-      val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
+      testWithDb {
+        db =>
+          val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
 
-      val pagesNumber = QuestionGenerationConfig.orderingItemsNumber
+          val pagesNumber = QuestionGenerationConfig.orderingItemsNumber
 
-      val itemIds: List[String] = (1 to pagesNumber).map {
-        nb => s"Page$nb"
-      }.toList
+          val itemIds: List[String] = (1 to pagesNumber).map {
+            nb => s"Page$nb"
+          }.toList
 
-      val pages = (0 until pagesNumber).map {
-        nb =>
-          FBPage(None, itemIds(nb), Some(s"Cool page with id $nb"), None, nb)
-      }.toList
+          val pages = (0 until pagesNumber).map {
+            nb =>
+              FBPage(None, itemIds(nb), Some(s"Cool page with id $nb"), None, nb)
+          }.toList
 
-      (0 until pagesNumber) foreach {
-        nb =>
-          val selector = BSONDocument("pageId" -> pages(nb))
-          Await.result(pagesCollection.update(selector, pages(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
-      }
+          (0 until pagesNumber) foreach {
+            nb =>
+              val selector = BSONDocument("pageId" -> pages(nb))
+              Await.result(pagesCollection.update(selector, pages(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
+          }
 
-      val actorRef = TestActorRef(OrderByPageLikes.props(db))
-      val testProbe = TestProbe()
-      testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
+          val actorRef = TestActorRef(OrderByPageLikes.props(db))
+          val testProbe = TestProbe()
+          testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
 
-      checkFinished[OrderQuestion](testProbe) {
-        question =>
-          orderCheck[PageSubject](question) {
-            case (subject, nb) =>
-              assert(subject.name == pages(nb).name.getOrElse(""))
+          checkFinished[OrderQuestion](testProbe) {
+            question =>
+              orderCheck[PageSubject](question) {
+                case (subject, nb) =>
+                  assert(subject.name == pages(nb).name.getOrElse(""))
+              }
           }
       }
     }

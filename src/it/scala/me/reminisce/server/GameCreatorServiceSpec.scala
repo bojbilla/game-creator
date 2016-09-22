@@ -24,6 +24,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.util.Properties._
+import scala.util.{Failure, Success}
 
 class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) with MongoEmbedDatabase
   with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
@@ -36,7 +37,7 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) wit
     addHeader(Accept(`application/json`))
       ~> sendReceive
     )
-  val testService = TestActorRef[ServerServiceActor]
+  val testService = TestActorRef(new ServerServiceActor(s"localhost:$port", "mydb"))
   val testUserOpt: Option[AuthenticatedTestUser] = {
     val facebookAppId = envOrElse("FACEBOOK_APP_ID", "NONE")
     val facebookAppSecret = envOrElse("FACEBOOK_APP_SECRET", "NONE")
@@ -183,31 +184,35 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) wit
       testUserOpt match {
         case Some(testUser) =>
           val connection = driver.connection(s"localhost:$port" :: Nil)
-          val db = connection("mydb")
-          val collection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
-          val selector = BSONDocument("userId" -> testUser.id)
-          val userStatsOpt = Await.result(collection.find(selector).one[UserStats], Duration(10, TimeUnit.SECONDS))
+          connection.database("mydb").onComplete {
+            case Success(db) =>
+              val collection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+              val selector = BSONDocument("userId" -> testUser.id)
+              val userStatsOpt = Await.result(collection.find(selector).one[UserStats], Duration(10, TimeUnit.SECONDS))
 
-          userStatsOpt match {
-            case Some(userStats) =>
-              val gameboardRequest = Get(s"/gameboard?user_id=${testUser.id}&access_token=${testUser.accessToken}&strategy=random")
+              userStatsOpt match {
+                case Some(userStats) =>
+                  val gameboardRequest = Get(s"/gameboard?user_id=${testUser.id}&access_token=${testUser.accessToken}&strategy=random")
 
-              testService ! gameboardRequest
+                  testService ! gameboardRequest
 
-              val gameboardAnswerOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-              gameboardAnswerOpt match {
-                case Some(gameboardAnswer) =>
-                  assert(gameboardAnswer.isInstanceOf[HttpResponse])
-                  val gameboardHttpResponse = gameboardAnswer.asInstanceOf[HttpResponse]
-                  assert(gameboardHttpResponse.status == StatusCodes.OK)
+                  val gameboardAnswerOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+                  gameboardAnswerOpt match {
+                    case Some(gameboardAnswer) =>
+                      assert(gameboardAnswer.isInstanceOf[HttpResponse])
+                      val gameboardHttpResponse = gameboardAnswer.asInstanceOf[HttpResponse]
+                      assert(gameboardHttpResponse.status == StatusCodes.OK)
+                    case None =>
+                      fail("Did not receive a successful gameboard.")
+                  }
+
                 case None =>
-                  fail("Did not receive a successful gameboard.")
+                  cancel("Unable to find UserStats, the test user may have been wiped from its posts. " +
+                    "It may also be that the fetching failed, please make sure that other tests pass.")
+
               }
-
-            case None =>
-              cancel("Unable to find UserStats, the test user may have been wiped from its posts. " +
-                "It may also be that the fetching failed, please make sure that other tests pass.")
-
+            case Failure(e) =>
+              fail(s"${e.getMessage}")
           }
         case None =>
           fail("TestUser is not defined.")

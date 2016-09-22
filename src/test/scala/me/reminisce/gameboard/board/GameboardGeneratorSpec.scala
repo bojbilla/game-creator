@@ -24,35 +24,37 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
 
   "GameboardGenerator" must {
     "generate valid boards." in {
-      val db = newDb()
-      val userId = Source.fromURL(getClass.getResource(testDb + "/userId")).getLines().toList.headOption match {
-        case Some(id) =>
-          id
-        case None =>
-          fail("UserId is not defined.")
-      }
-      DatabaseTestHelper.populateWithTestData(db, testDb)
-      val lastFetched = LastFetched(None, userId, DateTime.now)
-      db[BSONCollection](MongoDatabaseService.lastFetchedCollection).update(lastFetched, lastFetched, WriteConcern.Acknowledged, upsert = true)
-      (0 until 10).foreach {
-        i =>
-          val generator = TestActorRef(GameGenerator.props(db, userId))
-          val testProbe = TestProbe()
-          testProbe.send(generator, CreateBoard("Wrong_access_token", "chooser"))
-          val board = Option(testProbe.receiveOne(Duration(10, TimeUnit.SECONDS)))
-          board match {
-            case Some(InternalError(message)) =>
-              fail(s"Board creation failed with message : $message")
-            case Some(Board(id, tiles, isTokenStale, strategy)) =>
-              assert(id == userId)
-              tiles.foreach {
-                tile =>
-                  validateQuestion(tile.question1)
-                  validateQuestion(tile.question2)
-                  validateQuestion(tile.question3)
+      testWithDb {
+        db =>
+          val userId = Source.fromURL(getClass.getResource(testDb + "/userId")).getLines().toList.headOption match {
+            case Some(id) =>
+              id
+            case None =>
+              fail("UserId is not defined.")
+          }
+          DatabaseTestHelper.populateWithTestData(db, testDb)
+          val lastFetched = LastFetched(None, userId, DateTime.now)
+          db[BSONCollection](MongoDatabaseService.lastFetchedCollection).update(lastFetched, lastFetched, WriteConcern.Acknowledged, upsert = true)
+          (0 until 10).foreach {
+            i =>
+              val generator = TestActorRef(GameGenerator.props(db, userId))
+              val testProbe = TestProbe()
+              testProbe.send(generator, CreateBoard("Wrong_access_token", "chooser"))
+              val board = Option(testProbe.receiveOne(Duration(10, TimeUnit.SECONDS)))
+              board match {
+                case Some(InternalError(message)) =>
+                  fail(s"Board creation failed with message : $message")
+                case Some(Board(id, tiles, isTokenStale, strategy)) =>
+                  assert(id == userId)
+                  tiles.foreach {
+                    tile =>
+                      validateQuestion(tile.question1)
+                      validateQuestion(tile.question2)
+                      validateQuestion(tile.question3)
+                  }
+                case any =>
+                  println(s"Received : $any")
               }
-            case any =>
-              println(s"Received : $any")
           }
       }
     }
