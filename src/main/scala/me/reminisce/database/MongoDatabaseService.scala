@@ -6,9 +6,9 @@ import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.MongoDatabaseService._
 import me.reminisce.fetching.config.GraphResponses.{Page, Post}
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.{BSONDocument, BSONInteger}
-import reactivemongo.core.commands.GetLastError
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
+import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -28,27 +28,18 @@ object MongoDatabaseService {
   val itemsStatsCollection = "itemsStats"
 
   /**
-    * MongoDB LastError object to be used while inserting in order to have safer insertion
-    */
-  val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
-
-  /**
     * Creates a database service actor
+    *
     * @param userId userId of the user fdor which the data is stored
-    * @param db database into which data is inserted
+    * @param db     database into which data is inserted
     * @return props for the created MongoDatabaseService
     */
   def props(userId: String, db: DefaultDB): Props =
-    Props(new MongoDatabaseService(userId, db))
-
-  case class SaveFBPage(pages: List[Page])
-
-  case class SaveFBPost(posts: List[Post])
-
-  case class SaveLastFetchedTime()
+  Props(new MongoDatabaseService(userId, db))
 
   /**
     * Converts a [[me.reminisce.fetching.config.GraphResponses.Page]] to a [[me.reminisce.database.MongoDBEntities.FBPage]]
+    *
     * @param page page to convert
     * @return FBPage resulting from the conversion
     */
@@ -69,7 +60,8 @@ object MongoDatabaseService {
   /**
     * Extracts a [[me.reminisce.database.MongoDBEntities.FBPageLike]] from a
     * [[me.reminisce.fetching.config.GraphResponses.Page]]
-    * @param page page from which information is extracted
+    *
+    * @param page   page from which information is extracted
     * @param userId id of the user who liked the page
     * @return the extracted FBPageLike
     */
@@ -81,7 +73,8 @@ object MongoDatabaseService {
 
   /**
     * Converts a [[me.reminisce.fetching.config.GraphResponses.Post]] to a [[me.reminisce.database.MongoDBEntities.FBPost]]
-    * @param post post to convert
+    *
+    * @param post   post to convert
     * @param userId user who made the post
     * @return FBPost resulting from the conversion
     */
@@ -107,6 +100,13 @@ object MongoDatabaseService {
     FBPost(None, userId, post.id, post.message, post.story, fbPlace, post.created_time, fbFrom,
       likes, likeCount, post.`type`, post.link, post.full_picture, fbAttachments, fbComments, fbCommentsCount)
   }
+
+  case class SaveFBPage(pages: List[Page])
+
+  case class SaveFBPost(posts: List[Post])
+
+  case class SaveLastFetchedTime()
+
 }
 
 class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseService {
@@ -116,6 +116,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     * - SaveFBPage(pages): save the pages
     * - SaveFBPost(posts): save the posts
     * - SaveLastFetchedTime: save current time as last fetched time
+    *
     * @return Nothing
     */
   def receive = {
@@ -130,6 +131,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
 
   /**
     * Converts and saves pages, extracts and saves the page likes
+    *
     * @param pages pages to work on
     */
   private def saveFBPagesToDB(pages: List[Page]): Unit = {
@@ -137,12 +139,12 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
     val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
     pages.foreach { p =>
       val query = BSONDocument("pageId" -> p.id)
-      fbPageCollection.update(query, pageToFBPage(p), safeLastError, upsert = true).onFailure {
+      fbPageCollection.update(query, pageToFBPage(p), WriteConcern.Acknowledged, upsert = true).onFailure {
         case e => log.error(s"TEST DEBUG PRINT : finished with error : $e")
       }
 
       val query2 = BSONDocument("userId" -> userId, "pageId" -> p.id)
-      fbPageLikeCollection.update(query2, pageToFBPageLike(p, userId), safeLastError, upsert = true).onFailure {
+      fbPageLikeCollection.update(query2, pageToFBPageLike(p, userId), WriteConcern.Acknowledged, upsert = true).onFailure {
         case e => log.error(s"TEST DEBUG PRINT : finished with error : $e")
       }
     }
@@ -150,13 +152,14 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
 
   /**
     * Converts and saves posts
-    * @param posts posts to work on
+    *
+    * @param posts      posts to work on
     * @param collection collection in which the posts are saved
     */
   private def saveFBPostToDB(posts: List[Post], collection: BSONCollection): Unit = {
     posts.foreach { p =>
       val selector = BSONDocument("userId" -> userId, "postId" -> p.id)
-      collection.update(selector, postToFBPost(p, userId), safeLastError, upsert = true).onFailure {
+      collection.update(selector, postToFBPost(p, userId), WriteConcern.Acknowledged, upsert = true).onFailure {
         case e => log.error(s"TEST DEBUG PRINT : finished with error : $e")
       }
     }
@@ -164,6 +167,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
 
   /**
     * Saves the current time as last fetched time
+    *
     * @param collection collection in which the time is stored
     */
   private def saveLastFetchTime(collection: BSONCollection): Unit = {
@@ -172,7 +176,7 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseServic
 
     val update = BSONDocument("userId" -> userId, "date" -> time)
 
-    collection.update(selector, update, safeLastError, upsert = true).onFailure {
+    collection.update(selector, update, WriteConcern.Acknowledged, upsert = true).onFailure {
       case e => log.error(s"TEST DEBUG PRINT : finished with error : $e")
     }
   }

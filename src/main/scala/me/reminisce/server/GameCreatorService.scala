@@ -1,5 +1,6 @@
 package me.reminisce.server
 
+
 import akka.actor._
 import me.reminisce.database.DeletionService
 import me.reminisce.database.DeletionService.{ClearDatabase, RemoveUser}
@@ -8,16 +9,18 @@ import me.reminisce.fetching.FetcherService.FetchData
 import me.reminisce.gameboard.board.GameGenerator
 import me.reminisce.gameboard.board.GameGenerator.CreateBoard
 import me.reminisce.server.domain.{RESTHandlerCreator, RestMessage}
-import reactivemongo.api.DefaultDB
+import reactivemongo.api.{DefaultDB, MongoConnection}
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
 import spray.http.MediaTypes._
+import spray.http.StatusCodes.InternalServerError
 import spray.http._
 import spray.httpx.Json4sSupport
 import spray.routing._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 object GameCreatorService
 
@@ -34,10 +37,8 @@ trait GameCreatorServiceActor extends GameCreatorService {
   * Defines a GameCreatorService with the handled routes.
   */
 trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor with ActorLogging with Json4sSupport {
-  def actorRefFactory: ActorContext
-
-  val db: DefaultDB
-
+  val dbName: String
+  val dbConnection: MongoConnection
   implicit val pipelineRawJson: HttpRequest => Future[HttpResponse] = (
     addHeader(Accept(`application/json`))
       ~> sendReceive
@@ -89,48 +90,76 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
     }
   }
 
+  def actorRefFactory: ActorContext
 
   /**
     * Handles board creation requests
+    *
     * @param message rest message to request a gameboard to the GameGenerator
-    * @param userId user for which a board was requested
+    * @param userId  user for which a board was requested
     * @return a spray route
     */
   private def createBoard(message: RestMessage, userId: String): Route = {
-    log.info(s"Creating game board for user $userId.")
-    val generator = context.actorOf(GameGenerator.props(db, userId))
-    ctx => perRequest(ctx, generator, message)
+    handleWithDb {
+      (db, ctx) =>
+        log.info(s"Creating game board for user $userId.")
+        val generator = context.actorOf(GameGenerator.props(db, userId))
+        perRequest(ctx, generator, message)
+    }
+  }
+
+  private def handleWithDb(handler: (DefaultDB, RequestContext) => Unit): Route = {
+    ctx =>
+      dbConnection.database(dbName).onComplete {
+        case Success(db) =>
+          handler(db, ctx)
+        case Failure(e) =>
+          complete(InternalServerError, s"${e.getMessage}")
+      }
   }
 
   /**
     * Handles fetching requests
+    *
     * @param message rest message to request a data fetch to the FetcherService
     * @return a spray route
     */
   private def fetchData(message: RestMessage): Route = {
-    val fetcherService = context.actorOf(FetcherService.props(db))
-    ctx => perRequest(ctx, fetcherService, message)
+    handleWithDb {
+      (db, ctx) =>
+
+        val fetcherService = context.actorOf(FetcherService.props(db))
+        perRequest(ctx, fetcherService, message)
+    }
   }
 
   /**
     * Handles requests to remove a user from the database
+    *
     * @param message the message to request the deletion to the deletion service
-    * @param userId user to remove fro mthe database
+    * @param userId  user to remove fro mthe database
     * @return a spray route
     */
   private def removeUser(message: RestMessage, userId: String): Route = {
-    val deletionService = context.actorOf(DeletionService.props(db))
-    ctx => perRequest(ctx, deletionService, message)
+    handleWithDb {
+      (db, ctx) =>
+        val deletionService = context.actorOf(DeletionService.props(db))
+        perRequest(ctx, deletionService, message)
+    }
   }
 
   /**
     * Handles requests to drop the database
+    *
     * @param message the rest message to request
     * @return
     */
   private def dropDatabase(message: RestMessage): Route = {
-    val deletionService = context.actorOf(DeletionService.props(db))
-    ctx => perRequest(ctx, deletionService, message)
+    handleWithDb {
+      (db, ctx) =>
+        val deletionService = context.actorOf(DeletionService.props(db))
+        perRequest(ctx, deletionService, message)
+    }
   }
 
 }

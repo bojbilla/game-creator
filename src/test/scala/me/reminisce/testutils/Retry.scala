@@ -2,7 +2,7 @@ package me.reminisce.testutils
 
 import java.util.concurrent.TimeUnit
 
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 
 import scala.concurrent.Await
@@ -41,7 +41,7 @@ object Retry {
 
   def findList[T](collection: BSONCollection, selector: BSONDocument, attempts: Int)
                  (check: List[T] => Boolean)(implicit reader: BSONDocumentReader[T]): List[T] = {
-    Await.result(collection.find(selector).cursor[T].collect[List](stopOnError = true),
+    Await.result(collection.find(selector).cursor[T]().collect[List](stopOnError = true),
       Duration(10, TimeUnit.SECONDS)) match {
       case List() =>
         attempt[List[T]](attempts, Nil) {

@@ -6,7 +6,7 @@ import me.reminisce.database.StatsEntities.UserStats
 import me.reminisce.gameboard.board.BoardGenerator.{FailedBoardGeneration, FinishedBoardGeneration}
 import me.reminisce.gameboard.board.GameGenerator.InitBoardCreation
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 

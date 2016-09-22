@@ -9,7 +9,7 @@ import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType.MCWho
 import me.reminisce.gameboard.board.GameboardEntities.{MultipleChoiceQuestion, Possibility}
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -6,7 +6,7 @@ import me.reminisce.database.MongoDBEntities.{FBAttachment, FBPage, FBPageLike, 
 import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.gameboard.questions.QuestionGenerator.MongoDBError
 import me.reminisce.server.domain.RestMessage
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 import reactivemongo.core.commands.Count
@@ -135,11 +135,11 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
                                 collection: BSONCollection,
                                 query: BSONDocument, quantity: Int)
                                (implicit reader: BSONDocumentReader[T]): Future[List[T]] = {
-    val futureCount = db.command(Count(collection.name, Some(query)))
+    val futureCount = collection.count(Some(query))
     futureCount.flatMap { count =>
       val skip = if (count - quantity > 0) Random.nextInt(count - quantity) else 0
       collection.find(query).
-        options(QueryOpts(skipN = skip)).cursor[T].collect[List](quantity)
+        options(QueryOpts(skipN = skip)).cursor[T]().collect[List](quantity)
 
     }
   }
@@ -154,7 +154,7 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
     */
   protected def fetchPosts(postsCollection: BSONCollection, userId: String, postIds: List[String], client: ActorRef)(f: List[FBPost] => Unit): Unit = {
     val query = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> postIds))
-    postsCollection.find(query).cursor[FBPost].collect[List]().onComplete {
+    postsCollection.find(query).cursor[FBPost]().collect[List]().onComplete {
       case Success(list) => f(list)
       case Failure(e) =>
         client ! MongoDBError(s"${e.getMessage}")
@@ -171,7 +171,7 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
     */
   protected def fetchPages(pagesCollection: BSONCollection, pageIds: List[String]): Future[List[FBPage]] = {
     val query = BSONDocument("pageId" -> BSONDocument("$in" -> pageIds))
-    pagesCollection.find(query).cursor[FBPage].collect[List]()
+    pagesCollection.find(query).cursor[FBPage]().collect[List]()
   }
 
   /**
@@ -207,7 +207,7 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
       case None =>
         BSONDocument("userId" -> userId)
     }
-    pageLikesCollection.find(query).cursor[FBPageLike].collect[List]()
+    pageLikesCollection.find(query).cursor[FBPageLike]().collect[List]()
   }
 
   /**

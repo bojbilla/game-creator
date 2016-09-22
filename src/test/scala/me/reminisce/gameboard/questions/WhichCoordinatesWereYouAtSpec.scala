@@ -4,12 +4,12 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.MongoDBEntities.{FBLocation, FBPlace, FBPost}
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
-import me.reminisce.gameboard.board.GameboardEntities
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{GeolocationQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -22,59 +22,65 @@ class WhichCoordinatesWereYouAtSpec extends QuestionTester("WhichCoordinatesWere
 
   "WhichCoordinatesWereYouAt" must {
     "not create question when there is no post." in {
-      val db = newDb()
-      val itemId = "This post does not exist"
+      testWithDb {
+        db =>
+          val itemId = "This post does not exist"
 
-      val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
-      val testProbe = TestProbe()
-      testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Post has no place or post does not exist : $itemId"))
+          val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
+          val testProbe = TestProbe()
+          testProbe.send(actorRef, CreateQuestion(userId, itemId))
+          testProbe.expectMsg(NotEnoughData(s"Post has no place or post does not exist : $itemId"))
+      }
     }
 
     "not create question when there is no location." in {
-      val db = newDb()
-      val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+      testWithDb {
+        db =>
+          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
-      val itemId = "This post does not exist"
+          val itemId = "This post does not exist"
 
-      val fbPost = FBPost(postId = itemId, userId = userId)
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+          val fbPost = FBPost(postId = itemId, userId = userId)
+          Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-      val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
-      val testProbe = TestProbe()
-      testProbe.send(actorRef, CreateQuestion(userId, itemId))
-      testProbe.expectMsg(NotEnoughData(s"Post has no place or post does not exist : $itemId"))
+          val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
+          val testProbe = TestProbe()
+          testProbe.send(actorRef, CreateQuestion(userId, itemId))
+          testProbe.expectMsg(NotEnoughData(s"Post has no place or post does not exist : $itemId"))
+      }
     }
 
     "create a valid question when the post and place is there." in {
-      val db = newDb()
-      val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+      testWithDb {
+        db =>
+          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
-      val userId = "TestUser"
-      val itemId = "PostId"
-      val postMessage = "Awesome Message"
+          val userId = "TestUser"
+          val itemId = "PostId"
+          val postMessage = "Awesome Message"
 
-      val latitude = 6.2
-      val longitude = 45.13
-      val location = FBLocation(None, None, latitude = latitude, longitude = longitude, None, None)
-      val place = FBPlace(None, name = "SuperPlace", location = location, None)
-      val fbPost = FBPost(postId = itemId, userId = userId, message = Some(postMessage), place = Some(place))
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+          val latitude = 6.2
+          val longitude = 45.13
+          val location = FBLocation(None, None, latitude = latitude, longitude = longitude, None, None)
+          val place = FBPlace(None, name = "SuperPlace", location = location, None)
+          val fbPost = FBPost(postId = itemId, userId = userId, message = Some(postMessage), place = Some(place))
+          Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-      val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
-      val testProbe = TestProbe()
-      testProbe.send(actorRef, CreateQuestion(userId, itemId))
+          val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
+          val testProbe = TestProbe()
+          testProbe.send(actorRef, CreateQuestion(userId, itemId))
 
-      checkFinished[GeolocationQuestion](testProbe) {
-        question =>
-          checkSubject[TextPostSubject](question.subject) {
-            subject =>
-              val answer = question.answer
+          checkFinished[GeolocationQuestion](testProbe) {
+            question =>
+              checkSubject[TextPostSubject](question.subject) {
+                subject =>
+                  val answer = question.answer
 
-              assert(subject.text == fbPost.message.getOrElse(""))
+                  assert(subject.text == fbPost.message.getOrElse(""))
 
-              assert(answer.latitude == latitude)
-              assert(answer.longitude == longitude)
+                  assert(answer.latitude == latitude)
+                  assert(answer.longitude == longitude)
+              }
           }
       }
     }

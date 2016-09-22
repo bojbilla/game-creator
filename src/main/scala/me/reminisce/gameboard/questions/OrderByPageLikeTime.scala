@@ -9,7 +9,7 @@ import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}

@@ -10,7 +10,7 @@ import me.reminisce.gameboard.board.GameboardEntities.TimelineQuestion
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError, NotEnoughData}
 import me.reminisce.gameboard.questions.TimeQuestionGenerator._
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext.Implicits.global
