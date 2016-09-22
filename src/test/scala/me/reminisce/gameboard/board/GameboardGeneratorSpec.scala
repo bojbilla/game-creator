@@ -11,9 +11,8 @@ import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.server.domain.Domain.InternalError
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
-import reactivemongo.bson.BSONInteger
-import reactivemongo.core.commands.GetLastError
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -33,8 +32,8 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
           fail("UserId is not defined.")
       }
       DatabaseTestHelper.populateWithTestData(db, testDb)
-      val safeLastError = GetLastError(w = Some(BSONInteger(1)))
-      db[BSONCollection](MongoDatabaseService.lastFetchedCollection).save(LastFetched(None, userId, DateTime.now), safeLastError)
+      val lastFetched = LastFetched(None, userId, DateTime.now)
+      db[BSONCollection](MongoDatabaseService.lastFetchedCollection).update(lastFetched, lastFetched, WriteConcern.Acknowledged, upsert = true)
       (0 until 10).foreach {
         i =>
           val generator = TestActorRef(GameGenerator.props(db, userId))

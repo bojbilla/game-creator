@@ -6,13 +6,13 @@ import akka.testkit.TestActorRef
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
-import me.reminisce.database.{DatabaseTester, MongoDBEntities, MongoDatabaseService, StatsEntities}
+import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.fetching.config.GraphResponses._
 import me.reminisce.stats.StatsGenerator.{FinalStats, TransientPostsStats}
 import me.reminisce.testutils.Retry
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await

@@ -2,7 +2,7 @@ package me.reminisce.testutils
 
 import java.util.concurrent.TimeUnit
 
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 
 import scala.concurrent.Await

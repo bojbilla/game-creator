@@ -5,12 +5,12 @@ import java.util.concurrent.TimeUnit
 import akka.testkit.{TestActorRef, TestProbe}
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDBEntities.FBPost
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
-import me.reminisce.gameboard.board.GameboardEntities
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{OrderQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestionWithMultipleItems, NotEnoughData}
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,11 +39,11 @@ class OrderByPostTimeSpec extends QuestionTester("OrderByPostTimeSpec") {
       val postsNumber = QuestionGenerationConfig.orderingItemsNumber
 
       val itemIds: List[String] = (1 to postsNumber).map {
-        case nb => s"Post$nb"
+        nb => s"Post$nb"
       }.toList
 
       val posts = (0 until postsNumber).map {
-        case nb =>
+        nb =>
           val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
           val date = new DateTime(nb + 1)
           val dateAsString = date.toString(formatter)
@@ -51,8 +51,8 @@ class OrderByPostTimeSpec extends QuestionTester("OrderByPostTimeSpec") {
       }.toList
 
       (0 until postsNumber) foreach {
-        case nb =>
-          Await.result(postsCollection.save(posts(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
+        nb =>
+          Await.result(postsCollection.update(posts(nb), posts(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
       }
 
       val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))

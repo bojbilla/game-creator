@@ -6,23 +6,21 @@ import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike, FBPost}
 import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
-import reactivemongo.bson.{BSONDocumentWriter, BSONInteger, BSONObjectID}
-import reactivemongo.core.commands.GetLastError
+import reactivemongo.bson.{BSONDocumentWriter, BSONObjectID}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
 
 object DatabaseTestHelper extends MongoEmbedDatabase {
 
-  case class FBPageLikeWithoutDate(id: Option[BSONObjectID], userId: String, pageId: String, likeTime: String)
-
+  private lazy val driver: MongoDriver = new MongoDriver
+  private lazy val connection: MongoConnection = driver.connection(s"localhost:$port" :: Nil)
   // this conflicts with live mongo instances
   private val port = 27017
   private val mongoProps: MongodProps = mongoStart(port = port)
-  private lazy val driver: MongoDriver = new MongoDriver
-  private lazy val connection: MongoConnection = driver.connection(s"localhost:$port" :: Nil)
 
   def closeConnection() = {
     this.synchronized {
@@ -34,29 +32,6 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
   def getConnection: MongoConnection = {
     this.synchronized {
       connection
-    }
-  }
-
-  private def storeObjects[T](db: DefaultDB, collectionName: String, objects: Iterator[T])(implicit writer: BSONDocumentWriter[T]): Unit = {
-    val collection = db[BSONCollection](collectionName)
-    save[T](collection, objects)
-  }
-
-  private def simpleExtract[T](jsonPath: String)(implicit manifest: Manifest[T]): Iterator[T] = {
-    implicit val formats = DefaultFormats
-    val lines = Source.fromURL(getClass.getResource(jsonPath)).getLines()
-    lines.map {
-      l =>
-        val json = parse(l)
-        json.extract[T]
-    }
-  }
-
-  private def save[T](collection: BSONCollection, objs: Iterator[T])(implicit writer: BSONDocumentWriter[T]): Unit = {
-    val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
-    objs.foreach {
-      obj =>
-        collection.save(obj, safeLastError)
     }
   }
 
@@ -100,4 +75,28 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
     val itemsStats = simpleExtract[ItemStats](folder + "/itemsStats.json")
     storeObjects(db, "itemsStats", itemsStats)
   }
+
+  private def storeObjects[T](db: DefaultDB, collectionName: String, objects: Iterator[T])(implicit writer: BSONDocumentWriter[T]): Unit = {
+    val collection = db[BSONCollection](collectionName)
+    save[T](collection, objects)
+  }
+
+  private def save[T](collection: BSONCollection, objs: Iterator[T])(implicit writer: BSONDocumentWriter[T]): Unit = {
+    objs.foreach {
+      obj =>
+        collection.update(obj, obj, WriteConcern.Acknowledged, upsert = true)
+    }
+  }
+
+  private def simpleExtract[T](jsonPath: String)(implicit manifest: Manifest[T]): Iterator[T] = {
+    implicit val formats = DefaultFormats
+    val lines = Source.fromURL(getClass.getResource(jsonPath)).getLines()
+    lines.map {
+      l =>
+        val json = parse(l)
+        json.extract[T]
+    }
+  }
+
+  case class FBPageLikeWithoutDate(id: Option[BSONObjectID], userId: String, pageId: String, likeTime: String)
 }

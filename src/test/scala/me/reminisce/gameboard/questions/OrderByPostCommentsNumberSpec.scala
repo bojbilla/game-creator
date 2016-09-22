@@ -4,12 +4,12 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.MongoDBEntities._
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
-import me.reminisce.gameboard.board.GameboardEntities
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{OrderQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestionWithMultipleItems, NotEnoughData}
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,17 +38,17 @@ class OrderByPostCommentsNumberSpec extends QuestionTester("OrderByPostCommentsN
       val postsNumber = QuestionGenerationConfig.orderingItemsNumber
 
       val itemIds: List[String] = (1 to postsNumber).map {
-        case nb => s"Post$nb"
+        nb => s"Post$nb"
       }.toList
 
       val posts = (0 until postsNumber).map {
-        case nb =>
+        nb =>
           FBPost(None, userId, itemIds(nb), Some(s"Cool post $nb"), commentsCount = Some(nb))
       }.toList
 
       (0 until postsNumber) foreach {
-        case nb =>
-          Await.result(pagesCollection.save(posts(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
+        nb =>
+          Await.result(pagesCollection.update(posts(nb), posts(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
       }
       val testProbe = TestProbe()
       val actorRef = TestActorRef(OrderByPostCommentsNumber.props(db))

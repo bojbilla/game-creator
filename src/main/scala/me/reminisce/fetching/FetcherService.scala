@@ -13,7 +13,7 @@ import me.reminisce.server.domain.{Domain, RestMessage}
 import me.reminisce.stats.StatsGenerator
 import me.reminisce.stats.StatsGenerator.FinalStats
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 import spray.client.pipelining._
 import spray.http.StatusCodes._

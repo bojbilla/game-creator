@@ -7,7 +7,7 @@ import me.reminisce.gameboard.board.BoardGenerator.{FailedBoardGeneration, drawI
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.QuestionKind
 import me.reminisce.stats.StatsDataTypes.DataType
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 object UniformBoardGenerator

@@ -4,12 +4,12 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.MongoDBEntities._
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
-import me.reminisce.gameboard.board.GameboardEntities
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{CommentSubject, MultipleChoiceQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,7 +39,7 @@ class WhoMadeThisCommentOnYourPostSpec extends QuestionTester("WhichPageDidYouLi
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val fbPost = FBPost(postId = itemId, userId = userId)
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()
@@ -58,7 +58,7 @@ class WhoMadeThisCommentOnYourPostSpec extends QuestionTester("WhichPageDidYouLi
       val from = FBFrom(fromId, fromName)
       val comment = FBComment("commentId", from, 0, "hello")
       val fbPost = FBPost(postId = itemId, userId = userId, comments = Some(List(comment)))
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()
@@ -82,7 +82,7 @@ class WhoMadeThisCommentOnYourPostSpec extends QuestionTester("WhichPageDidYouLi
 
       val message = "Who liked this ?"
       val fbPost = FBPost(postId = itemId, userId = userId, comments = Some(comments), message = Some(message))
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoMadeThisCommentOnYourPost.props(db))
       val testProbe = TestProbe()

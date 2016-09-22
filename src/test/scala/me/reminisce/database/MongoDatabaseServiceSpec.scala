@@ -6,7 +6,7 @@ import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost, SaveL
 import me.reminisce.testutils.Retry
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 @DoNotDiscover

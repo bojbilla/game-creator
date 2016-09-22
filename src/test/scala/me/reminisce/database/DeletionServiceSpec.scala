@@ -9,7 +9,8 @@ import me.reminisce.server.ApplicationConfiguration
 import me.reminisce.server.domain.Domain.{ActionForbidden, Done}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.Await
@@ -30,7 +31,7 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
 
       val update = BSONDocument("userId" -> userId, "date" -> time)
 
-      Await.result(collection.save(update, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(collection.update(update, update, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
       val actorRef = TestActorRef(DeletionService.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, RemoveUser(userId))
@@ -58,7 +59,7 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
 
       val update = BSONDocument("userId" -> userId, "date" -> time)
 
-      Await.result(collection.save(update, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(collection.update(update, update, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
       val actorRef = TestActorRef(DeletionService.props(db))
       val testProbe = TestProbe()
       testProbe.send(actorRef, ClearDatabase())

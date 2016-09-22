@@ -4,12 +4,12 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.MongoDBEntities.{FBLocation, FBPlace, FBPost}
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
-import me.reminisce.gameboard.board.GameboardEntities
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{GeolocationQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,7 +38,7 @@ class WhichCoordinatesWereYouAtSpec extends QuestionTester("WhichCoordinatesWere
       val itemId = "This post does not exist"
 
       val fbPost = FBPost(postId = itemId, userId = userId)
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
       val testProbe = TestProbe()
@@ -59,7 +59,7 @@ class WhichCoordinatesWereYouAtSpec extends QuestionTester("WhichCoordinatesWere
       val location = FBLocation(None, None, latitude = latitude, longitude = longitude, None, None)
       val place = FBPlace(None, name = "SuperPlace", location = location, None)
       val fbPost = FBPost(postId = itemId, userId = userId, message = Some(postMessage), place = Some(place))
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhichCoordinatesWereYouAt.props(db))
       val testProbe = TestProbe()

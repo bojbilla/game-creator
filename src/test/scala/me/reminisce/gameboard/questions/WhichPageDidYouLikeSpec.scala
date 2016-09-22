@@ -4,13 +4,13 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
-import me.reminisce.gameboard.board.GameboardEntities
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.MultipleChoiceQuestion
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,22 +39,22 @@ class WhichPageDidYouLikeSpec extends QuestionTester("WhichPageDidYouLikeSpec") 
       val pagesNumber = 4 // MC question
 
       val itemIds: List[String] = (1 to pagesNumber).map {
-        case nb => s"Page$nb"
+        nb => s"Page$nb"
       }.toList
 
       val pages = (0 until pagesNumber).map {
-        case nb =>
+        nb =>
           FBPage(None, itemIds(nb), Some(s"Cool page with id $nb"), None, nb)
       }.toList
 
       (0 until pagesNumber) foreach {
-        case nb =>
-          Await.result(pagesCollection.save(pages(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
+        nb =>
+          Await.result(pagesCollection.update(pages(nb), pages(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
       }
 
       val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
       val pageLike = FBPageLike(None, userId, itemIds.head, DateTime.now)
-      Await.result(pageLikesCollection.save(pageLike, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(pageLikesCollection.update(pageLike, pageLike, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhichPageDidYouLike.props(db))
       val testProbe = TestProbe()

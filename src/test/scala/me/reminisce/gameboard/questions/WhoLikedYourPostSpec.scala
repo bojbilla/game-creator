@@ -4,13 +4,13 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.MongoDBEntities._
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.StatsEntities.UserStats
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService, StatsEntities}
-import me.reminisce.gameboard.board.GameboardEntities
 import me.reminisce.gameboard.board.GameboardEntities.{MultipleChoiceQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,7 +39,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
       val itemId = "This post does not exist"
 
       val userStats = UserStats(userId = userId)
-      Await.result(userStatsCollection.save(userStats, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(userStatsCollection.update(userStats, userStats, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
@@ -54,12 +54,12 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
       val itemId = "This post does exist"
 
       val userStats = UserStats(userId = userId)
-      Await.result(userStatsCollection.save(userStats, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(userStatsCollection.update(userStats, userStats, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val fbPost = FBPost(postId = itemId, userId = userId)
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
@@ -74,7 +74,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
       val itemId = "This post does exist"
 
       val userStats = UserStats(userId = userId)
-      Await.result(userStatsCollection.save(userStats, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(userStatsCollection.update(userStats, userStats, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
@@ -82,7 +82,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
       val likerName = "LikerName"
       val like = FBLike(likerId, likerName)
       val fbPost = FBPost(postId = itemId, userId = userId, likes = Some(List(like)))
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()
@@ -105,13 +105,13 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
 
       val freshUser = userId + "Fresh"
       val userStats = UserStats(userId = freshUser, likers = likers.toSet)
-      Await.result(userStatsCollection.save(userStats, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(userStatsCollection.update(userStats, userStats, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
       val message = "Who liked this ?"
       val fbPost = FBPost(postId = itemId, userId = freshUser, likes = Some(List(likers.head)), message = Some(message))
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhoLikedYourPost.props(db))
       val testProbe = TestProbe()

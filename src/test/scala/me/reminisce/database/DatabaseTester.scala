@@ -16,7 +16,6 @@ abstract class DatabaseTester(actorSystemName: String) extends TestKit(ActorSyst
 with ImplicitSender
 with WordSpecLike with BeforeAndAfterAll with BeforeAndAfterEach {
 
-  val safeLastError = new GetLastError(w = Some(BSONInteger(1)))
   val dbs = mutable.Set[DefaultDB]()
 
   override def afterAll() {

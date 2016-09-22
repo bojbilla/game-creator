@@ -8,7 +8,7 @@ import me.reminisce.server.ApplicationConfiguration
 import me.reminisce.server.domain.Domain.{ActionForbidden, Done, InternalError}
 import me.reminisce.server.domain.RestMessage
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext.Implicits.global

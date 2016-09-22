@@ -4,16 +4,16 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
-import me.reminisce.gameboard.board.GameboardEntities
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{OrderQuestion, PageSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestionWithMultipleItems, NotEnoughData}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
@@ -40,27 +40,27 @@ class OrderByPageLikeTimeSpec extends QuestionTester("OrderByPageLikeTimeSpec") 
       val pagesNumber = QuestionGenerationConfig.orderingItemsNumber
 
       val itemIds: List[String] = (1 to pagesNumber).map {
-        case nb => s"Page$nb"
+        nb => s"Page$nb"
       }.toList
 
       val pages = (0 until pagesNumber).map {
-        case nb =>
+        nb =>
           FBPage(None, itemIds(nb), Some(s"Cool page with id $nb"), None, nb)
       }.toList
 
       val pageLikes = (0 until pagesNumber).map {
-        case nb =>
+        nb =>
           FBPageLike(None, userId, itemIds(nb), new DateTime(nb))
       }
 
       (0 until pagesNumber) foreach {
-        case nb =>
-          Await.result(pagesCollection.save(pages(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
+        nb =>
+          Await.result(pagesCollection.update(pages(nb), pages(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
       }
 
       (0 until pagesNumber) foreach {
-        case nb =>
-          Await.result(pageLikesCollection.save(pageLikes(nb), safeLastError), Duration(10, TimeUnit.SECONDS))
+        nb =>
+          Await.result(pageLikesCollection.update(pageLikes(nb), pageLikes(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
       }
 
       val actorRef = TestActorRef(OrderByPageLikeTime.props(db))

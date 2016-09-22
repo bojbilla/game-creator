@@ -5,12 +5,12 @@ import java.util.concurrent.TimeUnit
 import akka.testkit.{TestActorRef, TestProbe}
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDBEntities.FBPost
-import me.reminisce.database.{MongoDBEntities, MongoDatabaseService}
-import me.reminisce.gameboard.board.GameboardEntities
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{TextPostSubject, TimelineQuestion}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteConcern
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -43,7 +43,7 @@ class WhenDidYouShareThisPostSpec extends QuestionTester("WhenDidYouShareThisPos
       val postedTime = DateTime.now.toString(formatter)
       val fbPost = FBPost(postId = itemId, userId = userId, attachments = None, message = Some(postMessage),
         createdTime = Some(postedTime))
-      Await.result(postsCollection.save(fbPost, safeLastError), Duration(10, TimeUnit.SECONDS))
+      Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
       val actorRef = TestActorRef(WhenDidYouShareThisPost.props(db))
       val testProbe = TestProbe()

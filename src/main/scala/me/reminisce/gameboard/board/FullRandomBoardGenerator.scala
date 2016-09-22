@@ -7,7 +7,7 @@ import me.reminisce.gameboard.board.BoardGenerator._
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.stats.StatsDataTypes._
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONArray, BSONDocument}
 
 import scala.util.Random

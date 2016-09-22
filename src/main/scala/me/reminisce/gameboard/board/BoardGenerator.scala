@@ -6,7 +6,7 @@ import me.reminisce.gameboard.board.GameGenerator.InitBoardCreation
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.Tile
 import me.reminisce.stats.StatsDataTypes.DataType
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 import reactivemongo.core.commands.Count

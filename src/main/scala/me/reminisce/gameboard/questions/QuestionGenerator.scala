@@ -6,7 +6,7 @@ import me.reminisce.database.MongoDBEntities.{FBAttachment, FBPage, FBPageLike, 
 import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.gameboard.questions.QuestionGenerator.MongoDBError
 import me.reminisce.server.domain.RestMessage
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 import reactivemongo.core.commands.Count

@@ -10,7 +10,7 @@ import me.reminisce.gameboard.questions.QuestionGenerationConfig
 import me.reminisce.stats.StatsDataTypes._
 import me.reminisce.stats.StatsGenerator._
 import reactivemongo.api.DefaultDB
-import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 import reactivemongo.core.commands.Count
 
