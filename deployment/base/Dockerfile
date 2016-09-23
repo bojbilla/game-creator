@@ -1,4 +1,4 @@
-FROM java:openjdk-7-jre
+FROM java:oracle-java8
 
 LABEL version 1.0
 LABEL description "Game logic of reminisce.me."

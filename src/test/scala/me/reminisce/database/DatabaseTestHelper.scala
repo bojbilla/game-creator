@@ -25,7 +25,7 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
   def closeConnection() = {
     this.synchronized {
       mongoStop(mongoProps)
-      driver.system.shutdown()
+      driver.system.terminate()
     }
   }
 

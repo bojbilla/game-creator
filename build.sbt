@@ -9,7 +9,7 @@ ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) }
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-feature")
 
 libraryDependencies ++= {
-  val akkaV = "2.3.14"
+  val akkaV = "2.4.2"
   val sprayV = "1.3.3"
   val json4sV = "3.3.0"
   val reactiveMongoV = "0.11.14"
