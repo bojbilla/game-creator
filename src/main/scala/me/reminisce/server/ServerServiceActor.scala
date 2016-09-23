@@ -29,7 +29,7 @@ class ServerServiceActor(mongoHost: String, mongoDbName: String) extends Actor w
     */
   override def postStop(): Unit = {
     dbConnection.close()
-    driver.system.shutdown()
+    driver.system.terminate()
     driver.close()
   }
 

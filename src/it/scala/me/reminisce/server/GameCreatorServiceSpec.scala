@@ -83,8 +83,8 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) wit
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
     mongoStop(mongoProps)
-    driver.system.shutdown()
-    system.shutdown()
+    driver.system.terminate()
+    system.terminate()
   }
 
 

@@ -55,6 +55,6 @@ object Server extends App {
   private def shutdown(): Unit = {
     println("System is shutting down...")
     IO(Http) ! Http.Unbind(Duration(10, TimeUnit.SECONDS))
-    system.shutdown()
+    system.terminate()
   }
 }
