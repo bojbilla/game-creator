@@ -9,6 +9,10 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
+/**
+  * Contains methods to retrieve entities from a mongo collection. They will retry until something is found which matches
+  * the check. If the check trivially returns true, it still ensures that something was found.
+  */
 object Retry {
   private val attemptsPermitted = 20
 
