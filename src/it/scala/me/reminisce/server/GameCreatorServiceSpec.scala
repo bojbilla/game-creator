@@ -11,6 +11,8 @@ import me.reminisce.fetching.config.GraphResponses.AccessTokenResponse
 import me.reminisce.server.TestHelpers._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Millis, Span}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import reactivemongo.api.MongoDriver
 import reactivemongo.api.collections.bson.BSONCollection
@@ -24,10 +26,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.util.Properties._
-import scala.util.{Failure, Success}
 
 class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) with MongoEmbedDatabase
-  with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
+  with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll with ScalaFutures {
 
 
   val port = 27017
@@ -184,8 +185,8 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) wit
       testUserOpt match {
         case Some(testUser) =>
           val connection = driver.connection(s"localhost:$port" :: Nil)
-          connection.database("mydb").onComplete {
-            case Success(db) =>
+          whenReady(connection.database("mydb"), timeout(Span(300, Millis)), interval(Span(30, Millis))) {
+            db =>
               val collection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
               val selector = BSONDocument("userId" -> testUser.id)
               val userStatsOpt = Await.result(collection.find(selector).one[UserStats], Duration(10, TimeUnit.SECONDS))
@@ -211,8 +212,6 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) wit
                     "It may also be that the fetching failed, please make sure that other tests pass.")
 
               }
-            case Failure(e) =>
-              fail(s"${e.getMessage}")
           }
         case None =>
           fail("TestUser is not defined.")
