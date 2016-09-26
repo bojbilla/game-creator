@@ -8,7 +8,8 @@ import me.reminisce.database.MongoDBEntities.LastFetched
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.MongoDatabaseService.SaveLastFetchedTime
 import me.reminisce.fetching.FetcherService._
-import me.reminisce.server.domain.Domain.{AlreadyFresh, Done, GraphAPIInvalidToken, GraphAPIUnreachable}
+import me.reminisce.server.domain.Domain.{AlreadyFresh, GraphAPIInvalidToken, GraphAPIUnreachable}
+import me.reminisce.server.domain.RESTHandler.Confirmation
 import me.reminisce.server.domain.{Domain, RestMessage}
 import me.reminisce.stats.StatsGenerator
 import me.reminisce.stats.StatsGenerator.FinalStats
@@ -35,6 +36,8 @@ object FetcherService {
   case class FetchDataSince(userId: String, accessToken: String, since: DateTime) extends RestMessage
 
   case class FinishedFetching(userId: String)
+
+  case class AckFetching(message: String)
 
   /**
     * Creates a fetcher service
@@ -73,21 +76,29 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
           case Success(Some(time)) => conditionalFetch(currentTime, time, userId, accessToken, client)
           case _ => conditionalFetch(currentTime, new DateTime(1000), userId, accessToken, client)
         }
-
       } else {
         sender ! Domain.TooManyRequests("Already fetching for user " + userId)
       }
+    case _ =>
+      log.info("Fetcher service Received unexpected message")
+  }
 
+  /**
+    * If the service starts fetching, we wait for the worker's feedback then acknowledge the end of the fetching to the
+    * initial client
+    * @param client fetching requester
+    * @return Nothing
+    */
+  def waitForFeedback(client: ActorRef): Receive = {
     case FinishedFetching(userId) =>
-      log.info(s"Finished fetching for user: $userId")
       val mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
       mongoSaver ! SaveLastFetchedTime
       sender ! PoisonPill
       currentlyFetching.remove(userId)
-
+      client ! Confirmation(s"Finished fetching for user: $userId")
+      context.become(receive)
     case _ =>
       log.info("Fetcher service Received unexpected message")
-
   }
 
   /**
@@ -121,7 +132,8 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
             case OK =>
               val fetcher = context.actorOf(FetcherWorker.props(database))
               fetcher ! FetchDataSince(userId, accessToken, lastFetched)
-              client ! Done(s"Fetching Data for $userId")
+              client ! AckFetching(s"Fetching Data for $userId")
+              context.become(waitForFeedback(client))
             case _ =>
               log.error(s"Received a fetch request with an invalid token.")
               client ! GraphAPIInvalidToken(s"The specified token is invalid.")

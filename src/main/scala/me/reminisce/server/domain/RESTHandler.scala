@@ -2,9 +2,10 @@ package me.reminisce.server.domain
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{OneForOneStrategy, _}
+import me.reminisce.fetching.FetcherService.AckFetching
 import me.reminisce.gameboard.questions.QuestionGenerator.FinishedQuestionCreation
 import me.reminisce.server.domain.Domain.{ActionForbidden, Error}
-import me.reminisce.server.domain.RESTHandler.{WithActorRef, WithProps}
+import me.reminisce.server.domain.RESTHandler.{Confirmation, WithActorRef, WithProps}
 import me.reminisce.server.jsonserializer.GameCreatorFormatter
 import spray.http.StatusCode
 import spray.http.StatusCodes._
@@ -46,20 +47,35 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
     case internalError: Domain.InternalError => complete(InternalServerError, internalError)
     case forbidden: ActionForbidden => complete(Forbidden, forbidden)
     case res: RestMessage => complete(OK, res)
+    case res @ AckFetching(message) =>
+      delayedComplete(OK, res)
     case x =>
       log.info("Per request received strange message " + x)
       complete(InternalServerError, "The request resulted in an unexpected answer.")
   }
 
   /**
-    * Complete the request with the given message and status
+    * Complete the request with the given message and status. Kills the worker.
     * @param status status of the response
     * @param obj response content
     * @tparam T type of the content
     */
   def complete[T <: AnyRef](status: StatusCode, obj: T) = {
     r.complete(status, obj)
-    stop(self)
+    done()
+  }
+
+  /**
+    * Complete the request with the given message and status. Then wait for the worker to ack the computation before
+    * killing it.
+    * @param status status of the response
+    * @param obj response content
+    * @tparam T type of the content
+    */
+  def delayedComplete[T <: AnyRef](status: StatusCode, obj: T) = {
+    r.complete(status, obj)
+    setReceiveTimeout(300.seconds)
+    context.become(waitForConfirmation)
   }
 
   override val supervisorStrategy =
@@ -68,6 +84,25 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
         complete(InternalServerError, Domain.Error(e.getMessage))
         Stop
     }
+
+  /**
+    * Stops this actor and its children
+    */
+  def done(): Unit = {
+    stop(self)
+    target ! PoisonPill
+  }
+
+  /**
+    * Waits for the worker then stops it
+    */
+  def waitForConfirmation: Receive = {
+    case Confirmation(message) =>
+      log.info(message)
+      done()
+    case x: Any =>
+      log.info(s"Unexpected message received. $x")
+  }
 }
 
 /**
@@ -80,6 +115,8 @@ object RESTHandler {
   case class WithProps(r: RequestContext, props: Props, message: RestMessage) extends RESTHandler {
     lazy val target = context.actorOf(props)
   }
+
+  case class Confirmation(message: String)
 
 }
 
