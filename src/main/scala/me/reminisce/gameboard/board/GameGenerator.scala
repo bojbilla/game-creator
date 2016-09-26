@@ -7,6 +7,7 @@ import me.reminisce.gameboard.board.BoardGenerator.{FailedBoardGeneration, Finis
 import me.reminisce.gameboard.board.GameGenerator.{CreateBoard, InitBoardCreation}
 import me.reminisce.gameboard.board.GameboardEntities.{Board, Tile}
 import me.reminisce.server.domain.Domain._
+import me.reminisce.server.domain.RESTHandler.Confirmation
 import me.reminisce.server.domain.{Domain, RestMessage}
 import reactivemongo.api.DefaultDB
 
@@ -129,6 +130,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
       verifyAndAnswer(client, tiles, ack = true, isTokenStale, strategy)
       context.become(awaitFeedBack(client, worker, tiles, fetcherAcked = true, isTokenStale, strategy))
       log.info(message)
+    case Confirmation(message) =>
     case any =>
       log.error(s"GameGenerator received an unknown message : $any.")
   }
@@ -146,6 +148,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
     if (tiles.length == 9 && ack) {
       client ! Board(userId, tiles, stale, strategy)
       sender() ! PoisonPill
+      context.become(receive)
     }
   }
 

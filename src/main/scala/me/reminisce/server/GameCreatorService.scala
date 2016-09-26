@@ -127,7 +127,6 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
   private def fetchData(message: RestMessage): Route = {
     handleWithDb {
       (db, ctx) =>
-
         val fetcherService = context.actorOf(FetcherService.props(db))
         perRequest(ctx, fetcherService, message)
     }

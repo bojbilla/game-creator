@@ -84,8 +84,11 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     case MongoDBError(m) =>
       workers.foreach(w => w ! PoisonPill)
       client ! InternalError(m)
+      context.become(receive)
     case DeletionResult(lastError) =>
-      verifyDone(client, workers - sender(), results + lastError)
+      val newWorkers = workers - sender()
+      sender() ! PoisonPill
+      verifyDone(client, newWorkers, results + lastError)
     case any =>
       log.error(s"Deletion service received an unexpected message : $any.")
   }
@@ -144,6 +147,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
       } else {
         client ! InternalError(s"Deletion finished with errors.")
       }
+      context.become(receive)
     }
     context.become(awaitFeedBack(client, workers, results))
   }
