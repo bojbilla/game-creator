@@ -34,3 +34,4 @@ project/plugins/project/
 #Deployment
 deployment/*.jar
 deployment/data/*
+/bin/
