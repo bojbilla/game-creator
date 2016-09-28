@@ -89,7 +89,7 @@ class MongoDatabaseServiceSuite extends FunSuite {
     fbPost.place match {
       case Some(place) =>
         assert(place.id.contains(PostTestsData.placeId))
-        assert(place.name == PostTestsData.placeName)
+        assert(place.name.contains(PostTestsData.placeName))
         assert(place.createdTime.contains(PostTestsData.placeCreated))
         val loc = place.location
         assert(loc.city.contains(PostTestsData.locationCity))

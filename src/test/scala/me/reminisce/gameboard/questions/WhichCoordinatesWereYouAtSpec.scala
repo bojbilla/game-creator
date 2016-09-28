@@ -62,7 +62,7 @@ class WhichCoordinatesWereYouAtSpec extends QuestionTester("WhichCoordinatesWere
           val latitude = 6.2
           val longitude = 45.13
           val location = FBLocation(None, None, latitude = latitude, longitude = longitude, None, None)
-          val place = FBPlace(None, name = "SuperPlace", location = location, None)
+          val place = FBPlace(None, name = Some("SuperPlace"), location = location, None)
           val fbPost = FBPost(postId = itemId, userId = userId, message = Some(postMessage), place = Some(place))
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
