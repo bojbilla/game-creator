@@ -1,7 +1,8 @@
 package me.reminisce.database
 
+import java.util.concurrent.TimeUnit
+
 import com.github.nscala_time.time.Imports._
-import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike, FBPost}
 import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
 import org.json4s.DefaultFormats
@@ -11,20 +12,33 @@ import reactivemongo.api.commands.WriteConcern
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 import reactivemongo.bson.{BSONDocumentWriter, BSONObjectID}
 
+import scala.collection.mutable
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
 
-object DatabaseTestHelper extends MongoEmbedDatabase {
+object DatabaseTestHelper {
 
   private lazy val driver: MongoDriver = new MongoDriver
   private lazy val connection: MongoConnection = driver.connection(s"localhost:$port" :: Nil)
   // this conflicts with live mongo instances
   val port = 27017
-  private val mongoProps: MongodProps = mongoStart(port = port)
+
+  val dbs = mutable.MutableList.empty[DefaultDB]
+
+  def registerDb(db: DefaultDB): Unit = {
+    this.synchronized {
+      dbs += db
+    }
+  }
 
   def closeConnection() = {
     this.synchronized {
-      mongoStop(mongoProps)
+      dbs.foreach {
+        db =>
+          Await.result(db.drop(), Duration(10, TimeUnit.SECONDS))
+      }
       driver.system.terminate()
     }
   }
@@ -99,4 +113,5 @@ object DatabaseTestHelper extends MongoEmbedDatabase {
   }
 
   case class FBPageLikeWithoutDate(id: Option[BSONObjectID], userId: String, pageId: String, likeTime: String)
+
 }

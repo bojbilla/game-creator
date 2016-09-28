@@ -33,10 +33,11 @@ abstract class DatabaseTester(actorSystemName: String) extends TestKit(ActorSyst
   protected def testWithDb(test: DefaultDB => Unit): Unit = {
     val dbId = Random.nextInt // if the actorSystemName is shared for unknown reasons.
     val connection = DatabaseTestHelper.getConnection
-    val dbName = s"DB${dbId}_for$actorSystemName"
+    val dbName = s"DB${dbId}_for_$actorSystemName"
 
     whenReady(connection.database(dbName, failoverStrategy = failoverStrategy)) {
       db =>
+        DatabaseTestHelper.registerDb(db)
         test(db)
     }
   }

@@ -127,9 +127,11 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     * @param client the original deletion requester
     */
   private def clearDatabase(client: ActorRef): Unit = {
-    foreachCollection(client) {
-      worker =>
-        worker ! DropCollection()
+    database.drop().onComplete {
+      case Success(_) =>
+        client ! Done("Deletion performed without error.")
+      case Failure(e) =>
+        client ! InternalError(s"Database error : $e.")
     }
   }
 
