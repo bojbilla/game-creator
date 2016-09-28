@@ -11,13 +11,15 @@ import spray.client.pipelining._
 import spray.http._
 
 import scala.concurrent.duration.Duration
+import scala.util.Random
 
 @DoNotDiscover
 class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
 
   case class SimpleMessageFormat(message: String)
   val port = DatabaseTestHelper.port
-  val testService = TestActorRef(new ServerServiceActor(s"localhost:$port", "garbage"))
+  val dbId = Random.nextInt
+  val testService = TestActorRef(new ServerServiceActor(s"localhost:$port", s"DB${dbId}_for_ServerServiceActorSpec"))
 
   implicit def json4sFormats: Formats = DefaultFormats
 
