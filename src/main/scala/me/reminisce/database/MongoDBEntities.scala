@@ -88,7 +88,7 @@ object MongoDBEntities {
     implicit val fbLocationFormat = Macros.handler[FBLocation]
   }
 
-  case class FBPlace(id: Option[String], name: String, location: FBLocation,
+  case class FBPlace(id: Option[String], name: Option[String], location: FBLocation,
                      createdTime: Option[String])
 
   object FBPlace {

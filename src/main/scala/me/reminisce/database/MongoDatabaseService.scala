@@ -91,12 +91,12 @@ object MongoDatabaseService {
         val media = a.media.flatMap(m => m.image.map(image => FBMedia(image.height, image.width, image.src)))
         FBAttachment(a.description, media = media, tpe = a.`type`)
     }))
-    val fbPlace: Option[FBPlace] = post.place.flatMap(place => place.name.flatMap(name => place.location.flatMap(
+    val fbPlace: Option[FBPlace] = post.place.flatMap(place => place.location.flatMap(
       location => location.latitude.flatMap(lat => location.longitude.flatMap(
-        long => Some(FBPlace(place.id, name, FBLocation(location.city, location.country,
+        long => Some(FBPlace(place.id, place.name, FBLocation(location.city, location.country,
           lat, long, location.street, location.zip), place.created_time))
       ))
-    )))
+    ))
     FBPost(None, userId, post.id, post.message, post.story, fbPlace, post.created_time, fbFrom,
       likes, likeCount, post.`type`, post.link, post.full_picture, fbAttachments, fbComments, fbCommentsCount)
   }
