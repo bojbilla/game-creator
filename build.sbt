@@ -70,6 +70,7 @@ resolvers ++= Seq("Slf4j-simple" at "https://mvnrepository.com/artifact/org.slf4
 
 assemblyJarName in assembly := "game-creator.jar"
 
+test in assembly := {}
 
 coverageHighlighting := false
 parallelExecution in Test := false
