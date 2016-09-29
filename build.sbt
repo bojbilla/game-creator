@@ -33,6 +33,7 @@ libraryDependencies ++= {
     "io.spray" %% "spray-testkit" % sprayV % "it, test",
     "com.typesafe.akka" %% "akka-actor" % akkaV,
     "com.typesafe.akka" %% "akka-testkit" % akkaV % "it, test",
+    "com.typesafe.akka" %% "akka-slf4j" % akkaV,
     "org.scalatest" %% "scalatest" % scalaTestV % "it, test",
     "com.github.nscala-time" %% "nscala-time" % nscalaTimeV,
     "org.json4s" %% "json4s-native" % json4sV,
