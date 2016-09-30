@@ -20,7 +20,6 @@ libraryDependencies ++= {
   val nscalaTimeV = "2.10.0"
   val logbackV = "1.1.7"
   val slf4jV = "1.7.21"
-  val groovyV = "2.4.7"
 
   Seq(
     "org.reactivemongo" %% "reactivemongo" % reactiveMongoV,
@@ -43,8 +42,7 @@ libraryDependencies ++= {
     "org.slf4j" % "slf4j-api" % slf4jV,
     "ch.qos.logback" % "logback-core" % logbackV,
     "ch.qos.logback" % "logback-classic" % logbackV,
-    "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-    "org.codehaus.groovy" % "groovy" % groovyV
+    "org.scala-lang" % "scala-reflect" % scalaVersion.value
   )
 }
 
