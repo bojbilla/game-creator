@@ -42,6 +42,7 @@ libraryDependencies ++= {
     "org.slf4j" % "slf4j-api" % slf4jV,
     "ch.qos.logback" % "logback-core" % logbackV,
     "ch.qos.logback" % "logback-classic" % logbackV,
+    "net.logstash.logback" % "logstash-logback-encoder" % "4.7",
     "org.scala-lang" % "scala-reflect" % scalaVersion.value
   )
 }
@@ -75,6 +76,7 @@ resolvers ++= Seq("Typesafe repository releases" at "http://repo.typesafe.com/ty
 resolvers ++= Seq("slf4j on Maven" at "https://mvnrepository.com/artifact/org.slf4j/slf4j-api")
 resolvers ++= Seq("logback-core on Maven" at "https://mvnrepository.com/artifact/ch.qos.logback/logback-core")
 resolvers ++= Seq("logback-classic on Maven" at "https://mvnrepository.com/artifact/ch.qos.logback/logback-classic")
+resolvers ++= Seq("Logback logstash interface" at "https://mvnrepository.com/artifact/net.logstash.logback/logstash-logback-encoder")
 
 assemblyJarName in assembly := "game-creator.jar"
 
