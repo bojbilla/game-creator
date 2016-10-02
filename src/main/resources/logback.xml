@@ -27,8 +27,13 @@
         <encoder>
             <pattern>%date{ISO8601} %level %logger [%file:%line] %msg%n</pattern>
         </encoder>
-
     </appender>
+
+    <appender name="logstash-tcp" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>127.0.0.1:4560</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+    </appender>
+
 
     <!-- AsyncAppender logs ILoggingEvents asynchronously. It acts solely as an event dispatcher and must therefore
          reference another appender in order to do anything useful. It uses a queue, parameters can be set. Look at the doc -->
@@ -46,5 +51,6 @@
         <appender-ref ref="errorLog"/>
         <appender-ref ref="errorInfoLog"/>
         <appender-ref ref="completeLog"/>
+        <appender-ref ref="logstash-tcp"/>
     </root>
 </configuration>
