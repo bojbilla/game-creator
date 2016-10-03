@@ -14,9 +14,4 @@ trait DatabaseService extends Actor with ActorLogging {
     */
   def actorRefFactory: ActorContext = context
 
-  /**
-    * Defines the logging object
-    */
-  override val log = Logging(context.system, this)
-
 }
