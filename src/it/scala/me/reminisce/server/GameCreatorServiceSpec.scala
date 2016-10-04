@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
-import com.github.simplyscala.{MongoEmbedDatabase, MongodProps}
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.StatsEntities.UserStats
 import me.reminisce.fetching.config.GraphResponses.AccessTokenResponse
@@ -26,19 +25,23 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.util.Properties._
+import scala.util.Random
 
-class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) with MongoEmbedDatabase
+class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
   with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll with ScalaFutures {
 
 
   val port = 27017
-  val mongoProps: MongodProps = mongoStart(port = port)
+
   val driver: MongoDriver = new MongoDriver
   implicit val pipelineRawJson: HttpRequest => Future[HttpResponse] = (
     addHeader(Accept(`application/json`))
       ~> sendReceive
     )
-  val testService = TestActorRef(new ServerServiceActor(s"localhost:$port", "mydb"))
+
+  val dbId = Random.nextInt
+  val dbName = s"DB${dbId}_for_ServerServiceActorSpec"
+  val testService = TestActorRef(new ServerServiceActor(s"localhost:$port", dbName))
   val testUserOpt: Option[AuthenticatedTestUser] = {
     val facebookAppId = envOrElse("FACEBOOK_APP_ID", "NONE")
     val facebookAppSecret = envOrElse("FACEBOOK_APP_SECRET", "NONE")
@@ -82,7 +85,6 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) wit
 
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
-    mongoStop(mongoProps)
     driver.system.terminate()
     system.terminate()
   }
@@ -185,7 +187,7 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec")) wit
       testUserOpt match {
         case Some(testUser) =>
           val connection = driver.connection(s"localhost:$port" :: Nil)
-          whenReady(connection.database("mydb"), timeout(Span(300, Millis)), interval(Span(30, Millis))) {
+          whenReady(connection.database(dbName), timeout(Span(300, Millis)), interval(Span(30, Millis))) {
             db =>
               val collection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
               val selector = BSONDocument("userId" -> testUser.id)

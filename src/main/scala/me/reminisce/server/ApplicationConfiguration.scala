@@ -13,6 +13,6 @@ object ApplicationConfiguration {
   val serverPort = envOrElse("GAME_CREATOR_PORT", "9900").toInt
 
   val mongoHost = envOrElse("MONGODB_HOST", hostName)
-  val mongodbName = envOrElse("REMINISCE_MONGO_DB", "mydb")
+  val mongodbName = envOrElse("REMINISCE_MONGO_DB", "game_creator")
 
 }
