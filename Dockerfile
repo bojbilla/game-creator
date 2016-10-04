@@ -24,6 +24,9 @@ RUN groupadd -r gc_group && useradd -r -g gc_group gc_user
 RUN mkdir -p $REMINISCEME_FOLDER
 WORKDIR $REMINISCEME_FOLDER
 RUN git clone https://github.com/reminisceme/game-creator.git
-RUN cd game-creator && sbt update
+RUN cd game-creator && sbt assembly
+RUN cp game-creator/target/scala-2.11/game-creator.jar .
+RUN chown -R gc_user:gc_group .
+USER gc_user
 
-CMD echo "hello"
+CMD java -Xmx128m -jar game-creator.jar
