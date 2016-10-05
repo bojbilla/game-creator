@@ -1,9 +1,10 @@
 package me.reminisce.stats
 
-import akka.actor.Props
+import akka.actor.{Actor, ActorLogging, Props}
+import akka.event.{Logging, LoggingAdapter}
 import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
-import me.reminisce.database.{DatabaseService, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.fetching.config.GraphResponses.Post
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.Order
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
@@ -210,7 +211,9 @@ object StatsGenerator {
   * @param userId user for which the statistics are computed
   * @param db database to store the stats in
   */
-class StatsGenerator(userId: String, db: DefaultDB) extends DatabaseService {
+class StatsGenerator(userId: String, db: DefaultDB) extends Actor with ActorLogging {
+
+  override val log: LoggingAdapter = Logging(context.system, this)
 
   /**
     * Entry point of this actor. Handles the following messages:
