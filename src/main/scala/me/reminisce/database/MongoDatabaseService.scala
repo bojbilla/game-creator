@@ -1,6 +1,6 @@
 package me.reminisce.database
 
-import akka.actor.Props
+import akka.actor.{Actor, ActorLogging, Props}
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.MongoDatabaseService._
@@ -109,7 +109,7 @@ object MongoDatabaseService {
 
 }
 
-class MongoDatabaseService(userId: String, db: DefaultDB) extends DatabaseService {
+class MongoDatabaseService(userId: String, db: DefaultDB) extends Actor with ActorLogging {
 
   /**
     * Entry point of the service, handles the following messages:
