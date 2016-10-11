@@ -11,7 +11,7 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 RUN add-apt-repository ppa:webupd8team/java
 RUN apt-get -qq update
 RUN apt-get -qq install -y oracle-java8-installer
-RUN apt-get -qq install -y sbt git-core
+RUN apt-get -qq install -y sbt
 
 ENV REMINISCEME_FOLDER /home/gc_user/reminisce.me
 ENV GAME_CREATOR_HOST 0.0.0.0
@@ -23,6 +23,4 @@ RUN groupadd -r gc_group && useradd -r -g gc_group gc_user
 
 RUN mkdir -p $REMINISCEME_FOLDER
 WORKDIR $REMINISCEME_FOLDER
-RUN git clone https://github.com/reminisceme/game-creator.git
-RUN cd game-creator && sbt update
 CMD echo "DONE"
