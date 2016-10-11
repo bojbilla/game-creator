@@ -16,24 +16,30 @@ game_creator_api = {
     "fetch": "http://localhost:9900/fetchData?user_id={}&access_token={}",
     "wipe": "http://localhost:9900/dropDatabase"
 }
-game_creator_directory = "C:/Users/bapti/Documents/Work/Semester Project/reminisceme/game-creator"
-api_file_path = game_creator_directory+"/src/main/scala/me/reminisce/fetching/config/FacebookServiceConfig.scala"
 dir = "jsonDir/"
 FNULL = open(os.devnull, 'w')
 
 def main():
-    if(len(sys.argv) != 5):
-        print("USAGE:\n python mongoJsonDiff.py <fb api version> <fb api version> <user id> <access_token>" , sys.stderr)
+    if(len(sys.argv) != 6):
+        print("USAGE:\n python mongoDiff.py <fb api version> <fb api version> <user id> <access_token> <game_creator_directory>" , sys.stderr)
+        print(len(sys.argv))
+        for a in sys.argv:
+            print(a)
         sys.exit(1)
 
     versions = [sys.argv[1], sys.argv[2]]
     user = sys.argv[3]
     access_token = sys.argv[4]
-
+    game_creator_directory = sys.argv[5]
+    api_file_path = game_creator_directory+"/src/main/scala/me/reminisce/fetching/config/FacebookServiceConfig.scala"
+    
     print("[INFO]: Empty jsonDir")
     filelist = [ dir+f for f in os.listdir(dir) if f.endswith(".json")]
     for f in filelist:
         os.remove(f)
+        
+    api = get_current_api(api_file_path)
+    
     print("[INFO]: Start mongodb")
     mongo = "mongod"
     if('win' in sys.platform):
@@ -42,7 +48,7 @@ def main():
     mongo = Popen([mongo],stdout=FNULL)
     pid_mongo = mongo.pid 
 
-    [jsons1,jsons2] = [get_jsons_from_db(v,user,access_token) for v in versions]
+    [jsons1,jsons2] = [get_jsons_from_db(v, user,access_token, api_file_path, game_creator_directory) for v in versions]
 
     print("[INFO]: Kill mongo")
     mongo.kill()
@@ -62,11 +68,12 @@ def main():
                 raise
 #      
     print("[INFO]: jsons diff available")
+    print("[INFO]: rewrite the original api version")
+    change_api_version(api,api_file_path)
     sys.exit()
     
-
-
-def get_jsons_from_db(version,user,access_token):
+    
+def get_jsons_from_db(version, user, access_token, api_file_path, game_creator_directory):
     """
     1) Modify the api version
     2) Start sbt run
@@ -77,11 +84,13 @@ def get_jsons_from_db(version,user,access_token):
     :version the version on which to launch the game_creator
     :user the user id
     :access_token the user's access token
+    :api_file_path path of the file containing the api version for the game creator
+    :game_creator_directory game-creator's directory
     
     :return dict of collection names -> file name
     """
     print("[INFO]: Modify API version with "+version)
-    change_api_version(version)
+    change_api_version(version,api_file_path)
     print("[INFO]: Start sbt run")
     sbt = Popen(["sbt", "run"],cwd=game_creator_directory, shell=True)
     pid_sbt = sbt.pid
@@ -139,12 +148,26 @@ def kill_sbt(pid_sbt):
     for process in children:
         process.send_signal(signal.SIGTERM)
         
+
+def get_current_api(api_file_path):
+    """
+    Get the current api
+    
+    :api_file_path path of the file containing the api version for the game creator
+    :return the current version
+    """
+    with open(api_file_path, "r+") as f:
+        old = f.read()
+        res = re.search("v\d+\.\d+", old)
+        return res.group(0)
+
         
-def change_api_version(version):
+def change_api_version(version, api_file_path):
     """
     Modify the version of the fb api in game_creator's FacebookServiceConfig.scala 
     
     :version the version to be overwritten
+    :api_file_path path of the file containing the api version for the game creator
     """
     with open(api_file_path, "r+") as f:
         old = f.read()

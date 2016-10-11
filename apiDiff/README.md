@@ -1,8 +1,8 @@
-diffVersion.py:
+queriesDiff.py:
 -------------------
  - USAGE:
   
-    `python diffVersion.py <fb api version> <fb api version> <user id> <access_token>`
+    `python queriesDiff.py <fb api version> <fb api version> <user id> <access_token>`
   
  - Description:
   
@@ -14,11 +14,11 @@ diffVersion.py:
   
     `python diffVersion.py v2.3 v2.7 201247182312 ASDHCKJajsdkjbAS981323gJC`
 
-mongoJsonDiff.py
+mongoDiff.py
 --------------------
  - USAGE:
     
-    `python mongoJsonDiff.py <fb api version> <fb api version> <user id> <access_token>`
+    `python mongoDiff.py <fb api version> <fb api version> <user id> <access_token> <game_creator_directory>`
     
  - Description:
  
@@ -28,4 +28,4 @@ mongoJsonDiff.py
     
  - Example:
   
-    `python mongoJsonDiff.py v2.3 v2.7 201247182312 ASDHCKJajsdkjbAS981323gJC`
+    `python mongoJsonDiff.py v2.3 v2.7 201247182312 ASDHCKJajsdkjbAS981323gJC "~/Documents/game_creator_directory"`
