@@ -32,7 +32,7 @@ class RetrieveLikedPages extends RetrieveData {
     */
   def receive = {
     case RetrieveEntities(params) =>
-      val params1 = params.copy(query = Some("me/likes?fields=name,photos.type(profile).limit(1){id,name,source},likes,created_time"))
+      val params1 = params.copy(query = Some("me/likes?fields=name,photos.type(profile).limit(1){id,name,source},fan_count,created_time"))
       val retriever = context.actorOf(RetrieveEntitiesService.props[Page](defaultFilter[Page]))
       retriever ! RetrieveEntities(params1)
       val client = sender()

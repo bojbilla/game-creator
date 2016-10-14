@@ -186,7 +186,7 @@ class MongoDatabaseServiceSuite extends FunSuite {
 
 object PageTestsData {
   val pageId = "PageId"
-  val allNone = Page(id = PageTestsData.pageId, name = None, photos = None, likes = None, created_time = "NotRequired")
+  val allNone = Page(id = PageTestsData.pageId, name = None, photos = None, fan_count = None, created_time = "NotRequired")
   val userId = "MyUser"
   val likes = 10
   val pageName = "MyFunPage"
@@ -209,7 +209,7 @@ object PageTestsData {
   val tagRoot = Root[List[Tag]](data = Some(List(tag1, tag2)), paging = None, summary = None)
   val photo = Photo(id = photoId, source = Some(photoSource), created_time = Some(photoCreatedTime), tags = Some(tagRoot))
   val photoRoot = Root[Photo](data = Some(photo), paging = None, summary = None)
-  val page = Page(id = pageId, name = Some(pageName), photos = Some(photoRoot), likes = Some(likes), created_time = pageCreatedTime)
+  val page = Page(id = pageId, name = Some(pageName), photos = Some(photoRoot), fan_count = Some(likes), created_time = pageCreatedTime)
   val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
   val likedTimeDate = formatter.parseDateTime(pageCreatedTime)
 }
