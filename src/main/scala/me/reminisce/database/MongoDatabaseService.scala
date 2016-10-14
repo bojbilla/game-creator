@@ -54,7 +54,7 @@ object MongoDatabaseService {
       }
       FBPhoto(photo.id, photo.source, photo.created_time, tags)
     }
-    FBPage(None, page.id, page.name, fbPhoto, page.likes.getOrElse(0))
+    FBPage(None, page.id, page.name, fbPhoto, page.fan_count.getOrElse(0))
   }
 
   /**

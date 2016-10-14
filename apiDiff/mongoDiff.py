@@ -39,6 +39,7 @@ def main():
         os.remove(f)
         
     api = get_current_api(api_file_path)
+    print(api)
     
     print("[INFO]: Start mongodb")
     mongo = "mongod"
