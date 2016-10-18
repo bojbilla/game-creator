@@ -46,7 +46,7 @@ class OrderByPostLikesNumberSpec extends QuestionTester("OrderByPostLikesNumberS
 
           val posts = (0 until postsNumber).map {
             nb =>
-              FBPost(None, userId, itemIds(nb), Some(s"Cool post $nb"), likesCount = Some(nb))
+              FBPost(None, userId, itemIds(nb), Some(s"Cool post $nb"), reactionCount = Some(nb))
           }.toList
 
           (0 until postsNumber) foreach {

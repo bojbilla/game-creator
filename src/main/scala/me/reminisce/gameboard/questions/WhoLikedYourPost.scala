@@ -59,7 +59,7 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
             for {
               userStats <- userStatsOpt
               post <- postOpt
-              likes <- post.likes
+              likes <- post.reactions
               liker <- Random.shuffle(likes).headOption
               if !((userStats.likers -- likes.toSet).size < 3)
               choices = (liker :: Random.shuffle((userStats.likers -- likes.toSet).toList).take(3)) map {

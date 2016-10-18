@@ -79,7 +79,7 @@ class StatsGeneratorSpec extends DatabaseTester("StatsGeneratorSpec") {
 
           val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",
             Map("LikeNumber" -> 1, "PostWhoCommented" -> 1, "PostGeolocation" -> 1, "Time" -> 1, "PostCommentsNumber" -> 1),
-            Map("Order" -> 0, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 1), Set(FBLike("1", "me")))
+            Map("Order" -> 0, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 1), Set(FBReaction("1", "me", "")))
 
           assert(userStats.contains(expectedUserStats))
       }
@@ -138,7 +138,7 @@ class StatsGeneratorSpec extends DatabaseTester("StatsGeneratorSpec") {
           val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",
             Map("LikeNumber" -> 22, "PostWhoLiked" -> 1, "PostWhoCommented" -> 2, "PostGeolocation" -> 2, "Time" -> 22,
               "PostCommentsNumber" -> 2), Map("Order" -> 42, "MultipleChoice" -> 3, "Geolocation" -> 2, "Timeline" -> 22),
-            Set(FBLike("1", "me"), FBLike("2", "me2"), FBLike("3", "me3"), FBLike("4", "me4")))
+            Set(FBReaction("1", "me", ""), FBReaction("2", "me2", ""), FBReaction("3", "me3", ""), FBReaction("4", "me4", "")))
 
           assert(userStats.contains(expectedUserStats))
       }
@@ -150,9 +150,9 @@ object StatsTestData {
 
   val userId = "TestUserStatsHandlerSpec"
 
-  val like1 = Like("1", "me")
-  val likes1 = Root[List[Like]](data = Some(List(like1)), paging = None, summary = None)
-  val pLikes = Post("id1", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = Some(likes1),
+  val like1 = Reaction("1", "me", "")
+  val likes1 = Root[List[Reaction]](data = Some(List(like1)), paging = None, summary = None)
+  val pLikes = Post("id1", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = Some(likes1),
     `type` = None, link = None, created_time = None, attachments = None, comments = None)
 
   val from2 = From(id = "2", name = "a")
@@ -164,19 +164,19 @@ object StatsTestData {
   val from5 = From(id = "5", name = "f")
   val comment5 = Comment(id = "5", from = from5, like_count = 0, message = "", attachments = None)
   val com3 = Root[List[Comment]](data = Option(List(comment2, comment3, comment4, comment5)), paging = None, summary = None)
-  val pComments = Post("id2", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
+  val pComments = Post("id2", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
     `type` = None, link = None, created_time = None, attachments = None, comments = Some(com3))
 
   val l4 = Location(city = None, country = None, latitude = Some(1.0), longitude = Some(1.2), street = None,
     zip = None)
   val pl5 = Place(id = None, name = None, location = Some(l4), created_time = None)
   val pLoc = Post("id3", from = None, message = None, story = None, place = Some(pl5),
-    likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
+    reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
 
   val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
   val now = DateTime.now
   val nowString = now.toString(formatter)
-  val pTime = Post("id4", from = None, message = Some("message"), story = None, place = None, likes = None,
+  val pTime = Post("id4", from = None, message = Some("message"), story = None, place = None, reactions = None,
     `type` = None, link = None, created_time = Some(nowString), attachments = None, comments = None)
 
   val posts = List(pLikes, pComments, pLoc, pTime)
@@ -200,6 +200,6 @@ object StatsTestData {
   val sampleUserStats = UserStats(None, userId,
     Map("LikeNumber" -> 11, "PostWhoCommented" -> 1, "PostGeolocation" -> 1, "Time" -> 11, "PostCommentsNumber" -> 1),
     Map("Order" -> 18, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 11),
-    Set(FBLike("2", "me2"), FBLike("3", "me3"), FBLike("4", "me4")))
+    Set(FBReaction("2", "me2", ""), FBReaction("3", "me3", ""), FBReaction("4", "me4", "")))
 
 }

@@ -67,8 +67,8 @@ class MongoDatabaseServiceSuite extends FunSuite {
     assert(convertedAllNone.place.isEmpty)
     assert(convertedAllNone.createdTime.isEmpty)
     assert(convertedAllNone.from.isEmpty)
-    assert(convertedAllNone.likes.isEmpty)
-    assert(convertedAllNone.likesCount.isEmpty)
+    assert(convertedAllNone.reactions.isEmpty)
+    assert(convertedAllNone.reactionCount.isEmpty)
     assert(convertedAllNone.tpe.isEmpty)
     assert(convertedAllNone.link.isEmpty)
     assert(convertedAllNone.attachments.isEmpty)
@@ -81,7 +81,7 @@ class MongoDatabaseServiceSuite extends FunSuite {
     assert(fbPost.message.contains(PostTestsData.postMessage))
     assert(fbPost.story.contains(PostTestsData.postStory))
     assert(fbPost.createdTime.contains(PostTestsData.postCreatedTime))
-    assert(fbPost.likesCount.contains(PostTestsData.rootLikes.data.getOrElse(List()).length))
+    assert(fbPost.reactionCount.contains(PostTestsData.rootLikes.data.getOrElse(List()).length))
     assert(fbPost.tpe.contains(PostTestsData.postType))
     assert(fbPost.link.contains(PostTestsData.postLink))
     assert(fbPost.commentsCount.contains(PostTestsData.rootComments.data.getOrElse(List()).length))
@@ -110,7 +110,7 @@ class MongoDatabaseServiceSuite extends FunSuite {
         fail("From not extracted.")
     }
 
-    fbPost.likes match {
+    fbPost.reactions match {
       case Some(like1 :: like2 :: Nil) =>
         assert(like1.userId == PostTestsData.likeId1)
         assert(like1.userName == PostTestsData.likeName1)
@@ -174,8 +174,8 @@ class MongoDatabaseServiceSuite extends FunSuite {
 
   test("When counting likes one should not trust the root summary.") {
     val fbPost = MongoDatabaseService.postToFBPost(PostTestsData.post, PostTestsData.userId)
-    val expectedLikeCount = PostTestsData.post.likes.flatMap(root => root.data.map(likesList => likesList.length))
-    assert(fbPost.likesCount == expectedLikeCount)
+    val expectedLikeCount = PostTestsData.post.reactions.flatMap(root => root.data.map(likesList => likesList.length))
+    assert(fbPost.reactionCount == expectedLikeCount)
   }
   test("When counting comments one should not trust the root summary.") {
     val fbPost = MongoDatabaseService.postToFBPost(PostTestsData.post, PostTestsData.userId)
@@ -249,11 +249,11 @@ object PostTestsData {
   val likeName1 = "Like name 1"
   val likeId2 = "Like Id2"
   val likeName2 = "Like name 2"
-  val postLike1 = Like(likeId1, likeName1)
-  val postLike2 = Like(likeId2, likeName2)
+  val postLike1 = Reaction(likeId1, likeName1, "")
+  val postLike2 = Reaction(likeId2, likeName2, "")
   val likesSumTotalCount = 123
   val likesSummary = Summary(total_count = likesSumTotalCount)
-  val rootLikes = Root[List[Like]](data = Some(List(postLike1, postLike2)), paging = None, summary = Some(likesSummary))
+  val rootLikes = Root[List[Reaction]](data = Some(List(postLike1, postLike2)), paging = None, summary = Some(likesSummary))
 
   val attachmentDescription1 = "My fun description 1"
   val attachImgHeight1 = 11
@@ -309,7 +309,7 @@ object PostTestsData {
     message = Some(postMessage),
     story = Some(postStory),
     place = Some(postPlace),
-    likes = Some(rootLikes),
+    reactions = Some(rootLikes),
     `type` = Some(postType),
     link = Some(postLink),
     created_time = Some(postCreatedTime),
@@ -322,7 +322,7 @@ object PostTestsData {
     message = None,
     story = None,
     place = None,
-    likes = None,
+    reactions = None,
     `type` = None,
     link = None,
     created_time = None,

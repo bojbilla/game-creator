@@ -87,8 +87,8 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
 
           val likerId = "LikerId"
           val likerName = "LikerName"
-          val like = FBLike(likerId, likerName)
-          val fbPost = FBPost(postId = itemId, userId = userId, likes = Some(List(like)))
+          val like = FBReaction(likerId, likerName, "")
+          val fbPost = FBPost(postId = itemId, userId = userId, reactions = Some(List(like)))
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
           val actorRef = TestActorRef(WhoLikedYourPost.props(db))
@@ -109,7 +109,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
             i =>
               val likerId = s"LikerId$i"
               val likerName = s"LikerName$i"
-              FBLike(likerId, likerName)
+              FBReaction(likerId, likerName,"")
           }.toList
 
           val freshUser = userId + "Fresh"
@@ -119,7 +119,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
           val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
 
           val message = "Who liked this ?"
-          val fbPost = FBPost(postId = itemId, userId = freshUser, likes = Some(List(likers.head)), message = Some(message))
+          val fbPost = FBPost(postId = itemId, userId = freshUser, reactions = Some(List(likers.head)), message = Some(message))
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
           val actorRef = TestActorRef(WhoLikedYourPost.props(db))
