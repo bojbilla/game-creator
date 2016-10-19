@@ -51,10 +51,13 @@ Defaults.itSettings
 
 lazy val `game-creator` = project.in(file(".")).configs(IntegrationTest).
   enablePlugins(BuildInfoPlugin).
+  dependsOn(statsModule % "test->test").
   settings(
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "me.reminisce.server"
   )
+
+lazy val statsModule = RootProject(uri("git://github.com/reminisceme/stats.git#702af365b2cdda9fb5e53a4e58fe5ee1b00c956e"))
 
 buildInfoOptions += BuildInfoOption.BuildTime
 buildInfoOptions += BuildInfoOption.ToJson

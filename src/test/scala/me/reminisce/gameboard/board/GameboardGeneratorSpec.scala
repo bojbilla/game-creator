@@ -3,6 +3,7 @@ package me.reminisce.gameboard.board
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.DatabaseFiller
 import me.reminisce.database.MongoDBEntities.{FBFrom, LastFetched}
 import me.reminisce.database.{DatabaseTestHelper, DatabaseTester, MongoDatabaseService}
 import me.reminisce.gameboard.board.GameGenerator.CreateBoard
@@ -32,7 +33,7 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
             case None =>
               fail("UserId is not defined.")
           }
-          DatabaseTestHelper.populateWithTestData(db, testDb)
+          DatabaseFiller.populateWithTestData(db, testDb)
           val lastFetched = LastFetched(None, userId, DateTime.now)
           db[BSONCollection](MongoDatabaseService.lastFetchedCollection).update(lastFetched, lastFetched, WriteConcern.Acknowledged, upsert = true)
           (0 until 10).foreach {
