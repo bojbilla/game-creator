@@ -41,7 +41,6 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
               val generator = TestActorRef(GameGenerator.props(db, userId))
               val testProbe = TestProbe()
               testProbe.send(generator, CreateBoard("Wrong_access_token", "chooser"))
-              println("=============START=============")
               val board = Option(testProbe.receiveOne(Duration(10, TimeUnit.SECONDS)))
               board match {
                 case Some(InternalError(message)) =>
