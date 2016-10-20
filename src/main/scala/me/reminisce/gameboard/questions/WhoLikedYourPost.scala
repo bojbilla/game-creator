@@ -55,6 +55,11 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
         postOpt <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost]
       }
         yield {
+          println("----")
+          println("userStatsOpt")
+          println(userStatsOpt)
+          println("postOpt")
+          println(postOpt)
           val gameQuestionOpt =
             for {
               userStats <- userStatsOpt
@@ -62,14 +67,22 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
               likes <- post.reactions
               liker <- Random.shuffle(likes).headOption
               if !((userStats.likers -- likes.toSet).size < 3)
-              choices = (liker :: Random.shuffle((userStats.likers -- likes.toSet).toList).take(3)) map {
-                choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
-              }
+                choices = (liker :: Random.shuffle((userStats.likers -- likes.toSet).toList).take(3)) map {
+                  choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
+                }
               answer <- choices.headOption
               shuffled = Random.shuffle(choices)
               postSubject = subjectFromPost(post)
             }
               yield {
+                println("=============================")
+                println(likes)
+                println(liker)
+                println(userStats.likers)
+                println(choices)
+                println(answer)
+                println(postSubject)
+                println("=============================")
                 MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
               }
           gameQuestionOpt match {

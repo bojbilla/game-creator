@@ -33,7 +33,7 @@ class RetrieveTaggedPosts extends RetrieveData {
     case RetrieveEntities(params) =>
       val client = sender()
       val params1 = params.copy(query = Some(s"${params.userId.getOrElse("me")}/" +
-        s"tagged?fields=id,message,created_time,link,from,likes.limit(1000).summary(true),source,place" +
+        s"tagged?fields=id,message,created_time,link,from,reactions.limit(1000).summary(true),source,place" +
         s"&since=${params.getSince}&until=${params.getUntil}"))
       val retriever = context.actorOf(RetrieveEntitiesService.props[Post](defaultFilter[Post]))
       retriever ! RetrieveEntities(params1)

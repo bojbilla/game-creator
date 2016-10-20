@@ -53,7 +53,7 @@ object GraphResponses {
   case class Picture(id: String,
                      picture: Option[String],
                      created_time: String,
-                     likes: Root[List[Reaction]],
+                     reactions: Root[List[Reaction]],
                      comments: Root[List[Comment]],
                      from: Option[From],
                      images: Option[List[Image]],
