@@ -22,7 +22,7 @@ object GraphResponses {
                   story: Option[String],
                   place: Option[Place],
                   full_picture: Option[String] = None,
-                  likes: Option[Root[List[Like]]],
+                  reactions: Option[Root[List[Reaction]]],
                   `type`: Option[String],
                   link: Option[String],
                   created_time: Option[String],
@@ -53,7 +53,7 @@ object GraphResponses {
   case class Picture(id: String,
                      picture: Option[String],
                      created_time: String,
-                     likes: Root[List[Like]],
+                     reactions: Root[List[Reaction]],
                      comments: Root[List[Comment]],
                      from: Option[From],
                      images: Option[List[Image]],
@@ -66,7 +66,7 @@ object GraphResponses {
 
   case class Friend(id: String, name: String, picture: Option[Root[Avatar]])
 
-  case class Like(id: String, name: String)
+  case class Reaction(id: String, name: String, `type`: String)
 
   case class Summary(total_count: Int)
 

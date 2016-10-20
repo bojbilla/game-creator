@@ -1,7 +1,7 @@
 package me.reminisce.database
 
 import com.github.nscala_time.time.Imports._
-import me.reminisce.database.MongoDBEntities.FBLike
+import me.reminisce.database.MongoDBEntities.FBReaction
 import reactivemongo.bson._
 
 /**
@@ -46,10 +46,10 @@ object MongoDBEntities {
     implicit val fbFromFormat = Macros.handler[FBFrom]
   }
 
-  case class FBLike(userId: String, userName: String)
+  case class FBReaction(userId: String, userName: String, reactionType: String)
 
-  object FBLike {
-    implicit val fbLikeFormat = Macros.handler[FBLike]
+  object FBReaction {
+    implicit val fbReactionFormat = Macros.handler[FBReaction]
   }
 
   case class FBMedia(height: Int, width: Int, src: String)
@@ -104,8 +104,8 @@ object MongoDBEntities {
                     place: Option[FBPlace] = None,
                     createdTime: Option[String] = None,
                     from: Option[FBFrom] = None,
-                    likes: Option[List[FBLike]] = None,
-                    likesCount: Option[Int] = None,
+                    reactions: Option[List[FBReaction]] = None,
+                    reactionCount: Option[Int] = None,
                     tpe: Option[String] = None,
                     link: Option[String] = None,
                     picture: Option[String] = None,
@@ -129,7 +129,7 @@ object StatsEntities {
                        userId: String,
                        dataTypeCounts: Map[String, Int] = Map(),
                        questionCounts: Map[String, Int] = Map(),
-                       likers: Set[FBLike] = Set())
+                       likers: Set[FBReaction] = Set())
 
   object UserStats {
 
@@ -159,7 +159,7 @@ object StatsEntities {
 
     implicit val mapStringIntReader = getMapStringIntReader
 
-    implicit val fbLikeFormat = MongoDBEntities.FBLike.fbLikeFormat
+    implicit val fbReactionFormat = MongoDBEntities.FBReaction.fbReactionFormat
 
     implicit val userStatsFormat = Macros.handler[UserStats]
   }

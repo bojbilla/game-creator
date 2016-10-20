@@ -1,7 +1,7 @@
 package me.reminisce.stats
 
 import com.github.nscala_time.time.Imports._
-import me.reminisce.database.MongoDBEntities.FBLike
+import me.reminisce.database.MongoDBEntities.FBReaction
 import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
 import me.reminisce.fetching.config.GraphResponses._
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
@@ -47,7 +47,7 @@ class StatsGeneratorSuite extends FunSuite {
   }
 
   test("Empty post data types.") {
-    val emptyPost = Post("id", from = None, message = None, story = None, place = None, likes = None, `type` = None,
+    val emptyPost = Post("id", from = None, message = None, story = None, place = None, reactions = None, `type` = None,
       link = None, created_time = None, attachments = None, comments = None)
     val emptyTypes = StatsGenerator.availableDataTypes(emptyPost)
     assert(emptyTypes.isEmpty)
@@ -56,13 +56,13 @@ class StatsGeneratorSuite extends FunSuite {
   test("Time data type.") {
     val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
     val now = DateTime.now.toString(formatter)
-    val storyAndTime = Post("id", from = None, message = None, story = Some("story"), place = None, likes = None,
+    val storyAndTime = Post("id", from = None, message = None, story = Some("story"), place = None, reactions = None,
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
     val timeIsHere = StatsGenerator.availableDataTypes(storyAndTime)
     assert(timeIsHere.nonEmpty && timeIsHere.size == 1)
     listHeadAssert(timeIsHere)(tpe => tpe == StatsDataTypes.Time)(() => fail("Type not defined."))
 
-    val messageAndTime = Post("id", from = None, message = Some("message"), story = None, place = None, likes = None,
+    val messageAndTime = Post("id", from = None, message = Some("message"), story = None, place = None, reactions = None,
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
     val timeIsAlsoHere = StatsGenerator.availableDataTypes(messageAndTime)
     assert(timeIsAlsoHere.nonEmpty && timeIsAlsoHere.size == 1)
@@ -72,42 +72,42 @@ class StatsGeneratorSuite extends FunSuite {
   test("Geolocation data type.") {
     val pl1 = Place(id = None, name = None, location = None, created_time = None)
     val p1 = Post("id", from = None, message = None, story = None, place = Some(pl1),
-      likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
+      reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(StatsGenerator.availableDataTypes(p1).isEmpty)
 
     val l1 = Location(city = None, country = None, latitude = None, longitude = None, street = None,
       zip = None)
     val pl2 = Place(id = None, name = None, location = Some(l1), created_time = None)
     val p2 = Post("id", from = None, message = None, story = None, place = Some(pl2),
-      likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
+      reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(StatsGenerator.availableDataTypes(p2).isEmpty)
 
     val l2 = Location(city = None, country = None, latitude = Some(1.0), longitude = None, street = None,
       zip = None)
     val pl3 = Place(id = None, name = None, location = Some(l2), created_time = None)
     val p3 = Post("id", from = None, message = None, story = None, place = Some(pl3),
-      likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
+      reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(StatsGenerator.availableDataTypes(p3).isEmpty)
 
     val l3 = Location(city = None, country = None, latitude = None, longitude = Some(1.2), street = None,
       zip = None)
     val pl4 = Place(id = None, name = None, location = Some(l3), created_time = None)
     val p4 = Post("id", from = None, message = None, story = None, place = Some(pl4),
-      likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
+      reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(StatsGenerator.availableDataTypes(p4).isEmpty)
 
     val l4 = Location(city = None, country = None, latitude = Some(1.0), longitude = Some(1.2), street = None,
       zip = None)
     val pl5 = Place(id = None, name = None, location = Some(l4), created_time = None)
     val p5 = Post("id", from = None, message = None, story = None, place = Some(pl5),
-      likes = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
+      reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
     val dataTypes = StatsGenerator.availableDataTypes(p5)
     assert(dataTypes.nonEmpty && dataTypes.size == 1)
     listHeadAssert(dataTypes)(tpe => tpe == StatsDataTypes.PostGeolocation)(() => fail("Type not defined."))
   }
 
   test("WhoCommented and CommentsNumber data types.") {
-    val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
+    val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(!StatsGenerator.availableDataTypes(p1).contains(StatsDataTypes.PostWhoCommented))
     assert(!StatsGenerator.availableDataTypes(p1).contains(StatsDataTypes.PostCommentsNumber))
@@ -115,7 +115,7 @@ class StatsGeneratorSuite extends FunSuite {
     val from2 = From(id = "", name = "")
     val comment2 = Comment(id = "", from = from2, like_count = 0, message = "", attachments = None)
     val com2 = Root[List[Comment]](data = Option(List(comment2)), paging = None, summary = None)
-    val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
+    val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = Some(com2))
     assert(!StatsGenerator.availableDataTypes(p2).contains(StatsDataTypes.PostWhoCommented))
     assert(!StatsGenerator.availableDataTypes(p2).contains(StatsDataTypes.PostCommentsNumber))
@@ -127,20 +127,20 @@ class StatsGeneratorSuite extends FunSuite {
     val from5 = From(id = "5", name = "")
     val comment5 = Comment(id = "5", from = from5, like_count = 0, message = "", attachments = None)
     val com3 = Root[List[Comment]](data = Option(List(comment2, comment3, comment4, comment5)), paging = None, summary = None)
-    val p3 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
+    val p3 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = Some(com3))
     assert(StatsGenerator.availableDataTypes(p3).contains(StatsDataTypes.PostWhoCommented))
     assert(StatsGenerator.availableDataTypes(p3).contains(StatsDataTypes.PostCommentsNumber))
   }
 
   test("LikesNumber data type.") {
-    val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = None,
+    val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(!StatsGenerator.availableDataTypes(p1).contains(StatsDataTypes.LikeNumber))
 
-    val like1 = Like("1", "")
-    val likes1 = Root[List[Like]](data = Some(List(like1)), paging = None, summary = None)
-    val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, likes = Some(likes1),
+    val like1 = Reaction("1", "", "")
+    val likes1 = Root[List[Reaction]](data = Some(List(like1)), paging = None, summary = None)
+    val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = Some(likes1),
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(StatsGenerator.availableDataTypes(p2).contains(StatsDataTypes.LikeNumber))
   }
@@ -182,8 +182,8 @@ class StatsGeneratorSuite extends FunSuite {
 
   test("Add new counts to user stats.") {
     val userId = "UserId"
-    val oldLikers = (1 to 10).map(nb => FBLike(s"user$nb", s"name$nb")).toSet
-    val newLikers = (11 to 20).map(nb => FBLike(s"user$nb", s"name$nb")).toSet
+    val oldLikers = (1 to 10).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
+    val newLikers = (11 to 20).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
     assert(oldLikers != newLikers)
 
     val oldDataTypes = Map((PostGeolocation.name, 2), (PostWhoCommented.name, 4), (PostWhoLiked.name, 13)) // linked with below counts

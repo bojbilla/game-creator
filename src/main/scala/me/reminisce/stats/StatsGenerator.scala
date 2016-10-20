@@ -144,7 +144,7 @@ object StatsGenerator {
     * @return a data type option
     */
   private def hasLikeNumber(post: Post): Option[DataType] = {
-    val likeCount = post.likes.flatMap(root => root.data).getOrElse(List()).size
+    val likeCount = post.reactions.flatMap(root => root.data).getOrElse(List()).size
     if (likeCount > 0) {
       Some(LikeNumber)
     } else {
@@ -177,7 +177,7 @@ object StatsGenerator {
     * @param userStats old user stats
     * @return new user stats
     */
-  def userStatsWithNewCounts(newLikers: Set[FBLike], newItemsStats: List[ItemStats], userStats: UserStats): UserStats = {
+  def userStatsWithNewCounts(newLikers: Set[FBReaction], newItemsStats: List[ItemStats], userStats: UserStats): UserStats = {
     val newDataTypes = newItemsStats.foldLeft(userStats.dataTypeCounts) {
       case (acc, itemStats) => addTypesToMap(itemStats.dataTypes.map(dType => (dType, 1)), acc)
     }
@@ -403,11 +403,11 @@ class StatsGenerator(userId: String, db: DefaultDB) extends Actor with ActorLogg
     * @param fbPosts posts to handle
     * @return list of likes
     */
-  private def accumulateLikes(fbPosts: List[FBPost]): Set[FBLike] = {
-    fbPosts.foldLeft(Set[FBLike]()) {
-      (acc: Set[FBLike], post: FBPost) => {
-        post.likes match {
-          case Some(likes) => acc ++ likes.toSet
+  private def accumulateLikes(fbPosts: List[FBPost]): Set[FBReaction] = {
+    fbPosts.foldLeft(Set[FBReaction]()) {
+      (acc: Set[FBReaction], post: FBPost) => {
+        post.reactions match {
+          case Some(reactions) => acc ++ reactions.toSet
           case None => acc
         }
       }
@@ -421,11 +421,11 @@ class StatsGenerator(userId: String, db: DefaultDB) extends Actor with ActorLogg
     * @param itemsStats items stats to update
     * @return list of updated items stats
     */
-  private def updatePostsStats(fbPosts: List[FBPost], likers: Set[FBLike],
+  private def updatePostsStats(fbPosts: List[FBPost], likers: Set[FBReaction],
                                itemsStats: List[ItemStats]): List[ItemStats] = {
     fbPosts.flatMap {
       fbPost =>
-        val likeNumber = fbPost.likesCount.getOrElse(0)
+        val likeNumber = fbPost.reactionCount.getOrElse(0)
         if (likers.size - likeNumber >= 3 && likeNumber > 0) {
           val oldItemStat = getItemStats(userId, fbPost.postId, "Post", itemsStats)
           val newDataListing = oldItemStat.dataTypes.toSet + PostWhoLiked.name

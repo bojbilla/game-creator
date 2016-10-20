@@ -79,8 +79,8 @@ object MongoDatabaseService {
     * @return FBPost resulting from the conversion
     */
   def postToFBPost(post: Post, userId: String): FBPost = {
-    val likes = post.likes.flatMap(root => root.data.map(likes => likes.map(l => FBLike(l.id, l.name))))
-    val likeCount = likes.map(likesList => likesList.length)
+    val reactions = post.reactions.flatMap(root => root.data.map(reactions => reactions.map(r => FBReaction(r.id, r.name, r.`type`))))
+    val reactionCount = reactions.map(reactionsList => reactionsList.length)
     val fbFrom = post.from.map(f => FBFrom(f.id, f.name))
     val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
       FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
@@ -98,7 +98,7 @@ object MongoDatabaseService {
       ))
     ))
     FBPost(None, userId, post.id, post.message, post.story, fbPlace, post.created_time, fbFrom,
-      likes, likeCount, post.`type`, post.link, post.full_picture, fbAttachments, fbComments, fbCommentsCount)
+      reactions, reactionCount, post.`type`, post.link, post.full_picture, fbAttachments, fbComments, fbCommentsCount)
   }
 
   case class SaveFBPage(pages: List[Page])

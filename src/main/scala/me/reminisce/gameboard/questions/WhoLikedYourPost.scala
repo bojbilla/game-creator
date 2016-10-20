@@ -51,7 +51,7 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
 
       (for {
         userStatsOpt <- userCollection.find(BSONDocument("userId" -> userId)).one[UserStats]
-        postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+        postCollection = db  [BSONCollection](MongoDatabaseService.fbPostsCollection)
         postOpt <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost]
       }
         yield {
@@ -59,12 +59,12 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
             for {
               userStats <- userStatsOpt
               post <- postOpt
-              likes <- post.likes
+              likes <- post.reactions
               liker <- Random.shuffle(likes).headOption
               if !((userStats.likers -- likes.toSet).size < 3)
-              choices = (liker :: Random.shuffle((userStats.likers -- likes.toSet).toList).take(3)) map {
-                choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
-              }
+                choices = (liker :: Random.shuffle((userStats.likers -- likes.toSet).toList).take(3)) map {
+                  choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
+                }
               answer <- choices.headOption
               shuffled = Random.shuffle(choices)
               postSubject = subjectFromPost(post)
