@@ -51,7 +51,7 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
 
       (for {
         userStatsOpt <- userCollection.find(BSONDocument("userId" -> userId)).one[UserStats]
-        postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+        postCollection = db  [BSONCollection](MongoDatabaseService.fbPostsCollection)
         postOpt <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost]
       }
         yield {
