@@ -11,7 +11,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suites}
 // CAUTION : if you run tests individually the db will not be closed properly and the port won't be released
 class DatabaseTests extends Suites(new OrderByPageLikesSpec, new OrderByPageLikeTimeSpec, new OrderByPostCommentsNumberSpec,
   new OrderByPostLikesNumberSpec, new OrderByPostTimeSpec, new WhenDidYouLikeThisPageSpec,
-  new WhenDidYouShareThisPostSpec, new WhichCoordinatesWereYouAtSpec, new WhichPageDidYouLikeSpec, new WhoLikedYourPostSpec,
+  new WhenDidYouShareThisPostSpec, new WhichCoordinatesWereYouAtSpec, new WhichPageDidYouLikeSpec, new WhoReactedToYourPostSpec,
   new WhoMadeThisCommentOnYourPostSpec, new FetcherServiceSpec, new MongoDatabaseServiceSpec, new DeletionServiceSpec,
   new StatsGeneratorSpec, new GameboardGeneratorSpec, new ServerServiceActorSpec)
 with BeforeAndAfterAll with BeforeAndAfterEach {

@@ -5,7 +5,7 @@ import me.reminisce.database.MongoDBEntities.FBPost
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.StatsEntities.UserStats
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.MultipleChoice
-import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType.MCWhoLikedYourPost
+import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType.MCWhoReactedToYourPost
 import me.reminisce.gameboard.board.GameboardEntities.{MultipleChoiceQuestion, Possibility}
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import reactivemongo.api.DefaultDB
@@ -16,25 +16,25 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
 
 /**
-  * Factory for [[me.reminisce.gameboard.questions.WhoLikedYourPost]]
+  * Factory for [[me.reminisce.gameboard.questions.WhoReactedToYourPost]]
   */
-object WhoLikedYourPost {
+object WhoReactedToYourPost {
 
   /**
-    * Creates a WhoLikedYourPost question generator
+    * Creates a WhoReactedToYourPost question generator
     * @param database database from which to take the data
     * @return props for the created actor
     */
   def props(database: DefaultDB): Props =
-    Props(new WhoLikedYourPost(database))
+    Props(new WhoReactedToYourPost(database))
 
 }
 
 /**
-  * WhoLikedYourPost question generator
+  * WhoReactedToYourPost question generator
   * @param db database from which to take the data
   */
-class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
+class WhoReactedToYourPost(db: DefaultDB) extends QuestionGenerator {
 
   /**
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
@@ -70,7 +70,7 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
               postSubject = subjectFromPost(post)
             }
               yield {
-                MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
+                MultipleChoiceQuestion(userId, MultipleChoice, MCWhoReactedToYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
               }
           gameQuestionOpt match {
             case Some(q) =>
@@ -83,7 +83,7 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
           client ! MongoDBError(s"${e.getMessage}")
       }
 
-    case any => log.error(s"WhoLikedYourPost received a unexpected message $any")
+    case any => log.error(s"WhoReactedToYourPost received a unexpected message $any")
   }
 
 

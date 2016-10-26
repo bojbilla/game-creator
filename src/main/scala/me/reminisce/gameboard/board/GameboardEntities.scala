@@ -23,7 +23,7 @@ object GameboardEntities {
     val GeoWhatCoordinatesWereYouAt = Value("GeoWhatCoordinatesWereYouAt")
     val MCWhoMadeThisCommentOnYourPost = Value("MCWhoMadeThisCommentOnYourPost")
     val MCWhichPageDidYouLike = Value("MCWhichPageDidYouLike")
-    val MCWhoLikedYourPost = Value("MCWhoLikedYourPost")
+    val MCWhoReactedToYourPost = Value("MCWhoReactedToYourPost")
     val ORDPageLikes = Value("ORDPageLikes")
     val ORDPostCommentsNumber = Value("ORDPostCommentsNumber")
     val ORDPostLikesNumber = Value("ORDPostLikesNumber")
