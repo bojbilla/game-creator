@@ -136,7 +136,7 @@ class StatsGeneratorSpec extends DatabaseTester("StatsGeneratorSpec") {
           }
 
           val expectedUserStats = UserStats(None, "TestUserStatsHandlerSpec",
-            Map("LikeNumber" -> 22, "PostWhoLiked" -> 1, "PostWhoCommented" -> 2, "PostGeolocation" -> 2, "Time" -> 22,
+            Map("LikeNumber" -> 22, "PostWhoReacted" -> 1, "PostWhoCommented" -> 2, "PostGeolocation" -> 2, "Time" -> 22,
               "PostCommentsNumber" -> 2), Map("Order" -> 42, "MultipleChoice" -> 3, "Geolocation" -> 2, "Timeline" -> 22),
             Set(FBReaction("1", "me", ""), FBReaction("2", "me2", ""), FBReaction("3", "me3", ""), FBReaction("4", "me4", "")))
 

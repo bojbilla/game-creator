@@ -6,7 +6,7 @@ import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
 import me.reminisce.fetching.config.GraphResponses._
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
-import me.reminisce.stats.StatsDataTypes.{PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoLiked}
+import me.reminisce.stats.StatsDataTypes.{PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoReacted}
 import me.reminisce.testutils.AssertHelpers._
 import org.joda.time.DateTime
 import org.scalatest.FunSuite
@@ -186,8 +186,8 @@ class StatsGeneratorSuite extends FunSuite {
     val newLikers = (11 to 20).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
     assert(oldLikers != newLikers)
 
-    val oldDataTypes = Map((PostGeolocation.name, 2), (PostWhoCommented.name, 4), (PostWhoLiked.name, 13)) // linked with below counts
-    val newDataTypes = List((PostWhoLiked.name, 7), (PostCommentsNumber.name, 17)) // prime number is important to test the rounding
+    val oldDataTypes = Map((PostGeolocation.name, 2), (PostWhoCommented.name, 4), (PostWhoReacted.name, 13)) // linked with below counts
+    val newDataTypes = List((PostWhoReacted.name, 7), (PostCommentsNumber.name, 17)) // prime number is important to test the rounding
     val newItemsStats = newDataTypes.flatMap {
         case (tpe, count) => (1 to count).map {
           any => ItemStats(userId = userId, itemId = s"item$userId", itemType = "Post", dataTypes = List(tpe), dataCount = 1)
@@ -209,7 +209,7 @@ class StatsGeneratorSuite extends FunSuite {
     assert(newUserStats.dataTypeCounts.size == userStats.dataTypeCounts.size + 1)
     assert(newUserStats.dataTypeCounts.getOrElse(PostGeolocation.name, 0) == 2)
     assert(newUserStats.dataTypeCounts.getOrElse(PostWhoCommented.name, 0) == 4)
-    assert(newUserStats.dataTypeCounts.getOrElse(PostWhoLiked.name, 0) == 20)
+    assert(newUserStats.dataTypeCounts.getOrElse(PostWhoReacted.name, 0) == 20)
     assert(newUserStats.dataTypeCounts.getOrElse(PostCommentsNumber.name, 0) == 17)
 
     assert(newUserStats.questionCounts.size == userStats.questionCounts.size + 1)

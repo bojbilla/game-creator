@@ -45,9 +45,9 @@ class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends Rand
   private def generateBoard(client: ActorRef): Unit = {
     // As order cannot be generated only from one question, we exclude the types that only lead to this kind of question
     // (because we cannot have a guarantee of the number of available items as we do not have user stats)
-    // PostWhoLiked is also excluded as it cannot be generated without UserStats (even though this type should not be
+    // PostWhoReacted is also excluded as it cannot be generated without UserStats (even though this type should not be
     // marked as available on an item if no UserStats was generated)
-    val excluded = (PostWhoLiked :: possibleTypes(Order).filter(t => possibleKind(t).size == 1)).map(_.name)
+    val excluded = (PostWhoReacted :: possibleTypes(Order).filter(t => possibleKind(t).size == 1)).map(_.name)
     val selector = BSONDocument("userId" -> userId,
       "$or" -> BSONArray(
         BSONDocument("dataCount" -> BSONDocument("$gt" -> excluded.size)),

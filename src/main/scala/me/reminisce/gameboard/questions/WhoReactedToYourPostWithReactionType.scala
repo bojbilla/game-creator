@@ -1,0 +1,101 @@
+package me.reminisce.gameboard.questions
+
+import akka.actor.Props
+import me.reminisce.database.MongoDBEntities.FBPost
+import me.reminisce.database.MongoDatabaseService
+import me.reminisce.database.StatsEntities.UserStats
+import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.MultipleChoice
+import me.reminisce.gameboard.board.GameboardEntities.{MultipleChoiceQuestion, Possibility}
+import me.reminisce.gameboard.questions.QuestionGenerator._
+import reactivemongo.api.DefaultDB
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.bson.BSONDocument
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Random
+import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
+
+
+/**
+  * Factory for [[me.reminisce.gameboard.questions.WhoReactedToYourPostWithReactionType]]
+  */
+object WhoReactedToYourPostWithReactionType {
+
+  /**
+    * Creates a WhoReactedToYourPostWithReactionType question generator
+    * @param database database from which to take the data
+    * @return props for the created actor
+    */
+  def props(database: DefaultDB, reactionType: String): Props =
+    Props(new WhoReactedToYourPostWithReactionType(database, reactionType))
+
+}
+
+/**
+  * WhoReactedToYourPostWithReactionType question generator
+  * @param db database from which to take the data
+  */
+class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: String) extends QuestionGenerator {
+
+  /**
+    * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
+    * necessary items from the database and creating a question. If some items are non conform to what is expected,
+    * missing or there is an error while contacting the database, the error is reported to the client.
+    * @return Nothing
+    */
+  def receive = {
+    case CreateQuestion(userId, itemId) =>
+      val client = sender()
+      // Note : if this question has been picked, it can only be if a UserStats exists
+
+      val userCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+
+      (for {
+        userStatsOpt <- userCollection.find(BSONDocument("userId" -> userId)).one[UserStats]
+        postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+        postOpt <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId, "reactions" -> BSONDocument("reactionType" -> reactionType))).one[FBPost]
+      }
+        yield {
+          val gameQuestionOpt =
+            for {
+              userStats <- userStatsOpt
+              post <- postOpt
+              reactions <- post.reactions
+              reactionerWithType <- Random.shuffle(reactions.filter { _.reactionType == reactionType }).headOption
+              if !((userStats.likers -- reactions.toSet).size < 3)
+                choices = (reactionerWithType :: Random.shuffle((userStats.likers -- reactions.toSet).toList).take(3)) map {
+                  choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
+                }
+              answer <- choices.headOption
+              shuffled = Random.shuffle(choices)
+              postSubject = subjectFromPost(post)
+            }
+              yield {
+                MultipleChoiceQuestion(userId, MultipleChoice, getSpecificQuestionType(reactionType), Some(postSubject), shuffled, shuffled.indexOf(answer))
+              }
+          gameQuestionOpt match {
+            case Some(q) =>
+              client ! FinishedQuestionCreation(q)
+            case None =>
+              client ! NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough reactioners or non-reactioners.")
+          }
+        }) onFailure {
+        case e =>
+          client ! MongoDBError(s"${e.getMessage}")
+      }
+
+    case any => log.error(s"WhoReactedToYourPostWithReactionType received a unexpected message $any")
+  }
+  
+  private def getSpecificQuestionType(reactionType: String) = {
+    Map(
+    "LIKE" -> MCWhoReactedToYourPostWithLIKE,
+    "WOW" -> MCWhoReactedToYourPostWithWOW,
+    "HAHA" -> MCWhoReactedToYourPostWithHAHA,
+    "LOVE" -> MCWhoReactedToYourPostWithLOVE,
+    "SAD" -> MCWhoReactedToYourPostWithSAD,
+    "ANGRY" -> MCWhoReactedToYourPostWithANGRY,
+    "THANKFUL" -> MCWhoReactedToYourPostWithTHANKFUL
+    )(reactionType)
+  }
+}
