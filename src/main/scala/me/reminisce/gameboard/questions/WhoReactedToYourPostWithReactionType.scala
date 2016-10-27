@@ -5,7 +5,6 @@ import me.reminisce.database.MongoDBEntities.FBPost
 import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.StatsEntities.UserStats
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.MultipleChoice
-import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType.MCWhoLikedYourPost
 import me.reminisce.gameboard.board.GameboardEntities.{MultipleChoiceQuestion, Possibility}
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import reactivemongo.api.DefaultDB
@@ -14,27 +13,29 @@ import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
+import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
+
 
 /**
-  * Factory for [[me.reminisce.gameboard.questions.WhoLikedYourPost]]
+  * Factory for [[me.reminisce.gameboard.questions.WhoReactedToYourPostWithReactionType]]
   */
-object WhoLikedYourPost {
+object WhoReactedToYourPostWithReactionType {
 
   /**
-    * Creates a WhoLikedYourPost question generator
+    * Creates a WhoReactedToYourPostWithReactionType question generator
     * @param database database from which to take the data
     * @return props for the created actor
     */
-  def props(database: DefaultDB): Props =
-    Props(new WhoLikedYourPost(database))
+  def props(database: DefaultDB, reactionType: String): Props =
+    Props(new WhoReactedToYourPostWithReactionType(database, reactionType))
 
 }
 
 /**
-  * WhoLikedYourPost question generator
+  * WhoReactedToYourPostWithReactionType question generator
   * @param db database from which to take the data
   */
-class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
+class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: String) extends QuestionGenerator {
 
   /**
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
@@ -51,18 +52,18 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
 
       (for {
         userStatsOpt <- userCollection.find(BSONDocument("userId" -> userId)).one[UserStats]
-        postCollection = db  [BSONCollection](MongoDatabaseService.fbPostsCollection)
-        postOpt <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost]
+        postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+        postOpt <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId, "reactions" -> BSONDocument("reactionType" -> reactionType))).one[FBPost]
       }
         yield {
           val gameQuestionOpt =
             for {
               userStats <- userStatsOpt
               post <- postOpt
-              likes <- post.reactions
-              liker <- Random.shuffle(likes).headOption
-              if !((userStats.likers -- likes.toSet).size < 3)
-                choices = (liker :: Random.shuffle((userStats.likers -- likes.toSet).toList).take(3)) map {
+              reactions <- post.reactions
+              reactionerWithType <- Random.shuffle(reactions.filter { _.reactionType == reactionType }).headOption
+              if !((userStats.likers -- reactions.toSet).size < 3)
+                choices = (reactionerWithType :: Random.shuffle((userStats.likers -- reactions.toSet).toList).take(3)) map {
                   choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
                 }
               answer <- choices.headOption
@@ -70,21 +71,31 @@ class WhoLikedYourPost(db: DefaultDB) extends QuestionGenerator {
               postSubject = subjectFromPost(post)
             }
               yield {
-                MultipleChoiceQuestion(userId, MultipleChoice, MCWhoLikedYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
+                MultipleChoiceQuestion(userId, MultipleChoice, getSpecificQuestionType(reactionType), Some(postSubject), shuffled, shuffled.indexOf(answer))
               }
           gameQuestionOpt match {
             case Some(q) =>
               client ! FinishedQuestionCreation(q)
             case None =>
-              client ! NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers.")
+              client ! NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough reactioners or non-reactioners.")
           }
         }) onFailure {
         case e =>
           client ! MongoDBError(s"${e.getMessage}")
       }
 
-    case any => log.error(s"WhoLikedYourPost received a unexpected message $any")
+    case any => log.error(s"WhoReactedToYourPostWithReactionType received a unexpected message $any")
   }
-
-
+  
+  private def getSpecificQuestionType(reactionType: String) = {
+    Map(
+    "LIKE" -> MCWhoReactedToYourPostWithLIKE,
+    "WOW" -> MCWhoReactedToYourPostWithWOW,
+    "HAHA" -> MCWhoReactedToYourPostWithHAHA,
+    "LOVE" -> MCWhoReactedToYourPostWithLOVE,
+    "SAD" -> MCWhoReactedToYourPostWithSAD,
+    "ANGRY" -> MCWhoReactedToYourPostWithANGRY,
+    "THANKFUL" -> MCWhoReactedToYourPostWithTHANKFUL
+    )(reactionType)
+  }
 }

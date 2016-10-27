@@ -428,7 +428,7 @@ class StatsGenerator(userId: String, db: DefaultDB) extends Actor with ActorLogg
         val likeNumber = fbPost.reactionCount.getOrElse(0)
         if (likers.size - likeNumber >= 3 && likeNumber > 0) {
           val oldItemStat = getItemStats(userId, fbPost.postId, "Post", itemsStats)
-          val newDataListing = oldItemStat.dataTypes.toSet + PostWhoLiked.name
+          val newDataListing = oldItemStat.dataTypes.toSet + PostWhoReacted.name
           Some(ItemStats(None, userId, oldItemStat.itemId, "Post", newDataListing.toList, newDataListing.size))
         } else {
           None

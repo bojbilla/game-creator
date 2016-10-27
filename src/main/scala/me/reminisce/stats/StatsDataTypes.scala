@@ -17,7 +17,7 @@ object StatsDataTypes {
 
   case object PostWhoCommented extends DataType("PostWhoCommented")
 
-  case object PostWhoLiked extends DataType("PostWhoLiked")
+  case object PostWhoReacted extends DataType("PostWhoReacted")
 
   case object PostCommentsNumber extends DataType("PostCommentsNumber")
 
@@ -37,7 +37,7 @@ object StatsDataTypes {
     */
   def possibleTypes(questionKind: QuestionKind): List[DataType] = questionKind match {
     case QuestionKind.MultipleChoice =>
-      List(PostWhoLiked, PostWhoCommented, PageWhichLiked)
+      List(PostWhoReacted, PostWhoCommented, PageWhichLiked)
     case QuestionKind.Timeline =>
       List(Time)
     case QuestionKind.Geolocation =>
@@ -60,7 +60,7 @@ object StatsDataTypes {
       List(QuestionKind.Geolocation)
     case PostWhoCommented =>
       List(QuestionKind.MultipleChoice)
-    case PostWhoLiked =>
+    case PostWhoReacted =>
       List(QuestionKind.MultipleChoice)
     case PostCommentsNumber =>
       List(QuestionKind.Order)
@@ -82,7 +82,7 @@ object StatsDataTypes {
 
     case PostWhoCommented.name => PostWhoCommented
 
-    case PostWhoLiked.name => PostWhoLiked
+    case PostWhoReacted.name => PostWhoReacted
 
     case PostCommentsNumber.name => PostCommentsNumber
 

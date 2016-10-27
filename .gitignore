@@ -35,3 +35,5 @@ project/plugins/project/
 deployment/*.jar
 deployment/data/*
 /bin/
+.cache-main
+.cache-tests

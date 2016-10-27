@@ -21,7 +21,7 @@ object DatabaseFiller {
     val pageLikes = pageLikesLines.map {
       l =>
         val json = parse(l)
-        // this allows the extract method to work properly
+        // this allows the extract method to work properly  
         val converted = json.mapField {
           case (field, value) =>
             if (field == "likeTime") {

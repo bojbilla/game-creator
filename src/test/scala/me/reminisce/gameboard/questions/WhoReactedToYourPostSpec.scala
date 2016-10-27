@@ -17,17 +17,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
+class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
 
-  val userId = "TestUserWhoLikedYourPost"
+  val userId = "TestUserWhoReactedToYourPost"
 
-  "WhoLikedYourPost" must {
+  "WhoReactedToYourPost" must {
     "not create question when there is no user statistics." in {
       testWithDb {
         db =>
           val itemId = "This post does not exist"
 
-          val actorRef = TestActorRef(WhoLikedYourPost.props(db))
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
           testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
@@ -44,7 +44,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
           val userStats = UserStats(userId = userId)
           Await.result(userStatsCollection.update(userStats, userStats, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val actorRef = TestActorRef(WhoLikedYourPost.props(db))
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
           testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
@@ -66,7 +66,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
           val fbPost = FBPost(postId = itemId, userId = userId)
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val actorRef = TestActorRef(WhoLikedYourPost.props(db))
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
           testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
@@ -91,7 +91,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
           val fbPost = FBPost(postId = itemId, userId = userId, reactions = Some(List(like)))
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val actorRef = TestActorRef(WhoLikedYourPost.props(db))
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
           testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
@@ -122,7 +122,7 @@ class WhoLikedYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
           val fbPost = FBPost(postId = itemId, userId = freshUser, reactions = Some(List(likers.head)), message = Some(message))
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val actorRef = TestActorRef(WhoLikedYourPost.props(db))
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(freshUser, itemId))
 
