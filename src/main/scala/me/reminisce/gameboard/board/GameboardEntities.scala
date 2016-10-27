@@ -23,7 +23,7 @@ object GameboardEntities {
     val GeoWhatCoordinatesWereYouAt = Value("GeoWhatCoordinatesWereYouAt")
     val MCWhoMadeThisCommentOnYourPost = Value("MCWhoMadeThisCommentOnYourPost")
     val MCWhichPageDidYouLike = Value("MCWhichPageDidYouLike")
-    val MCWhoReactedToYourPost = Value("MCWhoReactedToYourPost")
+    val MCWhoReactedToYourPost = Value("MCWhoLikedYourPost")
     val MCWhoReactedToYourPostWithLIKE = Value("MCWhoReactedToYourPostWithLIKE")
     val MCWhoReactedToYourPostWithWOW = Value("MCWhoReactedToYourPostWithWOW")
     val MCWhoReactedToYourPostWithHAHA = Value("MCWhoReactedToYourPostWithHAHA")
