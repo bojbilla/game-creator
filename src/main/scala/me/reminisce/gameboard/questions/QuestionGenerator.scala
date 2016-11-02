@@ -80,11 +80,25 @@ object QuestionGenerator {
       case Some(message) =>
         message + (if (includeStory) {
           post.story match {
-            case Some(story) => "\n" + story
+            case Some(story) => "\n" + stripInformation(story)
             case None => ""
           } 
         } else "")
-      case None => post.story.getOrElse("")
+      case None => stripInformation(post.story.getOrElse(""))
+    }
+  }
+
+  /**
+    * Strips the story from some information such as time, people or location.
+    * @param story a post story
+    * @return the transformed story
+    */
+  def stripInformation(story: String): String = {
+    story.split(" — ").toList match {
+      case str::Nil =>
+        str
+      case str :+ info =>
+        str.mkString(" — ")
     }
   }
 
