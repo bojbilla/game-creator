@@ -129,15 +129,16 @@ class QuestionGeneratorSuite extends FunSuite {
 
   test("Extracting text from post.") {
     val postMessage = "TestMessage"
-    val postStory = "Story"
+    val postStory = "Jacqueline Zumturm added 7 new photos — to the album: Salami — with Poulet Frit and 5 others."
+    val strippedStory = "Jacqueline Zumturm added 7 new photos — to the album: Salami"
 
     val testPostStoryMessage = createTestPost(postMessage, postStory, "ND")
     val storyMessage = QuestionGenerator.textFromPost(testPostStoryMessage)
-    assert(storyMessage == postMessage + "\n" + postStory)
+    assert(storyMessage == postMessage + "\n" + strippedStory)
 
     val testPostStoryOnly = createTestPost("", postStory, "ND")
     val storyOnly = QuestionGenerator.textFromPost(testPostStoryOnly)
-    assert(storyOnly == postStory)
+    assert(storyOnly == strippedStory)
 
     val testPostMessgaeOnly = createTestPost(postMessage, "", "ND")
     val messageOnly = QuestionGenerator.textFromPost(testPostMessgaeOnly)
@@ -146,6 +147,9 @@ class QuestionGeneratorSuite extends FunSuite {
     val testPostNoText = createTestPost("", "", "ND")
     val noText = QuestionGenerator.textFromPost(testPostNoText)
     assert(noText == "")
+
+    // This should not change
+    assert(QuestionGenerator.stripInformation("AA—AA—AA") == "AA—AA—AA")
   }
 
   test("Extracting src from FBAttachments.") {
