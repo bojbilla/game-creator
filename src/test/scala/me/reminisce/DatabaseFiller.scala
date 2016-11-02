@@ -3,7 +3,7 @@ package me.reminisce
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike, FBPost}
 import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
-import me.reminisce.database.DatabaseTestHelper._
+import me.reminisce.testutils.database.DatabaseTestHelper._
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 import reactivemongo.api.DefaultDB

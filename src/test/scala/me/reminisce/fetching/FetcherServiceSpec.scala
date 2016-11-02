@@ -4,9 +4,10 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.database.MongoDBEntities._
-import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.fetching.FetcherService.FetchData
 import me.reminisce.server.domain.Domain.{AlreadyFresh, TooManyRequests}
+import me.reminisce.testutils.database.DatabaseTester
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.bson.BSONCollection

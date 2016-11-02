@@ -1,13 +1,12 @@
 package me.reminisce.gameboard.questions
 
-import me.reminisce.gameboard.board.GameboardEntities
 import me.reminisce.gameboard.board.GameboardEntities.{SubjectWithId, TextPostSubject}
 import org.scalatest.FunSuite
 
 class OrderQuestionGeneratorSuite extends FunSuite {
 
   test("Empty list of subjects to SubjectWithIds.") {
-    assert(OrderQuestionGenerator.generateSubjectsWithId(List()) ==(List(), List()))
+    assert(OrderQuestionGenerator.generateSubjectsWithId(List()) == (List(), List()))
   }
 
   test("List of subjects to SubjectWithIds.") {

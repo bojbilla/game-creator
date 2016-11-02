@@ -5,11 +5,12 @@ import java.util.concurrent.TimeUnit
 import akka.testkit.TestActorRef
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDBEntities._
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
-import me.reminisce.database.{DatabaseTester, MongoDatabaseService}
 import me.reminisce.fetching.config.GraphResponses._
 import me.reminisce.stats.StatsGenerator.{FinalStats, TransientPostsStats}
 import me.reminisce.testutils.Retry
+import me.reminisce.testutils.database.DatabaseTester
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.bson.BSONCollection

@@ -7,6 +7,7 @@ import me.reminisce.database.DeletionService.{ClearDatabase, RemoveExtraLikes, R
 import me.reminisce.database.MongoDBEntities._
 import me.reminisce.server.ApplicationConfiguration
 import me.reminisce.server.domain.Domain.{ActionForbidden, Done}
+import me.reminisce.testutils.database.DatabaseTester
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.bson.BSONCollection
