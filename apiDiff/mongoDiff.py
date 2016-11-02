@@ -63,7 +63,7 @@ def main():
             try:
                 call([diffcmd, jsons1[c], jsons2[c]], stdout=f) 
             except:
-                sys.exc_info()[0]
+                print(sys.exc_info()[0])
                 print("[INFO]: Please install jsondiffpatch: `npm install jsondiffpatch`", sys.stderr)
                 time.sleep(5)
                 raise

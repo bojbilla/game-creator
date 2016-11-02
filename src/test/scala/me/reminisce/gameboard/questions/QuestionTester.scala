@@ -3,10 +3,9 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.TestProbe
-import me.reminisce.database.DatabaseTester
-import me.reminisce.gameboard.board.GameboardEntities
 import me.reminisce.gameboard.board.GameboardEntities.{GameQuestion, OrderQuestion, Subject}
 import me.reminisce.gameboard.questions.QuestionGenerator.FinishedQuestionCreation
+import me.reminisce.testutils.database.DatabaseTester
 
 import scala.concurrent.duration.Duration
 import scala.reflect.{ClassTag, classTag}

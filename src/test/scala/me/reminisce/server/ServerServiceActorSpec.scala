@@ -3,7 +3,7 @@ package me.reminisce.server
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.TestActorRef
-import me.reminisce.database.{DatabaseTestHelper, DatabaseTester}
+import me.reminisce.testutils.database.{DatabaseTestHelper, DatabaseTester}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatest.DoNotDiscover
@@ -16,12 +16,22 @@ import scala.util.Random
 @DoNotDiscover
 class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
 
-  case class SimpleMessageFormat(message: String)
   val port = DatabaseTestHelper.port
   val dbId = Random.nextInt
   val testService = TestActorRef(new ServerServiceActor(s"localhost:$port", s"DB${dbId}_for_ServerServiceActorSpec"))
 
   implicit def json4sFormats: Formats = DefaultFormats
+
+  private def extractStatus(feedbackOpt: Option[AnyRef]): StatusCode = {
+    feedbackOpt match {
+      case Some(feedback) =>
+        assert(feedback.isInstanceOf[HttpResponse])
+        val feedbackHttpResponse = feedback.asInstanceOf[HttpResponse]
+        feedbackHttpResponse.status
+      case None =>
+        fail("Did not receive feedback.")
+    }
+  }
 
   "ServerServiceActor" must {
     "try to fetch." in {
@@ -101,14 +111,5 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
     }
   }
 
-  private def extractStatus(feedbackOpt: Option[AnyRef]): StatusCode = {
-    feedbackOpt match {
-      case Some(feedback) =>
-        assert(feedback.isInstanceOf[HttpResponse])
-        val feedbackHttpResponse = feedback.asInstanceOf[HttpResponse]
-        feedbackHttpResponse.status
-      case None =>
-        fail("Did not receive feedback.")
-    }
-  }
+  case class SimpleMessageFormat(message: String)
 }

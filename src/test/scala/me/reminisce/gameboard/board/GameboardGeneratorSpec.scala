@@ -5,11 +5,12 @@ import java.util.concurrent.TimeUnit
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.DatabaseFiller
 import me.reminisce.database.MongoDBEntities.{FBFrom, LastFetched}
-import me.reminisce.database.{DatabaseTestHelper, DatabaseTester, MongoDatabaseService}
+import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameGenerator.CreateBoard
 import me.reminisce.gameboard.board.GameboardEntities.SubjectType.SubjectType
 import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.server.domain.Domain.InternalError
+import me.reminisce.testutils.database.DatabaseTester
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.bson.BSONCollection
@@ -61,39 +62,39 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
     }
   }
 
+  def validateSubject(subject: Subject): Unit = {
+    subject match {
+      case PageSubject(name: String, pageId: String, photoUrl: Option[String], tpe: SubjectType) =>
+        assert(tpe == SubjectType.PageSubject)
+        assert(name.nonEmpty)
+        assert(pageId.nonEmpty)
+      case TextPostSubject(text: String, tpe: SubjectType, from: Option[FBFrom]) =>
+        assert(tpe == SubjectType.TextPost)
+        assert(text.nonEmpty)
+      case ImagePostSubject(text: String, imageUrl: Option[String], facebookImageUrl: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
+        assert(tpe == SubjectType.ImagePost)
+        assert(text.nonEmpty)
+      case VideoPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
+        assert(tpe == SubjectType.VideoPost)
+        assert(text.nonEmpty)
+      case LinkPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
+        assert(tpe == SubjectType.LinkPost)
+        assert(text.nonEmpty)
+      case CommentSubject(comment: String, post: PostSubject, tpe: SubjectType) =>
+        assert(tpe == SubjectType.CommentSubject)
+        assert(comment.nonEmpty)
+        validateSubject(post)
+      case _ =>
+        fail("Non supported subject type.")
+    }
+  }
+
   /**
     * Validates the question, for the moment it only verifies that the subject is valid
     *
     * @param question question to validate
     */
   private def validateQuestion(question: GameQuestion): Unit = {
-
-    def validateSubject(subject: Subject): Unit = {
-      subject match {
-        case PageSubject(name: String, pageId: String, photoUrl: Option[String], tpe: SubjectType) =>
-          assert(tpe == SubjectType.PageSubject)
-          assert(name.nonEmpty)
-          assert(pageId.nonEmpty)
-        case TextPostSubject(text: String, tpe: SubjectType, from: Option[FBFrom]) =>
-          assert(tpe == SubjectType.TextPost)
-          assert(text.nonEmpty)
-        case ImagePostSubject(text: String, imageUrl: Option[String], facebookImageUrl: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
-          assert(tpe == SubjectType.ImagePost)
-          assert(text.nonEmpty)
-        case VideoPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
-          assert(tpe == SubjectType.VideoPost)
-          assert(text.nonEmpty)
-        case LinkPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
-          assert(tpe == SubjectType.LinkPost)
-          assert(text.nonEmpty)
-        case CommentSubject(comment: String, post: PostSubject, tpe: SubjectType) =>
-          assert(tpe == SubjectType.CommentSubject)
-          assert(comment.nonEmpty)
-          validateSubject(post)
-        case _ =>
-          fail("Non supported subject type.")
-      }
-    }
 
     question match {
       case TimelineQuestion(uid, kind, tpe, subject, answer, min, max, default, unit, step, threshold) =>
