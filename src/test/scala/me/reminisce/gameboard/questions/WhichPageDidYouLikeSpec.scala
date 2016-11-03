@@ -3,8 +3,8 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.MultipleChoiceQuestion
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.joda.time.DateTime
@@ -37,7 +37,7 @@ class WhichPageDidYouLikeSpec extends QuestionTester("WhichPageDidYouLikeSpec") 
     "create a valid question when the data is there." in {
       testWithDb {
         db =>
-          val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
+          val pagesCollection = db[BSONCollection](MongoCollections.fbPages)
 
           val pagesNumber = 4 // MC question
 
@@ -55,7 +55,7 @@ class WhichPageDidYouLikeSpec extends QuestionTester("WhichPageDidYouLikeSpec") 
               Await.result(pagesCollection.update(pages(nb), pages(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
           }
 
-          val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
+          val pageLikesCollection = db[BSONCollection](MongoCollections.fbPageLikes)
           val pageLike = FBPageLike(None, userId, itemIds.head, DateTime.now)
           Await.result(pageLikesCollection.update(pageLike, pageLike, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 

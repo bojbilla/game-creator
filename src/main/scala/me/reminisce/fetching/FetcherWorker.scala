@@ -1,6 +1,8 @@
 package me.reminisce.fetching
 
 import akka.actor._
+import me.reminisce.analysis.DataAnalyser
+import me.reminisce.analysis.DataAnalyser.{FinalAnalysis, TransientPostsAnalysis}
 import me.reminisce.database.DeletionService.RemoveExtraLikes
 import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
 import me.reminisce.database.{DeletionService, MongoDatabaseService}
@@ -13,8 +15,6 @@ import me.reminisce.fetching.retrievers.RetrievePosts.{FinishedRetrievingPosts, 
 import me.reminisce.fetching.retrievers.RetrieveTaggedPosts.{FinishedRetrievingTaggedPosts, PartialTaggedPostsResult}
 import me.reminisce.fetching.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
 import me.reminisce.server.domain.Domain.Done
-import me.reminisce.stats.StatsGenerator
-import me.reminisce.stats.StatsGenerator.{FinalStats, TransientPostsStats}
 import reactivemongo.api.DefaultDB
 
 /**
@@ -23,14 +23,16 @@ import reactivemongo.api.DefaultDB
 object FetcherWorker {
   /**
     * Create a fetcher worker
+    *
     * @param database database to store the fetched data
     * @return props for the created actor
     */
-  def props(database: DefaultDB): Props =
-    Props(new FetcherWorker(database))
+  def props(database: DefaultDB, userId: String): Props =
+  Props(new FetcherWorker(database, userId))
 
   /**
     * Removes empty posts from the list
+    *
     * @param posts posts to filter
     * @return filtered posts
     */
@@ -41,17 +43,22 @@ object FetcherWorker {
 
 /**
   * A fetcher worker, invokes the particular retrievers and request the storing of data in the database
+  *
   * @param database the database to store data in
   */
-class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
+class FetcherWorker(database: DefaultDB, userId: String) extends Actor with ActorLogging {
+
+  val dataAnalyser = context.actorOf(DataAnalyser.props(userId, database))
+  val mongoSaver = context.actorOf(MongoDatabaseService.props(userId, database))
 
   /**
     * Actor entry point, handles the FetchDataSince(userId, accessToken, lastFetched) message by creating the data
     * retrievers and requesting the data retrieving
+    *
     * @return Nothing
     */
   def receive = {
-    case FetchDataSince(userId, accessToken, lastFetched) =>
+    case FetchDataSince(accessToken, lastFetched) =>
       val client = sender()
       val simpleParameters = FBParameters(Some(userId), Some(accessToken), since = lastFetched)
       log.info("Fetching data for " + userId)
@@ -86,9 +93,10 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
     * - FinishedRetrievingTaggedPosts(posts): stores posts in the , tests if the fetching is done, if it is the case,
     * report to the client.
     * - Done(message): the deletion is done (see liked pages above), check if everything is done, if so report to client
-    * @param client fetching requester
-    * @param userId user for which data has to be fetched
-    * @param workers fetching and deleting workers
+    *
+    * @param client     fetching requester
+    * @param userId     user for which data has to be fetched
+    * @param workers    fetching and deleting workers
     * @param foundPosts fetched posts
     * @param foundPages fetched pages
     * @return Nothing
@@ -133,10 +141,11 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
   }
 
   /**
-    * Verifies if the work is done, if so report to client and requests to aggregate stats
-    * @param client fetching requester
-    * @param userId user for which the data is fetched
-    * @param workers current workers
+    * Verifies if the work is done, if so report to client and requests to aggregate the user summary
+    *
+    * @param client     fetching requester
+    * @param userId     user for which the data is fetched
+    * @param workers    current workers
     * @param newWorkers workers to add
     * @param oldWorkers workers to remove
     * @param foundPosts posts fetched
@@ -147,7 +156,7 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
     val newWorkersSet = workers ++ newWorkers -- oldWorkers
     if (newWorkersSet.isEmpty) {
       client ! FinishedFetching(userId)
-      statsGenerator(userId) ! FinalStats(foundPosts, foundPages)
+      dataAnalyser ! FinalAnalysis(foundPosts, foundPages)
     }
     context.become(awaitResults(client, userId, newWorkersSet, foundPosts, foundPages))
   }
@@ -162,44 +171,28 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
   }
 
   /**
-    * Generates a MongoDatabaseService
-    * @param userId id of the user for which data is being fetched
-    * @return a reference to the generated service
-    */
-  private def mongoSaver(userId: String): ActorRef = {
-    context.actorOf(MongoDatabaseService.props(userId, database))
-  }
-
-  /**
-    * Generates a StatsGenerator
-    * @param userId id of the user for which data is being fetched
-    * @return a reference to the generated service
-    */
-  private def statsGenerator(userId: String): ActorRef = {
-    context.actorOf(StatsGenerator.props(userId, database))
-  }
-
-  /**
     * Store posts
+    *
     * @param prunedPosts posts with text (other removed by [[me.reminisce.fetching.FetcherWorker.prunePosts]])
-    * @param userId id of the user for which data is being fetched
+    * @param userId      id of the user for which data is being fetched
     */
   private def storePosts(prunedPosts: Vector[Post], userId: String): Unit = {
-    statsGenerator(userId) ! TransientPostsStats(prunedPosts.toList)
-    mongoSaver(userId) ! SaveFBPost(prunedPosts.toList)
+    dataAnalyser ! TransientPostsAnalysis(prunedPosts.toList)
+    mongoSaver ! SaveFBPost(prunedPosts.toList)
   }
 
 
   /**
-    * Prunes posts, stores them, stores stats on them and then tests if the fetching is done, if it is the case,
+    * Prunes posts, stores them, stores summary on them and then tests if the fetching is done, if it is the case,
     * report to the client.
-    * @param client fetching requester
-    * @param workers current active workers
-    * @param posts posts to handle
-    * @param userId user for which data is being fetched
+    *
+    * @param client     fetching requester
+    * @param workers    current active workers
+    * @param posts      posts to handle
+    * @param userId     user for which data is being fetched
     * @param foundPosts already handled posts
     * @param foundPages already handled pages
-    * @param partial is the result partial
+    * @param partial    is the result partial
     */
   private def handlePosts(client: ActorRef, workers: Set[ActorRef], posts: Vector[Post], userId: String,
                           foundPosts: Set[String], foundPages: Set[String], partial: Boolean = false): Unit = {
@@ -215,11 +208,12 @@ class FetcherWorker(database: DefaultDB) extends Actor with ActorLogging {
 
   /**
     * Store pages
-    * @param pages pages to store
+    *
+    * @param pages  pages to store
     * @param userId user for which data is being fetched
     */
   private def storePages(pages: Vector[Page], userId: String): Unit = {
-    mongoSaver(userId) ! SaveFBPage(pages.toList)
+    mongoSaver ! SaveFBPage(pages.toList)
   }
 }
 

@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor._
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
-import me.reminisce.database.MongoDatabaseService
-import me.reminisce.database.StatsEntities.UserStats
+import me.reminisce.database.AnalysisEntities.UserSummary
+import me.reminisce.database.MongoCollections
 import me.reminisce.fetching.config.GraphResponses.AccessTokenResponse
 import me.reminisce.server.TestHelpers._
 import org.json4s.jackson.JsonMethods._
@@ -42,7 +42,7 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
   val dbId = Random.nextInt
   val dbName = s"DB${dbId}_for_ServerServiceActorSpec"
   val testService = TestActorRef(new ServerServiceActor(s"localhost:$port", dbName))
-  val testUserOpt: Option[AuthenticatedTestUser] = {
+  val maybeTestUser: Option[AuthenticatedTestUser] = {
     val facebookAppId = envOrElse("FACEBOOK_APP_ID", "NONE")
     val facebookAppSecret = envOrElse("FACEBOOK_APP_SECRET", "NONE")
 
@@ -97,8 +97,8 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
       assert(fetchRequest.method == HttpMethods.GET)
       testService ! fetchRequest
 
-      val responseOpt = Option(receiveOne(Duration(2, TimeUnit.SECONDS)))
-      responseOpt match {
+      val maybeResponse = Option(receiveOne(Duration(2, TimeUnit.SECONDS)))
+      maybeResponse match {
         case Some(response) =>
           assert(response.isInstanceOf[HttpResponse])
 
@@ -116,9 +116,9 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
 
       def checkFinished(fetchRequest: HttpRequest, attempts: Int): Unit = {
         testService ! fetchRequest
-        val finishedFetchingOpt = Option(receiveOne(Duration(2, TimeUnit.SECONDS)))
+        val maybeFinishedFetching = Option(receiveOne(Duration(2, TimeUnit.SECONDS)))
 
-        finishedFetchingOpt match {
+        maybeFinishedFetching match {
           case Some(finishedFetching) =>
             val done = finishedFetching.isInstanceOf[HttpResponse] &&
               finishedFetching.asInstanceOf[HttpResponse].status == StatusCodes.OK
@@ -140,14 +140,14 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
         }
       }
 
-      testUserOpt match {
+      maybeTestUser match {
         case Some(testUser) =>
           val fetchRequest = Get(s"/fetchData?user_id=${testUser.id}&access_token=${testUser.accessToken}")
           assert(fetchRequest.method == HttpMethods.GET)
           testService ! fetchRequest
 
-          val initialFetchResponseOpt = Option(receiveOne(Duration(2, TimeUnit.SECONDS)))
-          initialFetchResponseOpt match {
+          val maybeInitialFetchResponse = Option(receiveOne(Duration(2, TimeUnit.SECONDS)))
+          maybeInitialFetchResponse match {
             case Some(initialFetchResponse) =>
               assert(initialFetchResponse.isInstanceOf[HttpResponse])
 
@@ -162,8 +162,8 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
 
           testService ! fetchRequest
 
-          val concurrentResponseOpt = Option(receiveOne(Duration(2, TimeUnit.SECONDS)))
-          concurrentResponseOpt match {
+          val maybeConcurrentResponse = Option(receiveOne(Duration(2, TimeUnit.SECONDS)))
+          maybeConcurrentResponse match {
             case Some(concurrentResponse) =>
               assert(concurrentResponse.isInstanceOf[HttpResponse])
 
@@ -184,23 +184,23 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
     }
 
     "successfully generate a gameboard." in {
-      testUserOpt match {
+      maybeTestUser match {
         case Some(testUser) =>
           val connection = driver.connection(s"localhost:$port" :: Nil)
           whenReady(connection.database(dbName), timeout(Span(300, Millis)), interval(Span(30, Millis))) {
             db =>
-              val collection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+              val collection = db[BSONCollection](MongoCollections.userSummaries)
               val selector = BSONDocument("userId" -> testUser.id)
-              val userStatsOpt = Await.result(collection.find(selector).one[UserStats], Duration(10, TimeUnit.SECONDS))
+              val maybeUserSummary = Await.result(collection.find(selector).one[UserSummary], Duration(10, TimeUnit.SECONDS))
 
-              userStatsOpt match {
-                case Some(userStats) =>
+              maybeUserSummary match {
+                case Some(userSummary) =>
                   val gameboardRequest = Get(s"/gameboard?user_id=${testUser.id}&access_token=${testUser.accessToken}&strategy=random")
 
                   testService ! gameboardRequest
 
-                  val gameboardAnswerOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-                  gameboardAnswerOpt match {
+                  val maybeGameboardAnswer = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+                  maybeGameboardAnswer match {
                     case Some(gameboardAnswer) =>
                       assert(gameboardAnswer.isInstanceOf[HttpResponse])
                       val gameboardHttpResponse = gameboardAnswer.asInstanceOf[HttpResponse]
@@ -210,7 +210,7 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
                   }
 
                 case None =>
-                  cancel("Unable to find UserStats, the test user may have been wiped from its posts. " +
+                  cancel("Unable to find UserSummary, the test user may have been wiped from its posts. " +
                     "It may also be that the fetching failed, please make sure that other tests pass.")
 
               }
@@ -221,13 +221,13 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
     }
 
     "successfully delete data for the user." in {
-      testUserOpt match {
+      maybeTestUser match {
         case Some(testUser) =>
           val deleteRequest = Delete(s"/removeUser?user_id=${testUser.id}")
           testService ! deleteRequest
 
-          val feedbackOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-          feedbackOpt match {
+          val maybeFeedback = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+          maybeFeedback match {
             case Some(feedback) =>
               assert(feedback.isInstanceOf[HttpResponse])
               val feedbackHttpResponse = feedback.asInstanceOf[HttpResponse]
@@ -244,8 +244,8 @@ class GameCreatorServiceSpec extends TestKit(ActorSystem("GameCreatorSpec"))
       val deleteRequest = Delete(s"/dropDatabase")
       testService ! deleteRequest
 
-      val feedbackOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-      feedbackOpt match {
+      val maybeFeedback = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+      maybeFeedback match {
         case Some(feedback) =>
           assert(feedback.isInstanceOf[HttpResponse])
           val feedbackHttpResponse = feedback.asInstanceOf[HttpResponse]

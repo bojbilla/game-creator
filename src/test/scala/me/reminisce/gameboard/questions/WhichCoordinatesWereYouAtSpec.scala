@@ -3,8 +3,8 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBLocation, FBPlace, FBPost}
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{GeolocationQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
@@ -36,7 +36,7 @@ class WhichCoordinatesWereYouAtSpec extends QuestionTester("WhichCoordinatesWere
     "not create question when there is no location." in {
       testWithDb {
         db =>
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val itemId = "This post does not exist"
 
@@ -53,7 +53,7 @@ class WhichCoordinatesWereYouAtSpec extends QuestionTester("WhichCoordinatesWere
     "create a valid question when the post and place is there." in {
       testWithDb {
         db =>
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val userId = "TestUser"
           val itemId = "PostId"

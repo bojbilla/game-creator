@@ -1,8 +1,8 @@
 package me.reminisce.gameboard.questions
 
 import akka.actor.Props
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBComment, FBFrom, FBPost}
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
 import me.reminisce.gameboard.board.GameboardEntities._
@@ -21,15 +21,17 @@ object WhoMadeThisCommentOnYourPost {
 
   /**
     * Creates a WhoMadeThisCommentOnYourPost question generator
+    *
     * @param database database from which to take the data
     * @return props for the created actor
     */
   def props(database: DefaultDB): Props =
-    Props(new WhoMadeThisCommentOnYourPost(database))
+  Props(new WhoMadeThisCommentOnYourPost(database))
 }
 
 /**
   * WhoMadeThisCommentOnYourPost question generator
+  *
   * @param db database from which to take the data
   */
 class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
@@ -38,12 +40,13 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
     * necessary items from the database and creating a question. If some items are non conform to what is expected,
     * missing or there is an error while contacting the database, the error is reported to the client.
+    *
     * @return Nothing
     */
   def receive = {
     case CreateQuestion(userId, itemId) =>
       val client = sender()
-      val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+      val postCollection = db[BSONCollection](MongoCollections.fbPosts)
       postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost].onComplete {
         case Success(postOpt) =>
           (for {
@@ -74,6 +77,7 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
 
   /**
     * Gets comments made by 4 different people on the post
+    *
     * @param comments comments on the post
     * @return a set of candidate comments
     */
@@ -92,10 +96,11 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
 
   /**
     * Generates a multiple choice question
-    * @param userId user for which the question is meant
+    *
+    * @param userId           user for which the question is meant
     * @param selectedComments comments from which the user will have to chose
-    * @param rightOne answer to the question
-    * @param post post about which the question is
+    * @param rightOne         answer to the question
+    * @param post             post about which the question is
     * @return a multiple choice question
     */
   private def generateQuestion(userId: String, selectedComments: List[FBComment],

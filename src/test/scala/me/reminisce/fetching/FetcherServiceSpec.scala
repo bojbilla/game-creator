@@ -3,8 +3,8 @@ package me.reminisce.fetching
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities._
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.fetching.FetcherService.FetchData
 import me.reminisce.server.domain.Domain.{AlreadyFresh, TooManyRequests}
 import me.reminisce.testutils.database.DatabaseTester
@@ -41,7 +41,7 @@ class FetcherServiceSpec extends DatabaseTester("FetcherServiceSpec") {
       testWithDb {
         db =>
           val userId = "TestUserFetcherService2"
-          val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
+          val collection = db[BSONCollection](MongoCollections.lastFetched)
 
           val time = DateTime.now
 

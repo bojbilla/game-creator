@@ -3,8 +3,8 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities._
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{CommentSubject, MultipleChoiceQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
@@ -39,7 +39,7 @@ class WhoMadeThisCommentOnYourPostSpec extends QuestionTester("WhichPageDidYouLi
         db =>
           val itemId = "This post does exist"
 
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val fbPost = FBPost(postId = itemId, userId = userId)
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
@@ -56,7 +56,7 @@ class WhoMadeThisCommentOnYourPostSpec extends QuestionTester("WhichPageDidYouLi
         db =>
           val itemId = "This post does exist"
 
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val fromId = "FromId"
           val fromName = "FromName"
@@ -85,7 +85,7 @@ class WhoMadeThisCommentOnYourPostSpec extends QuestionTester("WhichPageDidYouLi
               FBComment(s"commentId$i", from, 0, s"hello$i")
           }.toList
 
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val message = "Who liked this ?"
           val fbPost = FBPost(postId = itemId, userId = userId, comments = Some(comments), message = Some(message))

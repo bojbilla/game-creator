@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import com.github.nscala_time.time.Imports._
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{PageSubject, TimelineQuestion}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.joda.time.DateTime
@@ -40,7 +40,7 @@ class WhenDidYouLikeThisPageSpec extends QuestionTester("WhenDidYouLikeThisPageS
         db =>
           val itemId = "This page does not exist"
 
-          val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
+          val pageLikesCollection = db[BSONCollection](MongoCollections.fbPageLikes)
           val likedTime = DateTime.now
           val pageLike = FBPageLike(None, userId, itemId, likedTime)
           Await.result(pageLikesCollection.update(pageLike, pageLike, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
@@ -55,14 +55,14 @@ class WhenDidYouLikeThisPageSpec extends QuestionTester("WhenDidYouLikeThisPageS
     "create a valid question when the data is there." in {
       testWithDb {
         db =>
-          val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
+          val pagesCollection = db[BSONCollection](MongoCollections.fbPages)
 
           val itemId = s"PageId"
 
           val page = FBPage(None, itemId, Some(s"Cool page with id ID"), None, 1)
           Await.result(pagesCollection.update(page, page, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
+          val pageLikesCollection = db[BSONCollection](MongoCollections.fbPageLikes)
           val likedTime = DateTime.now
           val pageLike = FBPageLike(None, userId, itemId, likedTime)
           Await.result(pageLikesCollection.update(pageLike, pageLike, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))

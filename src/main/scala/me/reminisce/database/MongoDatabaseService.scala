@@ -18,16 +18,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
   */
 object MongoDatabaseService {
   /**
-    * Collection names definitions
-    */
-  val fbPagesCollection = "fbPages"
-  val fbPageLikesCollection = "fbPageLikes"
-  val fbPostsCollection = "fbPosts"
-  val lastFetchedCollection = "lastFetched"
-  val userStatisticsCollection = "userStatistics"
-  val itemsStatsCollection = "itemsStats"
-
-  /**
     * Creates a database service actor
     *
     * @param userId userId of the user fdor which the data is stored
@@ -123,9 +113,9 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends Actor with Act
     case SaveFBPage(pages) =>
       saveFBPagesToDB(pages)
     case SaveFBPost(posts) =>
-      saveFBPostToDB(posts, db[BSONCollection](MongoDatabaseService.fbPostsCollection))
+      saveFBPostToDB(posts, db[BSONCollection](MongoCollections.fbPosts))
     case SaveLastFetchedTime =>
-      saveLastFetchTime(db[BSONCollection](MongoDatabaseService.lastFetchedCollection))
+      saveLastFetchTime(db[BSONCollection](MongoCollections.lastFetched))
     case any => log.error(s"MongoDB Service received unexpected message : $any")
   }
 
@@ -135,8 +125,8 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends Actor with Act
     * @param pages pages to work on
     */
   private def saveFBPagesToDB(pages: List[Page]): Unit = {
-    val fbPageCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
-    val fbPageLikeCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
+    val fbPageCollection = db[BSONCollection](MongoCollections.fbPages)
+    val fbPageLikeCollection = db[BSONCollection](MongoCollections.fbPageLikes)
     pages.foreach { p =>
       val query = BSONDocument("pageId" -> p.id)
       fbPageCollection.update(query, pageToFBPage(p), WriteConcern.Acknowledged, upsert = true).onFailure {

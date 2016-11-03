@@ -2,8 +2,8 @@ package me.reminisce.gameboard.questions
 
 import akka.actor.Props
 import com.github.nscala_time.time.Imports._
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
 import me.reminisce.gameboard.board.GameboardEntities.TimelineQuestion
@@ -22,15 +22,17 @@ object WhenDidYouLikeThisPage {
 
   /**
     * Creates a WhenDidYouLikeThisPage question generator
+    *
     * @param database database from which to take the data
     * @return props for the created actor
     */
   def props(database: DefaultDB): Props =
-    Props(new WhenDidYouLikeThisPage(database))
+  Props(new WhenDidYouLikeThisPage(database))
 }
 
 /**
   * WhenDidYouLikeThisPage question generator
+  *
   * @param db database from which to take the data
   */
 class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
@@ -39,6 +41,7 @@ class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
     * necessary items from the database and creating a question. If some items are non conform to what is expected,
     * missing or there is an error while contacting the database, the error is reported to the client.
+    *
     * @return Nothing
     */
   def receive = {
@@ -48,16 +51,16 @@ class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
         "userId" -> userId,
         "pageId" -> itemId
       )
-      val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
+      val pageLikesCollection = db[BSONCollection](MongoCollections.fbPageLikes)
 
       (for {
         mayBePageLike <- pageLikesCollection.find(query).one[FBPageLike]
-        pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
+        pagesCollection = db[BSONCollection](MongoCollections.fbPages)
         pageSelector = BSONDocument("pageId" -> itemId)
         maybePage <- pagesCollection.find(pageSelector).one[FBPage]
       }
         yield {
-          val tlQuestionOpt =
+          val maybeTimelineQuestion =
             for {
               pageLike <- mayBePageLike
               page <- maybePage
@@ -74,7 +77,7 @@ class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
                       default.toString(formatter), unit, step, threshold)
                 }
               }
-          tlQuestionOpt match {
+          maybeTimelineQuestion match {
             case Some(tlQuestion) =>
               client ! FinishedQuestionCreation(tlQuestion)
             case None =>

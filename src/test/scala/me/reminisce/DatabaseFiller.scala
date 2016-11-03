@@ -2,7 +2,8 @@ package me.reminisce
 
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike, FBPost}
-import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
+import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
+import me.reminisce.database.MongoCollections
 import me.reminisce.testutils.database.DatabaseTestHelper._
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
@@ -42,13 +43,13 @@ object DatabaseFiller {
             throw new IllegalArgumentException("Impossible match case.")
         }
     }
-    storeObjects(db, "fbPageLikes", pageLikes)
+    storeObjects(db, MongoCollections.fbPageLikes, pageLikes)
 
     val posts = simpleExtract[FBPost](folder + "/fbPosts.json")
-    storeObjects(db, "fbPosts", posts)
-    val userStats = simpleExtract[UserStats](folder + "/userStatistics.json")
-    storeObjects(db, "userStatistics", userStats)
-    val itemsStats = simpleExtract[ItemStats](folder + "/itemsStats.json")
-    storeObjects(db, "itemsStats", itemsStats)
+    storeObjects(db, MongoCollections.fbPosts, posts)
+    val userSummary = simpleExtract[UserSummary](folder + "/userSummaries.json")
+    storeObjects(db, MongoCollections.userSummaries, userSummary)
+    val itemsSummaries = simpleExtract[ItemSummary](folder + "/itemsSummaries.json")
+    storeObjects(db, MongoCollections.itemsSummaries, itemsSummaries)
   }
 }

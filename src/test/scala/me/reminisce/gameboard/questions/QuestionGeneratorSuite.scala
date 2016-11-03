@@ -13,12 +13,12 @@ class QuestionGeneratorSuite extends FunSuite {
       url => List(FBAttachment(media = Some(FBMedia(1, 1, url))))
     }
 
-    val messgaeOpt = if (message != "") Some(message) else None
-    val storyopt = if (story != "") Some(story) else None
+    val maybeMessage = if (message != "") Some(message) else None
+    val maybeStory = if (story != "") Some(story) else None
     FBPost(postId = "NONE", userId = "NONE", tpe = Some(postType),
       attachments = attachments,
-      message = messgaeOpt,
-      story = storyopt,
+      message = maybeMessage,
+      story = maybeStory,
       link = link,
       from = from
     )
@@ -129,8 +129,8 @@ class QuestionGeneratorSuite extends FunSuite {
 
   test("Extracting text from post.") {
     val postMessage = "TestMessage"
-    val postStory = "Jacqueline Zumturm added 7 new photos — to the album: Salami — with Poulet Frit and 5 others."
-    val strippedStory = "Jacqueline Zumturm added 7 new photos — to the album: Salami"
+    val postStory = "Jacqueline Zumturm added 7 new photos \u2014 to the album: Salami \u2014 with Poulet Frit and 5 others."
+    val strippedStory = "Jacqueline Zumturm added 7 new photos \u2014 to the album: Salami"
 
     val testPostStoryMessage = createTestPost(postMessage, postStory, "ND")
     val storyMessage = QuestionGenerator.textFromPost(testPostStoryMessage)
@@ -149,7 +149,7 @@ class QuestionGeneratorSuite extends FunSuite {
     assert(noText == "")
 
     // This should not change
-    assert(QuestionGenerator.stripInformation("AA—AA—AA") == "AA—AA—AA")
+    assert(QuestionGenerator.stripInformation("AA\u2014AA\u2014AA") == "AA\u2014AA\u2014AA")
   }
 
   test("Extracting src from FBAttachments.") {

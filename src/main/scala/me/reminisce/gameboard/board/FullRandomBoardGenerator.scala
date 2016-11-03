@@ -1,11 +1,11 @@
 package me.reminisce.gameboard.board
 
 import akka.actor.ActorRef
-import me.reminisce.database.MongoDatabaseService
-import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
+import me.reminisce.analysis.DataTypes._
+import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
+import me.reminisce.database.MongoCollections
 import me.reminisce.gameboard.board.BoardGenerator._
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
-import me.reminisce.stats.StatsDataTypes._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONArray, BSONDocument}
@@ -16,22 +16,24 @@ object FullRandomBoardGenerator
 
 /**
   * Implementation of a random board generator using fully random drawers
+  *
   * @param database database in which the data is stored
-  * @param userId user for which the board is generated
+  * @param userId   user for which the board is generated
   */
 class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends RandomBoardGenerator(database, userId, "random") {
 
   /**
-    * Create the game board and choses the right generateBoard method to call depending on the existence of user
-    * statistics or not
+    * Create the game board and chooses the right generateBoard method to call depending on the existence of user
+    * summary or not
+    *
     * @param client the board requester
     */
   def createGame(client: ActorRef): Unit = {
-    val userCollection = database[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+    val userCollection = database[BSONCollection](MongoCollections.userSummaries)
     val selector = BSONDocument("userId" -> userId)
-    findOne[UserStats](userCollection, selector, client) {
-      case Some(userStats) =>
-        generateBoard(userStats, client)(drawItemsAtRandomFromBags[QuestionKind], drawItemsAtRandomFromBags[DataType])
+    findOne[UserSummary](userCollection, selector, client) {
+      case Some(userSummary) =>
+        generateBoard(userSummary, client)(drawItemsAtRandomFromBags[QuestionKind], drawItemsAtRandomFromBags[DataType])
       case None =>
         generateBoard(client)
     }
@@ -39,26 +41,27 @@ class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends Rand
 
   /**
     * Implementation of the generate board method (see [[me.reminisce.gameboard.board.RandomBoardGenerator.generateBoard]])
-    * without having user statistics
+    * without having user summary
+    *
     * @param client original board requester
     */
   private def generateBoard(client: ActorRef): Unit = {
     // As order cannot be generated only from one question, we exclude the types that only lead to this kind of question
-    // (because we cannot have a guarantee of the number of available items as we do not have user stats)
-    // PostWhoReacted is also excluded as it cannot be generated without UserStats (even though this type should not be
-    // marked as available on an item if no UserStats was generated)
+    // (because we cannot have a guarantee of the number of available items as we do not have user summary)
+    // PostWhoReacted is also excluded as it cannot be generated without UserSummary (even though this type should not be
+    // marked as available on an item if no UserSummary was generated)
     val excluded = (PostWhoReacted :: possibleTypes(Order).filter(t => possibleKind(t).size == 1)).map(_.name)
     val selector = BSONDocument("userId" -> userId,
       "$or" -> BSONArray(
         BSONDocument("dataCount" -> BSONDocument("$gt" -> excluded.size)),
         BSONDocument("dataTypes" -> BSONDocument("$nin" -> excluded))))
-    val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
-    findSomeRandom[ItemStats](itemsStatsCollection, selector, client) {
-      itemsStatsList =>
-        if (itemsStatsList.length < 27) {
+    val itemsSummariesCollection = database[BSONCollection](MongoCollections.itemsSummaries)
+    findSomeRandom[ItemSummary](itemsSummariesCollection, selector, client) {
+      itemsSummaries =>
+        if (itemsSummaries.length < 27) {
           client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
         } else {
-          val shuffledList = Random.shuffle(itemsStatsList).take(27)
+          val shuffledList = Random.shuffle(itemsSummaries).take(27)
           val tuples = shuffledList.flatMap {
             is =>
               val okTypes = is.dataTypes.filterNot(t => excluded.contains(t)).map(stringToType)
