@@ -3,17 +3,17 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{OrderQuestion, PageSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestionWithMultipleItems, NotEnoughData}
 import org.joda.time.DateTime
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteConcern
-import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
@@ -37,8 +37,8 @@ class OrderByPageLikeTimeSpec extends QuestionTester("OrderByPageLikeTimeSpec") 
     "create a valid question when the data is there." in {
       testWithDb {
         db =>
-          val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
-          val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
+          val pagesCollection = db[BSONCollection](MongoCollections.fbPages)
+          val pageLikesCollection = db[BSONCollection](MongoCollections.fbPageLikes)
 
           val pagesNumber = QuestionGenerationConfig.orderingItemsNumber
 

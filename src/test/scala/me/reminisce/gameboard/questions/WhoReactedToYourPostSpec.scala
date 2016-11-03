@@ -3,9 +3,9 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.database.AnalysisEntities.UserSummary
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities._
-import me.reminisce.database.MongoDatabaseService
-import me.reminisce.database.StatsEntities.UserStats
 import me.reminisce.gameboard.board.GameboardEntities.{MultipleChoiceQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
@@ -22,7 +22,7 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
   val userId = "TestUserWhoReactedToYourPost"
 
   "WhoReactedToYourPost" must {
-    "not create question when there is no user statistics." in {
+    "not create question when there is no user summary." in {
       testWithDb {
         db =>
           val itemId = "This post does not exist"
@@ -30,38 +30,38 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
           val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
-          testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
+          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough likers or non-likers."))
       }
     }
 
     "not create question when there is no post." in {
       testWithDb {
         db =>
-          val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+          val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
 
           val itemId = "This post does not exist"
 
-          val userStats = UserStats(userId = userId)
-          Await.result(userStatsCollection.update(userStats, userStats, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
+          val userSummary = UserSummary(userId = userId)
+          Await.result(userSummariesCollection.update(userSummary, userSummary, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
           val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
-          testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
+          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough likers or non-likers."))
       }
     }
 
     "not create question when there is no likes for post." in {
       testWithDb {
         db =>
-          val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+          val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
 
           val itemId = "This post does exist"
 
-          val userStats = UserStats(userId = userId)
-          Await.result(userStatsCollection.update(userStats, userStats, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
+          val userSummary = UserSummary(userId = userId)
+          Await.result(userSummariesCollection.update(userSummary, userSummary, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val fbPost = FBPost(postId = itemId, userId = userId)
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
@@ -69,21 +69,21 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
           val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
-          testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
+          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough likers or non-likers."))
       }
     }
 
     "not create question when there is not enough non-likers for post." in {
       testWithDb {
         db =>
-          val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+          val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
 
           val itemId = "This post does exist"
 
-          val userStats = UserStats(userId = userId)
-          Await.result(userStatsCollection.update(userStats, userStats, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
+          val userSummary = UserSummary(userId = userId)
+          Await.result(userSummariesCollection.update(userSummary, userSummary, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val likerId = "LikerId"
           val likerName = "LikerName"
@@ -94,14 +94,14 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
           val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
-          testProbe.expectMsg(NotEnoughData(s"No user stats, $itemId does not exist or $itemId has not enough likers or non-likers."))
+          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough likers or non-likers."))
       }
     }
 
     "create a valid question when the data is correctly setup." in {
       testWithDb {
         db =>
-          val userStatsCollection = db[BSONCollection](MongoDatabaseService.userStatisticsCollection)
+          val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
 
           val itemId = "Fresh post for this test"
 
@@ -109,14 +109,14 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
             i =>
               val likerId = s"LikerId$i"
               val likerName = s"LikerName$i"
-              FBReaction(likerId, likerName,"")
+              FBReaction(likerId, likerName, "")
           }.toList
 
           val freshUser = userId + "Fresh"
-          val userStats = UserStats(userId = freshUser, likers = likers.toSet)
-          Await.result(userStatsCollection.update(userStats, userStats, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
+          val userSummary = UserSummary(userId = freshUser, likers = likers.toSet)
+          Await.result(userSummariesCollection.update(userSummary, userSummary, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val message = "Who liked this ?"
           val fbPost = FBPost(postId = itemId, userId = freshUser, reactions = Some(List(likers.head)), message = Some(message))

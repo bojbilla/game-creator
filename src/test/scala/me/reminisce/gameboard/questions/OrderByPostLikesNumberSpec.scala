@@ -3,8 +3,8 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.FBPost
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{OrderQuestion, TextPostSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestionWithMultipleItems, NotEnoughData}
 import org.scalatest.DoNotDiscover
@@ -36,7 +36,7 @@ class OrderByPostLikesNumberSpec extends QuestionTester("OrderByPostLikesNumberS
     "create a valid question when the data is there." in {
       testWithDb {
         db =>
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val postsNumber = QuestionGenerationConfig.orderingItemsNumber
 

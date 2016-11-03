@@ -2,7 +2,7 @@ package me.reminisce.database
 
 import akka.actor._
 import me.reminisce.database.DeletionService.{ClearDatabase, RemoveExtraLikes, RemoveUser}
-import me.reminisce.database.DeletionWorker.{DeleteSelectorMatch, DeletionResult, DropCollection}
+import me.reminisce.database.DeletionWorker.{DeleteSelectorMatch, DeletionResult}
 import me.reminisce.gameboard.questions.QuestionGenerator.MongoDBError
 import me.reminisce.server.ApplicationConfiguration
 import me.reminisce.server.domain.Domain.{ActionForbidden, Done, InternalError}
@@ -27,15 +27,17 @@ object DeletionService {
 
   /**
     * Creates a deletion service actors
+    *
     * @param database the database on which the service must operate
     * @return props for the generated deletion service
     */
   def props(database: DefaultDB): Props =
-    Props(new DeletionService(database))
+  Props(new DeletionService(database))
 }
 
 /**
   * A deletion service actor which can delete parts of the data in a database
+  *
   * @constructor create a deletion service operating on a database
   * @param database a reference to the database on which the service operates
   */
@@ -49,6 +51,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
     * [[me.reminisce.server.ApplicationConfiguration.appMode]] is "DEV"
     *
     * Creates a worker and then waits on feedback.
+    *
     * @return Nothing
     */
   def receive = {
@@ -75,7 +78,8 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
 
   /**
     * Waiting on feedback from the workers until there is no worker left
-    * @param client the original deletion requester
+    *
+    * @param client  the original deletion requester
     * @param workers the currently working workers
     * @param results an aggregation of the deletion results sent by the workers
     * @return Nothing
@@ -95,6 +99,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
 
   /**
     * Creates workers and requests the deletion of every piece of data from that user.
+    *
     * @param userId userId of the user to delete
     * @param client the original requester for deletion
     */
@@ -108,12 +113,13 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
 
   /**
     * Creates workers and request them to delete the extra likes for a particular user
-    * @param userId the handled user
+    *
+    * @param userId      the handled user
     * @param actualLikes the actual likes of the user
-    * @param client the original deletion requester
+    * @param client      the original deletion requester
     */
   private def removeExtraLikes(userId: String, actualLikes: Set[String], client: ActorRef): Unit = {
-    val pageLikeCollection = database[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
+    val pageLikeCollection = database[BSONCollection](MongoCollections.fbPageLikes)
     val selector = BSONDocument("userId" -> userId,
       "pageId" -> BSONDocument("$nin" -> actualLikes.toList)
     )
@@ -124,6 +130,7 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
 
   /**
     * Create workers to delete each collection
+    *
     * @param client the original deletion requester
     */
   private def clearDatabase(client: ActorRef): Unit = {
@@ -137,7 +144,8 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
 
   /**
     * Verifies if the work is done , if so it reports back to client.
-    * @param client original deletion requester
+    *
+    * @param client  original deletion requester
     * @param workers currently working workers
     * @param results aggregated deletion results
     */
@@ -156,8 +164,9 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
 
   /**
     * Performs operation defined by handle on every collection if there is at least one, otherwise calls default
-    * @param client original requester
-    * @param handle performs operations on a list of collection names
+    *
+    * @param client  original requester
+    * @param handle  performs operations on a list of collection names
     * @param default default operation if there is no collection
     */
   private def onCollections(client: ActorRef)(handle: List[String] => Unit)(default: () => Unit): Unit = {
@@ -178,7 +187,8 @@ class DeletionService(database: DefaultDB) extends Actor with ActorLogging {
 
   /**
     * Calls the handleWithWorkers routine on a worker for each collection found
-    * @param client original requester
+    *
+    * @param client            original requester
     * @param handleWithWorkers operation to perform on a worker constructed for a particular collection
     */
   private def foreachCollection(client: ActorRef)(handleWithWorkers: ActorRef => Unit): Unit = {

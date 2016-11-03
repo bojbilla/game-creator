@@ -3,8 +3,8 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.FBPage
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{OrderQuestion, PageSubject}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestionWithMultipleItems, NotEnoughData}
 import org.scalatest.DoNotDiscover
@@ -37,7 +37,7 @@ class OrderByPageLikesSpec extends QuestionTester("OrderByPageLikesSpec") {
     "create a valid question when the data is there." in {
       testWithDb {
         db =>
-          val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
+          val pagesCollection = db[BSONCollection](MongoCollections.fbPages)
 
           val pagesNumber = QuestionGenerationConfig.orderingItemsNumber
 

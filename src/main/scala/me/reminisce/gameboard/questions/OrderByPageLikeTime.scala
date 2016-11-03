@@ -1,8 +1,8 @@
 package me.reminisce.gameboard.questions
 
 import akka.actor.Props
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.OrderQuestion
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
@@ -21,15 +21,17 @@ object OrderByPageLikeTime {
 
   /**
     * Creates an OrderByPageLikeTime question generator
+    *
     * @param database database from which to take the data
     * @return props for the created actor
     */
   def props(database: DefaultDB): Props =
-    Props(new OrderByPageLikeTime(database))
+  Props(new OrderByPageLikeTime(database))
 }
 
 /**
   * OrderByPageLikeTime question generator
+  *
   * @param db database from which to take the data
   */
 class OrderByPageLikeTime(db: DefaultDB) extends OrderQuestionGenerator {
@@ -38,13 +40,14 @@ class OrderByPageLikeTime(db: DefaultDB) extends OrderQuestionGenerator {
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
     * necessary items from the database and creating a question. If some items are non conform to what is expected,
     * missing or there is an error while contacting the database, the error is reported to the client.
+    *
     * @return Nothing
     */
   def receive = {
     case CreateQuestionWithMultipleItems(userId, itemIds) =>
       val client = sender()
-      val pageLikesCollection = db[BSONCollection](MongoDatabaseService.fbPageLikesCollection)
-      val pagesCollection = db[BSONCollection](MongoDatabaseService.fbPagesCollection)
+      val pageLikesCollection = db[BSONCollection](MongoCollections.fbPageLikes)
+      val pagesCollection = db[BSONCollection](MongoCollections.fbPages)
       (for {
         pageLikes <- fetchLikedPages(pageLikesCollection, userId, Some(itemIds))
         pages <- fetchPages(pagesCollection, itemIds)
@@ -69,8 +72,9 @@ class OrderByPageLikeTime(db: DefaultDB) extends OrderQuestionGenerator {
 
   /**
     * Generate a question
-    * @param userId user for which the question is meant
-    * @param pages pages choice
+    *
+    * @param userId    user for which the question is meant
+    * @param pages     pages choice
     * @param pageLikes page likes corresponding to the pages
     * @return an order question
     */

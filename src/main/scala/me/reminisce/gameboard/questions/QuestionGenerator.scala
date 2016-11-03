@@ -90,26 +90,28 @@ object QuestionGenerator {
 
   /**
     * Strips the story from some information such as time, people or location.
+    * \u2014 is the character '—' used by Facebook for separating extra information from the story
     * @param story a post story
     * @return the transformed story
     */
   def stripInformation(story: String): String = {
-    story.split(" — ").toList match {
+    val sep = " \u2014 "
+    story.split(sep).toList match {
       case str::Nil =>
         str
       case str :+ info =>
-        str.mkString(" — ")
+        str.mkString(sep)
     }
   }
 
   /**
     * Extracts the source of a media attachment
-    * @param attachmentOpt media attachment option from which the source is extracted
+    * @param maybeAttachment media attachment option from which the source is extracted
     * @return the extracted source
     */
-  def srcFromAttachments(attachmentOpt: Option[List[FBAttachment]]): Option[String] = {
+  def srcFromAttachments(maybeAttachment: Option[List[FBAttachment]]): Option[String] = {
     for {
-      attachmentList <- attachmentOpt
+      attachmentList <- maybeAttachment
       attachment <- attachmentList.headOption
       media <- attachment.media
     } yield media.src

@@ -2,8 +2,8 @@ package me.reminisce.gameboard.questions
 
 import akka.actor.Props
 import com.github.nscala_time.time.Imports._
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.FBPost
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
 import me.reminisce.gameboard.board.GameboardEntities.TimelineQuestion
@@ -23,15 +23,17 @@ object WhenDidYouShareThisPost {
 
   /**
     * Creates a WhenDidYouShareThisPost question generator
+    *
     * @param database database from which to take the data
     * @return props for the created actor
     */
   def props(database: DefaultDB): Props =
-    Props(new WhenDidYouShareThisPost(database))
+  Props(new WhenDidYouShareThisPost(database))
 }
 
 /**
   * WhenDidYouShareThisPost question generator
+  *
   * @param db database from which to take the data
   */
 class WhenDidYouShareThisPost(db: DefaultDB) extends TimeQuestionGenerator {
@@ -40,6 +42,7 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends TimeQuestionGenerator {
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
     * necessary items from the database and creating a question. If some items are non conform to what is expected,
     * missing or there is an error while contacting the database, the error is reported to the client.
+    *
     * @return Nothing
     */
   def receive = {
@@ -49,10 +52,10 @@ class WhenDidYouShareThisPost(db: DefaultDB) extends TimeQuestionGenerator {
         "userId" -> userId,
         "postId" -> itemId
       )
-      val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+      val postCollection = db[BSONCollection](MongoCollections.fbPosts)
       postCollection.find(query).one[FBPost].onComplete {
-        case Success(postOpt) =>
-          postOpt match {
+        case Success(maybePost) =>
+          maybePost match {
             case Some(post) =>
               val dateString = post.createdTime.getOrElse("1970-01-01'T'00:00:00+0000")
               val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)

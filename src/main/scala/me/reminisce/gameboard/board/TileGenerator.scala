@@ -6,7 +6,7 @@ import me.reminisce.gameboard.board.GameboardEntities.{GameQuestion, _}
 import me.reminisce.gameboard.board.TileGenerator.{CreateTile, FailedTileCreation, FinishedTileCreation}
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import me.reminisce.gameboard.questions._
-import me.reminisce.stats.StatsDataTypes._
+import me.reminisce.analysis.DataTypes._
 import reactivemongo.api.DefaultDB
 
 /**

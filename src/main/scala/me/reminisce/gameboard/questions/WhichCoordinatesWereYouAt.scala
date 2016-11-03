@@ -2,8 +2,8 @@ package me.reminisce.gameboard.questions
 
 import akka.actor.Props
 import akka.event.Logging
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.FBPost
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
 import me.reminisce.gameboard.board.GameboardEntities.{GeolocationQuestion, Location}
@@ -22,23 +22,27 @@ object WhichCoordinatesWereYouAt {
 
   /**
     * Creates a WhichCoordinatesWereYouAt question generator
+    *
     * @param database database from which to take the data
     * @return props for the created actor
     */
   def props(database: DefaultDB): Props =
-    Props(new WhichCoordinatesWereYouAt(database))
+  Props(new WhichCoordinatesWereYouAt(database))
 }
 
 /**
   * WhichCoordinatesWereYouAt question generator
+  *
   * @param db database from which to take the data
   */
 class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
   override val log = Logging(context.system, this)
+
   /**
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
     * necessary items from the database and creating a question. If some items are non conform to what is expected,
     * missing or there is an error while contacting the database, the error is reported to the client.
+    *
     * @return Nothing
     */
   def receive = {
@@ -48,10 +52,10 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
         "userId" -> userId,
         "postId" -> itemId
       )
-      val postCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+      val postCollection = db[BSONCollection](MongoCollections.fbPosts)
       postCollection.find(query).one[FBPost].onComplete {
         case Success(postOpt) =>
-          val questionOpt =
+          val maybeQuestion =
             for {
               post <- postOpt
               //we can't use the postSubject, as it contains the story which contains the actual location
@@ -70,7 +74,7 @@ class WhichCoordinatesWereYouAt(db: DefaultDB) extends QuestionGenerator {
               GeolocationQuestion(userId, Geolocation, GeoWhatCoordinatesWereYouAt, Some(postSubject),
                 answer, defaultLocation, range)
             }
-          questionOpt match {
+          maybeQuestion match {
             case Some(q) =>
               client ! FinishedQuestionCreation(q)
             case None =>

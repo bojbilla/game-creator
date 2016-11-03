@@ -1,12 +1,12 @@
-package me.reminisce.stats
+package me.reminisce.analysis
 
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.QuestionKind
 
 /**
-  * Defines the data types necessary to generate stats.
+  * Defines the data types necessary to generate the user summaries.
   */
-object StatsDataTypes {
+object DataTypes {
 
   abstract class DataType(id: String) {
     val name: String = id

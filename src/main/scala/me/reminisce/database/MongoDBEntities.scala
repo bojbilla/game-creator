@@ -5,6 +5,18 @@ import me.reminisce.database.MongoDBEntities.FBReaction
 import reactivemongo.bson._
 
 /**
+  * Collections used by this project
+  */
+object MongoCollections {
+  val fbPages = "fbPages"
+  val fbPageLikes = "fbPageLikes"
+  val fbPosts = "fbPosts"
+  val lastFetched = "lastFetched"
+  val userSummaries = "userSummaries"
+  val itemsSummaries = "itemsSummaries"
+}
+
+/**
   * Defines all the facebook objects which will be stored in MongoDB and the serialization routines are defined
   */
 object MongoDBEntities {
@@ -121,17 +133,17 @@ object MongoDBEntities {
 }
 
 /**
-  * Defines all the stats entities which will be stored in the database along with the serialization routines
+  * Defines all the data analysis entities which will be stored in the database along with the serialization routines
   */
-object StatsEntities {
+object AnalysisEntities {
 
-  case class UserStats(id: Option[BSONObjectID] = None,
-                       userId: String,
-                       dataTypeCounts: Map[String, Int] = Map(),
-                       questionCounts: Map[String, Int] = Map(),
-                       likers: Set[FBReaction] = Set())
+  case class UserSummary(id: Option[BSONObjectID] = None,
+                         userId: String,
+                         dataTypeCounts: Map[String, Int] = Map(),
+                         questionCounts: Map[String, Int] = Map(),
+                         likers: Set[FBReaction] = Set())
 
-  object UserStats {
+  object UserSummary {
 
     def getMapStringIntWriter(implicit intWriter: BSONWriter[Int, BSONInteger]): BSONDocumentWriter[Map[String, Int]] = {
       new BSONDocumentWriter[Map[String, Int]] {
@@ -161,7 +173,7 @@ object StatsEntities {
 
     implicit val fbReactionFormat = MongoDBEntities.FBReaction.fbReactionFormat
 
-    implicit val userStatsFormat = Macros.handler[UserStats]
+    implicit val userSummaryFormat = Macros.handler[UserSummary]
   }
 
   case class PostQuestions(id: Option[BSONObjectID] = None,
@@ -175,16 +187,16 @@ object StatsEntities {
   }
 
 
-  case class ItemStats(id: Option[BSONObjectID] = None,
-                       userId: String,
-                       itemId: String,
-                       itemType: String,
-                       dataTypes: List[String],
-                       dataCount: Int,
-                       readForStats: Boolean = false)
+  case class ItemSummary(id: Option[BSONObjectID] = None,
+                         userId: String,
+                         itemId: String,
+                         itemType: String,
+                         dataTypes: List[String],
+                         dataCount: Int,
+                         readForSummary: Boolean = false)
 
-  object ItemStats {
-    implicit val itemStatsFormat = Macros.handler[ItemStats]
+  object ItemSummary {
+    implicit val itemSummaryFormat = Macros.handler[ItemSummary]
   }
 
 }

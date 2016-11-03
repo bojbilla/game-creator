@@ -1,21 +1,21 @@
-package me.reminisce.stats
+package me.reminisce.analysis
 
 import com.github.nscala_time.time.Imports._
+import me.reminisce.analysis.DataTypes.{PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoReacted}
+import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoDBEntities.FBReaction
-import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
 import me.reminisce.fetching.config.GraphResponses._
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
-import me.reminisce.stats.StatsDataTypes.{PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoReacted}
 import me.reminisce.testutils.AssertHelpers._
 import org.joda.time.DateTime
 import org.scalatest.FunSuite
 
-class StatsGeneratorSuite extends FunSuite {
+class DataAnalyserSuite extends FunSuite {
 
   test("Adding a new question type to a map of type -> count.") {
     val map = Map[String, Int](("T1", 2), ("T2", 4), ("T3", 11))
-    val noExtension = StatsGenerator.addTypesToMap(List(), map)
+    val noExtension = DataAnalyser.addTypesToMap(List(), map)
     assert(noExtension.size == map.size)
     map.foreach {
       case (k, v) =>
@@ -32,7 +32,7 @@ class StatsGeneratorSuite extends FunSuite {
     val incTypeCount = 2
 
 
-    val extended = StatsGenerator.addTypesToMap(List[(String, Int)]((newType, newTypeCount), (incType, incTypeCount)), map)
+    val extended = DataAnalyser.addTypesToMap(List[(String, Int)]((newType, newTypeCount), (incType, incTypeCount)), map)
 
     assert(extended.size == map.size + 1)
     map.foreach {
@@ -49,7 +49,7 @@ class StatsGeneratorSuite extends FunSuite {
   test("Empty post data types.") {
     val emptyPost = Post("id", from = None, message = None, story = None, place = None, reactions = None, `type` = None,
       link = None, created_time = None, attachments = None, comments = None)
-    val emptyTypes = StatsGenerator.availableDataTypes(emptyPost)
+    val emptyTypes = DataAnalyser.availableDataTypes(emptyPost)
     assert(emptyTypes.isEmpty)
   }
 
@@ -58,67 +58,67 @@ class StatsGeneratorSuite extends FunSuite {
     val now = DateTime.now.toString(formatter)
     val storyAndTime = Post("id", from = None, message = None, story = Some("story"), place = None, reactions = None,
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
-    val timeIsHere = StatsGenerator.availableDataTypes(storyAndTime)
+    val timeIsHere = DataAnalyser.availableDataTypes(storyAndTime)
     assert(timeIsHere.nonEmpty && timeIsHere.size == 1)
-    listHeadAssert(timeIsHere)(tpe => tpe == StatsDataTypes.Time)(() => fail("Type not defined."))
+    listHeadAssert(timeIsHere)(tpe => tpe == DataTypes.Time)(() => fail("Type not defined."))
 
     val messageAndTime = Post("id", from = None, message = Some("message"), story = None, place = None, reactions = None,
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
-    val timeIsAlsoHere = StatsGenerator.availableDataTypes(messageAndTime)
+    val timeIsAlsoHere = DataAnalyser.availableDataTypes(messageAndTime)
     assert(timeIsAlsoHere.nonEmpty && timeIsAlsoHere.size == 1)
-    listHeadAssert(timeIsAlsoHere)(tpe => tpe == StatsDataTypes.Time)(() => fail("Type not defined."))
+    listHeadAssert(timeIsAlsoHere)(tpe => tpe == DataTypes.Time)(() => fail("Type not defined."))
   }
 
   test("Geolocation data type.") {
     val pl1 = Place(id = None, name = None, location = None, created_time = None)
     val p1 = Post("id", from = None, message = None, story = None, place = Some(pl1),
       reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsGenerator.availableDataTypes(p1).isEmpty)
+    assert(DataAnalyser.availableDataTypes(p1).isEmpty)
 
     val l1 = Location(city = None, country = None, latitude = None, longitude = None, street = None,
       zip = None)
     val pl2 = Place(id = None, name = None, location = Some(l1), created_time = None)
     val p2 = Post("id", from = None, message = None, story = None, place = Some(pl2),
       reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsGenerator.availableDataTypes(p2).isEmpty)
+    assert(DataAnalyser.availableDataTypes(p2).isEmpty)
 
     val l2 = Location(city = None, country = None, latitude = Some(1.0), longitude = None, street = None,
       zip = None)
     val pl3 = Place(id = None, name = None, location = Some(l2), created_time = None)
     val p3 = Post("id", from = None, message = None, story = None, place = Some(pl3),
       reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsGenerator.availableDataTypes(p3).isEmpty)
+    assert(DataAnalyser.availableDataTypes(p3).isEmpty)
 
     val l3 = Location(city = None, country = None, latitude = None, longitude = Some(1.2), street = None,
       zip = None)
     val pl4 = Place(id = None, name = None, location = Some(l3), created_time = None)
     val p4 = Post("id", from = None, message = None, story = None, place = Some(pl4),
       reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsGenerator.availableDataTypes(p4).isEmpty)
+    assert(DataAnalyser.availableDataTypes(p4).isEmpty)
 
     val l4 = Location(city = None, country = None, latitude = Some(1.0), longitude = Some(1.2), street = None,
       zip = None)
     val pl5 = Place(id = None, name = None, location = Some(l4), created_time = None)
     val p5 = Post("id", from = None, message = None, story = None, place = Some(pl5),
       reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    val dataTypes = StatsGenerator.availableDataTypes(p5)
+    val dataTypes = DataAnalyser.availableDataTypes(p5)
     assert(dataTypes.nonEmpty && dataTypes.size == 1)
-    listHeadAssert(dataTypes)(tpe => tpe == StatsDataTypes.PostGeolocation)(() => fail("Type not defined."))
+    listHeadAssert(dataTypes)(tpe => tpe == DataTypes.PostGeolocation)(() => fail("Type not defined."))
   }
 
   test("WhoCommented and CommentsNumber data types.") {
     val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(!StatsGenerator.availableDataTypes(p1).contains(StatsDataTypes.PostWhoCommented))
-    assert(!StatsGenerator.availableDataTypes(p1).contains(StatsDataTypes.PostCommentsNumber))
+    assert(!DataAnalyser.availableDataTypes(p1).contains(DataTypes.PostWhoCommented))
+    assert(!DataAnalyser.availableDataTypes(p1).contains(DataTypes.PostCommentsNumber))
 
     val from2 = From(id = "", name = "")
     val comment2 = Comment(id = "", from = from2, like_count = 0, message = "", attachments = None)
     val com2 = Root[List[Comment]](data = Option(List(comment2)), paging = None, summary = None)
     val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = Some(com2))
-    assert(!StatsGenerator.availableDataTypes(p2).contains(StatsDataTypes.PostWhoCommented))
-    assert(!StatsGenerator.availableDataTypes(p2).contains(StatsDataTypes.PostCommentsNumber))
+    assert(!DataAnalyser.availableDataTypes(p2).contains(DataTypes.PostWhoCommented))
+    assert(!DataAnalyser.availableDataTypes(p2).contains(DataTypes.PostCommentsNumber))
 
     val from3 = From(id = "3", name = "")
     val comment3 = Comment(id = "3", from = from3, like_count = 0, message = "", attachments = None)
@@ -129,23 +129,23 @@ class StatsGeneratorSuite extends FunSuite {
     val com3 = Root[List[Comment]](data = Option(List(comment2, comment3, comment4, comment5)), paging = None, summary = None)
     val p3 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = Some(com3))
-    assert(StatsGenerator.availableDataTypes(p3).contains(StatsDataTypes.PostWhoCommented))
-    assert(StatsGenerator.availableDataTypes(p3).contains(StatsDataTypes.PostCommentsNumber))
+    assert(DataAnalyser.availableDataTypes(p3).contains(DataTypes.PostWhoCommented))
+    assert(DataAnalyser.availableDataTypes(p3).contains(DataTypes.PostCommentsNumber))
   }
 
   test("LikesNumber data type.") {
     val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(!StatsGenerator.availableDataTypes(p1).contains(StatsDataTypes.LikeNumber))
+    assert(!DataAnalyser.availableDataTypes(p1).contains(DataTypes.LikeNumber))
 
     val like1 = Reaction("1", "", "")
     val likes1 = Root[List[Reaction]](data = Some(List(like1)), paging = None, summary = None)
     val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = Some(likes1),
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(StatsGenerator.availableDataTypes(p2).contains(StatsDataTypes.LikeNumber))
+    assert(DataAnalyser.availableDataTypes(p2).contains(DataTypes.LikeNumber))
   }
 
-  test("Extract item stats from list of items stats.") {
+  test("Extract item summary from list of items summaries.") {
     val itemsNumber = 10
     val users = (0 until itemsNumber).map {
       nb => s"User$nb"
@@ -160,11 +160,11 @@ class StatsGeneratorSuite extends FunSuite {
       nb => (0 to nb).map(nbb => s"dType$nbb").toList // no empty list here (usage of to)
     }
     val counts = 1 to itemsNumber //No count equal to 0
-    val stats = (0 until itemsNumber).map {
-        nb => ItemStats(None, users(nb), items(nb), types(nb), dataTypes(nb), counts(nb), readForStats = true)
-      }.toList
+    val itemSummaries = (0 until itemsNumber).map {
+      nb => ItemSummary(None, users(nb), items(nb), types(nb), dataTypes(nb), counts(nb), readForSummary = true)
+    }.toList
 
-    val empty = StatsGenerator.getItemStats("Ha", "He", "Hi", stats)
+    val empty = DataAnalyser.getItemSummary("Ha", "He", "Hi", itemSummaries)
     assert(empty.userId == "Ha")
     assert(empty.itemId == "He")
     assert(empty.itemType == "Hi")
@@ -172,7 +172,7 @@ class StatsGeneratorSuite extends FunSuite {
     assert(empty.dataCount == 0)
 
     val findThis = itemsNumber / 2
-    val foundIt = StatsGenerator.getItemStats(users(findThis), items(findThis), types(findThis), stats)
+    val foundIt = DataAnalyser.getItemSummary(users(findThis), items(findThis), types(findThis), itemSummaries)
     assert(foundIt.userId == users(findThis))
     assert(foundIt.itemId == items(findThis))
     assert(foundIt.itemType == types(findThis))
@@ -180,7 +180,7 @@ class StatsGeneratorSuite extends FunSuite {
     assert(foundIt.dataCount == counts(findThis))
   }
 
-  test("Add new counts to user stats.") {
+  test("Add new counts to user summary.") {
     val userId = "UserId"
     val oldLikers = (1 to 10).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
     val newLikers = (11 to 20).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
@@ -188,34 +188,34 @@ class StatsGeneratorSuite extends FunSuite {
 
     val oldDataTypes = Map((PostGeolocation.name, 2), (PostWhoCommented.name, 4), (PostWhoReacted.name, 13)) // linked with below counts
     val newDataTypes = List((PostWhoReacted.name, 7), (PostCommentsNumber.name, 17)) // prime number is important to test the rounding
-    val newItemsStats = newDataTypes.flatMap {
-        case (tpe, count) => (1 to count).map {
-          any => ItemStats(userId = userId, itemId = s"item$userId", itemType = "Post", dataTypes = List(tpe), dataCount = 1)
-        }
+    val newItemsSummaries = newDataTypes.flatMap {
+      case (tpe, count) => (1 to count).map {
+        any => ItemSummary(userId = userId, itemId = s"item$userId", itemType = "Post", dataTypes = List(tpe), dataCount = 1)
       }
+    }
 
     val expectedOrderCount = 17 - (17 % QuestionGenerationConfig.orderingItemsNumber)
 
     val oldQuestionCounts = Map((Geolocation.toString, 2), (MultipleChoice.toString, 17))
 
-    val userStats = UserStats(userId = userId, dataTypeCounts = oldDataTypes, questionCounts = oldQuestionCounts,
+    val userSummary = UserSummary(userId = userId, dataTypeCounts = oldDataTypes, questionCounts = oldQuestionCounts,
       likers = oldLikers)
 
-    val newUserStats = StatsGenerator.userStatsWithNewCounts(newLikers, newItemsStats, userStats)
+    val newUserSummary = DataAnalyser.userSummaryWithNewCounts(newLikers, newItemsSummaries, userSummary)
 
-    assert(userStats.userId == newUserStats.userId)
-    assert(newUserStats.likers == newLikers)
+    assert(userSummary.userId == newUserSummary.userId)
+    assert(newUserSummary.likers == newLikers)
 
-    assert(newUserStats.dataTypeCounts.size == userStats.dataTypeCounts.size + 1)
-    assert(newUserStats.dataTypeCounts.getOrElse(PostGeolocation.name, 0) == 2)
-    assert(newUserStats.dataTypeCounts.getOrElse(PostWhoCommented.name, 0) == 4)
-    assert(newUserStats.dataTypeCounts.getOrElse(PostWhoReacted.name, 0) == 20)
-    assert(newUserStats.dataTypeCounts.getOrElse(PostCommentsNumber.name, 0) == 17)
+    assert(newUserSummary.dataTypeCounts.size == userSummary.dataTypeCounts.size + 1)
+    assert(newUserSummary.dataTypeCounts.getOrElse(PostGeolocation.name, 0) == 2)
+    assert(newUserSummary.dataTypeCounts.getOrElse(PostWhoCommented.name, 0) == 4)
+    assert(newUserSummary.dataTypeCounts.getOrElse(PostWhoReacted.name, 0) == 20)
+    assert(newUserSummary.dataTypeCounts.getOrElse(PostCommentsNumber.name, 0) == 17)
 
-    assert(newUserStats.questionCounts.size == userStats.questionCounts.size + 1)
-    assert(newUserStats.questionCounts.getOrElse(Geolocation.toString, 0) == 2)
-    assert(newUserStats.questionCounts.getOrElse(MultipleChoice.toString, 0) == 24)
-    assert(newUserStats.questionCounts.getOrElse(Order.toString, 0) == expectedOrderCount)
+    assert(newUserSummary.questionCounts.size == userSummary.questionCounts.size + 1)
+    assert(newUserSummary.questionCounts.getOrElse(Geolocation.toString, 0) == 2)
+    assert(newUserSummary.questionCounts.getOrElse(MultipleChoice.toString, 0) == 24)
+    assert(newUserSummary.questionCounts.getOrElse(Order.toString, 0) == expectedOrderCount)
   }
 
 }

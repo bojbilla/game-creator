@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import me.reminisce.DatabaseFiller
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBFrom, LastFetched}
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameGenerator.CreateBoard
 import me.reminisce.gameboard.board.GameboardEntities.SubjectType.SubjectType
 import me.reminisce.gameboard.board.GameboardEntities._
@@ -36,7 +36,7 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
           }
           DatabaseFiller.populateWithTestData(db, testDb)
           val lastFetched = LastFetched(None, userId, DateTime.now)
-          db[BSONCollection](MongoDatabaseService.lastFetchedCollection).update(lastFetched, lastFetched, WriteConcern.Acknowledged, upsert = true)
+          db[BSONCollection](MongoCollections.lastFetched).update(lastFetched, lastFetched, WriteConcern.Acknowledged, upsert = true)
           (0 until 10).foreach {
             i =>
               val generator = TestActorRef(GameGenerator.props(db, userId))

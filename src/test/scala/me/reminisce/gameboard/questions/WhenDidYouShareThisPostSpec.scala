@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
 import com.github.nscala_time.time.Imports._
+import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.FBPost
-import me.reminisce.database.MongoDatabaseService
 import me.reminisce.gameboard.board.GameboardEntities.{TextPostSubject, TimelineQuestion}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
@@ -37,7 +37,7 @@ class WhenDidYouShareThisPostSpec extends QuestionTester("WhenDidYouShareThisPos
     "create a valid question when the post is there." in {
       testWithDb {
         db =>
-          val postsCollection = db[BSONCollection](MongoDatabaseService.fbPostsCollection)
+          val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
           val itemId = "PostId"
           val postMessage = "Awesome Message"

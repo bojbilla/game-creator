@@ -22,8 +22,8 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
 
   implicit def json4sFormats: Formats = DefaultFormats
 
-  private def extractStatus(feedbackOpt: Option[AnyRef]): StatusCode = {
-    feedbackOpt match {
+  private def extractStatus(maybeFeedback: Option[AnyRef]): StatusCode = {
+    maybeFeedback match {
       case Some(feedback) =>
         assert(feedback.isInstanceOf[HttpResponse])
         val feedbackHttpResponse = feedback.asInstanceOf[HttpResponse]
@@ -38,8 +38,8 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
       val fetchRequest = HttpRequest(uri = "/fetchData?user_id=XXX&access_token=XXX")
       assert(fetchRequest.method == HttpMethods.GET)
       testService ! fetchRequest
-      val responseOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-      responseOpt match {
+      val maybeResponse = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+      maybeResponse match {
         case Some(response) =>
           assert(response.isInstanceOf[HttpResponse])
 
@@ -58,8 +58,8 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
 
       testService ! gameboardRequest
 
-      val gameboardAnswerOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-      gameboardAnswerOpt match {
+      val maybeGameboardAnswer = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+      maybeGameboardAnswer match {
         case Some(gameboardAnswer) =>
           assert(gameboardAnswer.isInstanceOf[HttpResponse])
           val gameboardHttpResponse = gameboardAnswer.asInstanceOf[HttpResponse]
@@ -73,8 +73,8 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
       val deleteRequest = Delete(s"/removeUser?user_id=XXX")
       testService ! deleteRequest
 
-      val feedbackOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-      val status = extractStatus(feedbackOpt)
+      val maybeFeedback = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+      val status = extractStatus(maybeFeedback)
       status match {
         case StatusCodes.OK =>
         case StatusCodes.Forbidden =>
@@ -90,8 +90,8 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
       val deleteRequest = Delete(s"/dropDatabase")
       testService ! deleteRequest
 
-      val feedbackOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-      val status = extractStatus(feedbackOpt)
+      val maybeFeedback = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+      val status = extractStatus(maybeFeedback)
       status match {
         case StatusCodes.OK => assert(ApplicationConfiguration.appMode == "DEV")
         case StatusCodes.Forbidden => assert(ApplicationConfiguration.appMode != "DEV")
@@ -106,8 +106,8 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
       val deleteRequest = Get(s"/info")
       testService ! deleteRequest
 
-      val feedbackOpt = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
-      assert(extractStatus(feedbackOpt) == StatusCodes.OK)
+      val maybeFeedback = Option(receiveOne(Duration(10, TimeUnit.SECONDS)))
+      assert(extractStatus(maybeFeedback) == StatusCodes.OK)
     }
   }
 

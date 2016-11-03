@@ -1,14 +1,14 @@
 package me.reminisce.gameboard.board
 
 import akka.actor.ActorRef
-import me.reminisce.database.MongoDatabaseService
-import me.reminisce.database.StatsEntities.{ItemStats, UserStats}
+import me.reminisce.analysis.DataTypes._
+import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
+import me.reminisce.database.MongoCollections
 import me.reminisce.gameboard.board.BoardGenerator.{FailedBoardGeneration, FinishedBoardGeneration, createBuckets}
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.Tile
 import me.reminisce.gameboard.board.TileGenerator.{CreateTile, FailedTileCreation, FinishedTileCreation}
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
-import me.reminisce.stats.StatsDataTypes._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -55,20 +55,20 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
 
 
   /**
-    * Board generation logic based on the user stats. As this is a random generation, we use two random drawers,
+    * Board generation logic based on the user summary. As this is a random generation, we use two random drawers,
     * one to decide the question kinds and one to decide the data types associated with the kinds. The actual drawers
     * can be fully random or biased.
     *
-    * @param userStats        generated statistics about the user
+    * @param userSummary      generated summary about the user
     * @param client           original requester
     * @param randomKindDrawer random drawer for question kinds
     * @param randomTypeDrawer random drawer for data types
     */
-  protected def generateBoard(userStats: UserStats, client: ActorRef)
+  protected def generateBoard(userSummary: UserSummary, client: ActorRef)
                              (randomKindDrawer: (List[Int], List[QuestionKind], Int, Int) => List[QuestionKind],
                               randomTypeDrawer: (List[Int], List[DataType], Int, Int) => List[DataType]): Unit = {
     // An order question is made of multiple items
-    val normalizedCounts = userStats.questionCounts.map {
+    val normalizedCounts = userSummary.questionCounts.map {
       case (k, v) =>
         if (k == Order.toString) {
           k -> v / orderingItemsNumber
@@ -90,7 +90,7 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
       val pairsKindType: List[(QuestionKind, DataType)] = selectedKinds.groupBy(el => el).toList.flatMap {
         case (kind, kindList) =>
           val possTypes = possibleTypes(kind)
-          val counts = possTypes.map(t => userStats.dataTypeCounts.getOrElse(t.name, 0))
+          val counts = possTypes.map(t => userSummary.dataTypeCounts.getOrElse(t.name, 0))
           val selectedTypes =
             if (kind == Order) {
               randomTypeDrawer(counts, possTypes, kindList.length, orderingItemsNumber)
@@ -122,16 +122,16 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
       //Partitions into two : the ones matching the same kind/type as the head and the rest
       pairsKindType.partition { case (kind, dType) => (kind == cKind) && (dType == cType) } match {
         case (current, rest) =>
-          val itemsStatsCollection = database[BSONCollection](MongoDatabaseService.itemsStatsCollection)
-          val query = BSONDocument("userId" -> userId, "dataTypes" -> BSONDocument("$in" -> List(cType.name)), "readForStats" -> true)
-          findSomeRandom[ItemStats](itemsStatsCollection, query, client) {
-            listItemsStats =>
+          val itemsSummariesCollection = database[BSONCollection](MongoCollections.itemsSummaries)
+          val query = BSONDocument("userId" -> userId, "dataTypes" -> BSONDocument("$in" -> List(cType.name)), "readForSummary" -> true)
+          findSomeRandom[ItemSummary](itemsSummariesCollection, query, client) {
+            itemsSummaries =>
               cKind match {
                 case Order =>
-                  if (listItemsStats.length >= orderingItemsNumber * current.length) {
-                    // groups the retrieved stats by item type
-                    val groups = listItemsStats.groupBy(is => is.itemType).toList.map {
-                      case (itemType, list) => list.map(itemStats => (itemStats.itemId, itemStats.itemType))
+                  if (itemsSummaries.length >= orderingItemsNumber * current.length) {
+                    // groups the retrieved summary by item type
+                    val groups = itemsSummaries.groupBy(is => is.itemType).toList.map {
+                      case (itemType, list) => list.map(itemSummary => (itemSummary.itemId, itemSummary.itemType))
                     }
                     // generate buckets of items to order
                     val randomBuckets = Random.shuffle(groups.flatMap(list => createBuckets[(String, String)](list, orderingItemsNumber)))
@@ -148,9 +148,9 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
                     client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
                   }
                 case _ =>
-                  if (listItemsStats.length >= current.length) {
+                  if (itemsSummaries.length >= current.length) {
                     //associate the (kind, type) tuples to values
-                    val newFound = current.zip(listItemsStats.map(is => (is.itemId, is.itemType))).map {
+                    val newFound = current.zip(itemsSummaries.map(is => (is.itemId, is.itemType))).map {
                       case ((kind, dType), v) => (kind, dType, List(v))
                     }
                     generateWithKindTypePairs(alreadyGenerated ++ newFound, rest, client)

@@ -1,10 +1,10 @@
 package me.reminisce.database
 
+import me.reminisce.analysis.DataAnalyserSpec
 import me.reminisce.fetching.FetcherServiceSpec
 import me.reminisce.gameboard.board.GameboardGeneratorSpec
 import me.reminisce.gameboard.questions._
 import me.reminisce.server.ServerServiceActorSpec
-import me.reminisce.stats.StatsGeneratorSpec
 import me.reminisce.testutils.database.DatabaseTestHelper
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suites}
 
@@ -14,7 +14,7 @@ class DatabaseTests extends Suites(new OrderByPageLikesSpec, new OrderByPageLike
   new OrderByPostLikesNumberSpec, new OrderByPostTimeSpec, new WhenDidYouLikeThisPageSpec,
   new WhenDidYouShareThisPostSpec, new WhichCoordinatesWereYouAtSpec, new WhichPageDidYouLikeSpec, new WhoReactedToYourPostSpec,
   new WhoMadeThisCommentOnYourPostSpec, new FetcherServiceSpec, new MongoDatabaseServiceSpec, new DeletionServiceSpec,
-  new StatsGeneratorSpec, new GameboardGeneratorSpec, new ServerServiceActorSpec)
+  new DataAnalyserSpec, new GameboardGeneratorSpec, new ServerServiceActorSpec)
   with BeforeAndAfterAll with BeforeAndAfterEach {
 
   override def afterAll() = {

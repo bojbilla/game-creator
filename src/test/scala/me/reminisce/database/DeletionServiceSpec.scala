@@ -26,7 +26,7 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
     "delete user without error." in {
       testWithDb {
         db =>
-          val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
+          val collection = db[BSONCollection](MongoCollections.lastFetched)
 
           val userId = "TestUser"
           val time = DateTime.now
@@ -57,7 +57,7 @@ class DeletionServiceSpec extends DatabaseTester("DeletionServiceSpec") {
       testWithDb {
         db =>
           //sample data to be deleted
-          val collection = db[BSONCollection](MongoDatabaseService.lastFetchedCollection)
+          val collection = db[BSONCollection](MongoCollections.lastFetched)
 
           val userId = "TestUser"
           val time = DateTime.now
