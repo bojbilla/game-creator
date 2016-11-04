@@ -202,9 +202,8 @@ object AnalysisEntities {
                          blacklist: Option[Set[FBFrom]] = None,
                          commentersCommentsCount: Map[String, Int] = Map(),
                          reactionersReactionsCount: Map[String, Int] = Map())
-
+                         
   object UserSummary {
-
     def getMapStringIntWriter(implicit intWriter: BSONWriter[Int, BSONInteger]): BSONDocumentWriter[Map[String, Int]] = {
       new BSONDocumentWriter[Map[String, Int]] {
         def write(mapIntString: Map[String, Int]): BSONDocument = {
@@ -216,7 +215,7 @@ object AnalysisEntities {
       }
     }
 
-    def getMapStringIntReader(implicit intReader: BSONReader[BSONInteger, Int]): BSONDocumentReader[Map[String, Int]] = {
+  def getMapStringIntReader(implicit intReader: BSONReader[BSONInteger, Int]): BSONDocumentReader[Map[String, Int]] = {
       new BSONDocumentReader[Map[String, Int]] {
         def read(doc: BSONDocument): Map[String, Int] = {
           val elements = doc.elements.map {
