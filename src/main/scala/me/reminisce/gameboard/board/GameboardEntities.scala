@@ -1,7 +1,6 @@
 package me.reminisce.gameboard.board
 
-import me.reminisce.database.MongoDBEntities.{FBFrom, FBLocation, FBPlace}
-import me.reminisce.fetching.config.GraphResponses.Place
+import me.reminisce.database.MongoDBEntities.{FBFrom, FBLocation}
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.QuestionKind
 import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType.SpecificQuestionType
 import me.reminisce.gameboard.board.GameboardEntities.SubjectType.SubjectType
@@ -30,7 +29,6 @@ object GameboardEntities {
     val MCWhoReactedToYourPostWithLOVE = Value("MCWhoReactedToYourPostWithLOVE")
     val MCWhoReactedToYourPostWithSAD = Value("MCWhoReactedToYourPostWithSAD")
     val MCWhoReactedToYourPostWithANGRY = Value("MCWhoReactedToYourPostWithANGRY")
-    val MCWhoReactedToYourPostWithTHANKFUL = Value("MCWhoReactedToYourPostWithTHANKFUL")
     val ORDPageLikes = Value("ORDPageLikes")
     val ORDPostCommentsNumber = Value("ORDPostCommentsNumber")
     val ORDPostLikesNumber = Value("ORDPostLikesNumber")
@@ -70,6 +68,7 @@ object GameboardEntities {
 
   /**
     * Abstract subject, a subject represents a facebook item
+    *
     * @param `type` type of the subject
     */
   abstract sealed class Subject(`type`: SubjectType)
@@ -100,9 +99,10 @@ object GameboardEntities {
 
   /**
     * Abstract game question
-    * @param userId user for which the question is
-    * @param kind kind of question (See [[me.reminisce.gameboard.board.GameboardEntities.QuestionKind]]
-    * @param `type` type of question (See [[me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType]]
+    *
+    * @param userId  user for which the question is
+    * @param kind    kind of question (See [[me.reminisce.gameboard.board.GameboardEntities.QuestionKind]]
+    * @param `type`  type of question (See [[me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType]]
     * @param subject subject of the question (See [[me.reminisce.gameboard.board.GameboardEntities.Subject]]
     */
   abstract sealed class GameQuestion(userId: String, kind: QuestionKind, `type`: SpecificQuestionType, subject: Option[Subject])

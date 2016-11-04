@@ -32,6 +32,7 @@ object DataTypes {
 
   /**
     * Possible data types for a given question kind
+    *
     * @param questionKind question kind
     * @return list of data types
     */
@@ -50,6 +51,7 @@ object DataTypes {
 
   /**
     * Possible question kinds for given data type
+    *
     * @param dataType data type
     * @return list of question kinds
     */
@@ -74,6 +76,7 @@ object DataTypes {
 
   /**
     * Converts a string naming a data type to a DataType object
+    *
     * @param typeName type name as a string
     * @return a DataType object
     */

@@ -11,6 +11,7 @@ object OrderQuestionGenerator {
 
   /**
     * Given a list of subjects, associates them with ids and shuffles them
+    *
     * @param orderedSubjects subjects to associate with ids
     * @return a list of shuffled subject with ids and the right order of ids
     */

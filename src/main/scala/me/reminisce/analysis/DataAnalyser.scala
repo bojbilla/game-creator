@@ -5,8 +5,8 @@ import akka.event.{Logging, LoggingAdapter}
 import me.reminisce.analysis.DataAnalyser._
 import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
-import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.MongoCollections
+import me.reminisce.database.MongoDBEntities._
 import me.reminisce.fetching.config.GraphResponses.Post
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.Order
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
@@ -261,7 +261,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   /**
     * Stores the available data types (partial) for posts into the database
     *
-    * @param fbPosts              posts to analyse
+    * @param fbPosts                  posts to analyse
     * @param itemsSummariesCollection collection in which to store the summaries
     */
   private def saveTransientPostsSummary(fbPosts: List[Post], itemsSummariesCollection: BSONCollection): Unit = {
@@ -281,17 +281,17 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     * etc...) otherwise only aggregates the not read ones in the database (initially the items summaries are stored as not
     * read because they were not aggregated completely with old user summary).
     *
-    * @param fbPostsIds           ids of posts to handle
-    * @param fbPagesIds           ids of pages to handle
-    * @param userSummary            old user summary
-    * @param postCollection       collection containing posts
-    * @param pagesCollection      collection containing pages
-    * @param userSummaryCollection  collection containing user summaries
+    * @param fbPostsIds               ids of posts to handle
+    * @param fbPagesIds               ids of pages to handle
+    * @param userSummary              old user summary
+    * @param postCollection           collection containing posts
+    * @param pagesCollection          collection containing pages
+    * @param userSummaryCollection    collection containing user summaries
     * @param itemsSummariesCollection collection containing items summaries
     */
   private def finalizeSummary(fbPostsIds: List[String], fbPagesIds: List[String], userSummary: UserSummary,
-                            postCollection: BSONCollection, pagesCollection: BSONCollection, userSummaryCollection: BSONCollection,
-                            itemsSummariesCollection: BSONCollection): Unit = {
+                              postCollection: BSONCollection, pagesCollection: BSONCollection, userSummaryCollection: BSONCollection,
+                              itemsSummariesCollection: BSONCollection): Unit = {
     if ((fbPagesIds ++ fbPostsIds).nonEmpty) {
       val postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> fbPostsIds))
       val postsCursor = postCollection.find(postSelector).cursor[FBPost]()
@@ -339,17 +339,17 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   /**
     * Concretely performs the aggregation
     *
-    * @param fbPosts              posts to handle
-    * @param fbPages              pages to handle
-    * @param notLikedPagesCount   number of pages not liked
-    * @param userSummary            old user summary
-    * @param itemSummaries           old items summaries
+    * @param fbPosts                  posts to handle
+    * @param fbPages                  pages to handle
+    * @param notLikedPagesCount       number of pages not liked
+    * @param userSummary              old user summary
+    * @param itemSummaries            old items summaries
     * @param itemsSummariesCollection collection for items summaries
     * @param userSummariesCollection  collection for user summaries
     */
   private def finalizeSummary(fbPosts: List[FBPost], fbPages: List[FBPage], notLikedPagesCount: Int, userSummary: UserSummary,
-                            itemSummaries: List[ItemSummary], itemsSummariesCollection: BSONCollection,
-                            userSummariesCollection: BSONCollection): Unit = {
+                              itemSummaries: List[ItemSummary], itemsSummariesCollection: BSONCollection,
+                              userSummariesCollection: BSONCollection): Unit = {
     val newLikers = accumulateLikes(fbPosts) ++ userSummary.likers
 
     val updatedPosts: List[ItemSummary] = updatePostsSummaries(fbPosts, newLikers, itemSummaries)
@@ -379,14 +379,14 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   /**
     * Aggregates not read items summaries with the user summary.
     *
-    * @param fbPosts              handled posts
-    * @param itemSummaries           not read items summaries
-    * @param userSummary            old user summary
+    * @param fbPosts                  handled posts
+    * @param itemSummaries            not read items summaries
+    * @param userSummary              old user summary
     * @param itemsSummariesCollection collection containing items summaries
     * @param userSummariesCollection  collection containing user summaries
     */
   private def dealWithOldSummaries(fbPosts: List[FBPost], itemSummaries: List[ItemSummary], userSummary: UserSummary,
-                               itemsSummariesCollection: BSONCollection, userSummariesCollection: BSONCollection): Unit = {
+                                   itemsSummariesCollection: BSONCollection, userSummariesCollection: BSONCollection): Unit = {
 
     val newLikers = accumulateLikes(fbPosts) ++ userSummary.likers
 
@@ -434,13 +434,13 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   /**
     * Update post items summaries based on the number of likers
     *
-    * @param fbPosts    posts to handle
-    * @param likers     likers
+    * @param fbPosts       posts to handle
+    * @param likers        likers
     * @param itemSummaries items summaries to update
     * @return list of updated items summaries
     */
   private def updatePostsSummaries(fbPosts: List[FBPost], likers: Set[FBReaction],
-                               itemSummaries: List[ItemSummary]): List[ItemSummary] = {
+                                   itemSummaries: List[ItemSummary]): List[ItemSummary] = {
     fbPosts.flatMap {
       fbPost =>
         val likeNumber = fbPost.reactionCount.getOrElse(0)

@@ -9,7 +9,6 @@ import me.reminisce.server.domain.RestMessage
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
-import reactivemongo.core.commands.Count
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -32,6 +31,7 @@ object QuestionGenerator {
 
   /**
     * Extract the right subject type from a post
+    *
     * @param post post from which the subject must be extracted
     * @return a subject representing the page
     */
@@ -72,6 +72,7 @@ object QuestionGenerator {
 
   /**
     * Extracts the text of a post
+    *
     * @param post post from which the text is extracted
     * @return the post's text
     */
@@ -82,7 +83,7 @@ object QuestionGenerator {
           post.story match {
             case Some(story) => "\n" + stripInformation(story)
             case None => ""
-          } 
+          }
         } else "")
       case None => stripInformation(post.story.getOrElse(""))
     }
@@ -91,13 +92,14 @@ object QuestionGenerator {
   /**
     * Strips the story from some information such as time, people or location.
     * \u2014 is the character '—' used by Facebook for separating extra information from the story
+    *
     * @param story a post story
     * @return the transformed story
     */
   def stripInformation(story: String): String = {
     val sep = " \u2014 "
     story.split(sep).toList match {
-      case str::Nil =>
+      case str :: Nil =>
         str
       case str :+ info =>
         str.mkString(sep)
@@ -106,6 +108,7 @@ object QuestionGenerator {
 
   /**
     * Extracts the source of a media attachment
+    *
     * @param maybeAttachment media attachment option from which the source is extracted
     * @return the extracted source
     */
@@ -119,6 +122,7 @@ object QuestionGenerator {
 
   /**
     * Extract a subject from a page
+    *
     * @param page page from which the subject must be extracted
     * @return a subject representing the page
     */
@@ -137,13 +141,15 @@ object QuestionGenerator {
   */
 abstract class QuestionGenerator extends Actor with ActorLogging {
   override val log = Logging(context.system, this)
+
   /**
     * Get a number of document matching a query. Skips a random number of them.
-    * @param db database containing the documents
+    *
+    * @param db         database containing the documents
     * @param collection collection containing the documents
-    * @param query query to match
-    * @param quantity quantity to get
-    * @param reader implicit deserializer
+    * @param query      query to match
+    * @param quantity   quantity to get
+    * @param reader     implicit deserializer
     * @tparam T document type
     * @return a future list of documents
     */
@@ -162,11 +168,12 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
 
   /**
     * Fetches all the posts matching the given ids and applies a function to them
+    *
     * @param postsCollection collection containing posts
-    * @param userId user who made the posts (or was tagged in them)
-    * @param postIds posts to fetch
-    * @param client original requester
-    * @param f function applied to the posts
+    * @param userId          user who made the posts (or was tagged in them)
+    * @param postIds         posts to fetch
+    * @param client          original requester
+    * @param f               function applied to the posts
     */
   protected def fetchPosts(postsCollection: BSONCollection, userId: String, postIds: List[String], client: ActorRef)(f: List[FBPost] => Unit): Unit = {
     val query = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> postIds))
@@ -181,8 +188,9 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
 
   /**
     * Fetches all the pages matching the given ids
+    *
     * @param pagesCollection collection containing pages
-    * @param pageIds pages to fetch
+    * @param pageIds         pages to fetch
     * @return a future list of pages
     */
   protected def fetchPages(pagesCollection: BSONCollection, pageIds: List[String]): Future[List[FBPage]] = {
@@ -192,10 +200,11 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
 
   /**
     * Fetches all the pages matching the given ids and applies a function to them, reports error to the client
+    *
     * @param pagesCollection collection containing pages
-    * @param pageIds pages to fetch
-    * @param client original requester
-    * @param f function applied to the pages
+    * @param pageIds         pages to fetch
+    * @param client          original requester
+    * @param f               function applied to the pages
     * @return a future list of page likes
     */
   def fetchPages(pagesCollection: BSONCollection, pageIds: List[String], client: ActorRef)(f: List[FBPage] => Unit): Unit = {
@@ -210,9 +219,10 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
 
   /**
     * Fetches all the page likes matching the given ids
+    *
     * @param pageLikesCollection collection containing page likes
-    * @param userId user who liked the pages
-    * @param pageIds pages to fetch
+    * @param userId              user who liked the pages
+    * @param pageIds             pages to fetch
     * @return a future list of page likes
     */
   protected def fetchLikedPages(pageLikesCollection: BSONCollection, userId: String,
@@ -228,11 +238,12 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
 
   /**
     * Fetches all the page likes matching the given ids and applies a function to them, reports error to the client
+    *
     * @param pageLikesCollection collection containing page likes
-    * @param userId user who liked the pages
-    * @param pageIds pages to fetch
-    * @param client original requester
-    * @param f function applied to the page likes
+    * @param userId              user who liked the pages
+    * @param pageIds             pages to fetch
+    * @param client              original requester
+    * @param f                   function applied to the page likes
     */
   protected def fetchLikedPages(pageLikesCollection: BSONCollection, userId: String, client: ActorRef, pageIds: Option[List[String]] = None)
                                (f: List[FBPageLike] => Unit): Unit = {
@@ -247,10 +258,11 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
 
   /**
     * Fetches one page and applies a function to it, reports error to the client
+    *
     * @param pagesCollection collection containing pages
-    * @param pageId page to fetch
-    * @param client original requester
-    * @param f function to apply to the page
+    * @param pageId          page to fetch
+    * @param client          original requester
+    * @param f               function to apply to the page
     */
   protected def fetchPage(pagesCollection: BSONCollection, pageId: String, client: ActorRef)(f: Option[FBPage] => Unit): Unit = {
     val query = BSONDocument("pageId" -> pageId)

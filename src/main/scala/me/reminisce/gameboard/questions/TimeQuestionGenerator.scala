@@ -18,6 +18,7 @@ object TimeQuestionGenerator {
 
   /**
     * Given a date in the past generate a range used for a Timeline question
+    *
     * @param actualDate date in the past
     * @return a (min, default, max, unit, step) tuple used to generate a Timeline question
     */
@@ -44,6 +45,7 @@ object TimeQuestionGenerator {
 
   /**
     * Converts our time units to an equivalent period
+    *
     * @param unit unit to convert
     * @return a period which lasts one unit
     */

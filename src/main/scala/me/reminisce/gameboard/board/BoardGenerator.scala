@@ -1,15 +1,14 @@
 package me.reminisce.gameboard.board
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
+import me.reminisce.analysis.DataTypes.DataType
 import me.reminisce.gameboard.board.BoardGenerator.FailedBoardGeneration
 import me.reminisce.gameboard.board.GameGenerator.InitBoardCreation
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.Tile
-import me.reminisce.analysis.DataTypes.DataType
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
-import reactivemongo.core.commands.Count
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -32,9 +31,10 @@ object BoardGenerator {
     * {{
     * scala> val selectedItems = drawItemsAtRandomFromBags[QuestionKind](List(10, 11), List(MultipleChoice, Timeline), 10)
     * }}
-    * @param bagSizes sizes of the bags
-    * @param bagContents content of each bag
-    * @param quantity number of draws to perform
+    *
+    * @param bagSizes      sizes of the bags
+    * @param bagContents   content of each bag
+    * @param quantity      number of draws to perform
     * @param drawnQuantity number of objects drawn for each draw, for instance, when generating order questions,
     *                      one will remove not only one but multiple items will be removed from the bag as an order
     *                      question requires more than one item
@@ -92,8 +92,9 @@ object BoardGenerator {
   /**
     * Determines in what bag the random value lies based on the bag thresholds (which are the number of remaining items
     * in the bags)
+    *
     * @param bagThresholds list of limiting values for the bags
-    * @param bagContents content of each bag
+    * @param bagContents   content of each bag
     * @param generatedRand generated random value
     * @tparam T type of items
     * @return the drawn item
@@ -117,7 +118,8 @@ object BoardGenerator {
   /**
     * Form thresholds determining limits for a random value to lie in one bag or the other based on the number of items
     * in each bag.
-    * @param acc an accumulator which holds the previously found thresholds
+    *
+    * @param acc   an accumulator which holds the previously found thresholds
     * @param sizes sizes of the differend bags
     * @return a list of thresholds
     */
@@ -140,9 +142,10 @@ object BoardGenerator {
     * A bag is defined by its number of items and its content, we assume that bag i contains bagSizes[i]
     * items which all are bagContents[i]. See [[me.reminisce.gameboard.board.BoardGenerator.drawItemsAtRandomFromBags]]
     * for an example as those two methods are used the same way.
-    * @param bagSizes sizes of the bags
-    * @param bagContents content of each bag
-    * @param quantity number of draws to perform
+    *
+    * @param bagSizes      sizes of the bags
+    * @param bagContents   content of each bag
+    * @param quantity      number of draws to perform
     * @param drawnQuantity number of objects drawn for each draw, explanation for this is given in
     *                      [[me.reminisce.gameboard.board.BoardGenerator.drawItemsAtRandomFromBags]]
     * @tparam T type of the items
@@ -187,9 +190,10 @@ object BoardGenerator {
 
   /**
     * Form buckets of equal size fro ma list of items (a bucket is a list of items)
-    * @param list items to put into buckets
+    *
+    * @param list       items to put into buckets
     * @param bucketSize desired size of buckets
-    * @param acc already formed buckets
+    * @param acc        already formed buckets
     * @tparam T type of items in the buckets
     * @return a list of buckets
     */
@@ -208,19 +212,22 @@ object BoardGenerator {
 
 /**
   * Abstract board generating class
+  *
   * @param database database in which the data is stored
-  * @param userId user for which the board is generated
+  * @param userId   user for which the board is generated
   */
 abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor with ActorLogging {
 
   /**
     * Implements the logic of actually creating a board
+    *
     * @param client the board requester
     */
   def createGame(client: ActorRef): Unit
 
   /**
     * This actor's entry point, handles the InitBoardCreation() message which triggers the board creation
+    *
     * @return Nothing
     */
   def receive = {
@@ -236,11 +243,12 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
 
   /**
     * Tries to find one item in collection which matches selector and applies the handler function f on it
+    *
     * @param collection collection to search in
-    * @param selector selector to match
-    * @param client original requester
-    * @param f handles the returned value
-    * @param reader implicit deserializer
+    * @param selector   selector to match
+    * @param client     original requester
+    * @param f          handles the returned value
+    * @param reader     implicit deserializer
     * @tparam T type of data to retrieve
     */
   protected def findOne[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (Option[T] => Unit))
@@ -256,11 +264,12 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
 
   /**
     * Tries to get as much data as possible from collection matching selector and then applies handler function f on it
+    *
     * @param collection collection to search in
-    * @param selector selector to match
-    * @param client original requester
-    * @param f handles the returned values
-    * @param reader implicit deserializer
+    * @param selector   selector to match
+    * @param client     original requester
+    * @param f          handles the returned values
+    * @param reader     implicit deserializer
     * @tparam T type of the data to retrieve
     */
   protected def findSome[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
@@ -277,13 +286,14 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
   /**
     * Same as [[me.reminisce.gameboard.board.BoardGenerator.findSome]] but retrieves a fixed number of items and asks
     * the database to skip a random number of results
-    * @param db database t osearch in
+    *
+    * @param db         database t osearch in
     * @param collection collection so search in
-    * @param query query to match
-    * @param quantity number of items to retrieve
-    * @param client original requester
-    * @param f handle the results
-    * @param reader implicit deserializer
+    * @param query      query to match
+    * @param quantity   number of items to retrieve
+    * @param client     original requester
+    * @param f          handle the results
+    * @param reader     implicit deserializer
     * @tparam T type of the retrieved items
     */
   protected def findSomeRandom[T](db: DefaultDB,
@@ -305,11 +315,12 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
 
   /**
     * Same as [[me.reminisce.gameboard.board.BoardGenerator.findSome]] except that it shuffles the results
+    *
     * @param collection collection to search in
-    * @param selector selector to match
-    * @param client original requester
-    * @param f handles the returned values
-    * @param reader implicit deserializer
+    * @param selector   selector to match
+    * @param client     original requester
+    * @param f          handles the returned values
+    * @param reader     implicit deserializer
     * @tparam T type of the data to retrieve
     */
   protected def findSomeRandom[T](collection: BSONCollection, selector: BSONDocument, client: ActorRef)(f: (List[T] => Unit))
@@ -329,8 +340,9 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
     * generate the question. Those tuples will be then sent to the appropriate question generator to generate an actual
     * question.
     * This functions attempts to generate tiles of questions of the same type.
+    *
     * @param generatedTuples questions generated, as tuples
-    * @param client original requester
+    * @param client          original requester
     * @return the list of tiles definitions
     */
   protected def generateTiles(generatedTuples: List[(QuestionKind, DataType, List[(String, String)])], client: ActorRef):

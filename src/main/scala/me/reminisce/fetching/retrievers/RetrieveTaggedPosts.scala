@@ -11,10 +11,11 @@ import me.reminisce.fetching.retrievers.RetrieveTaggedPosts.{FinishedRetrievingT
 object RetrieveTaggedPosts {
   /**
     * Creates a retrieve tagged posts actor
+    *
     * @return props for the created actor
     */
   def props(): Props =
-    Props(new RetrieveTaggedPosts())
+  Props(new RetrieveTaggedPosts())
 
   case class FinishedRetrievingTaggedPosts(posts: Vector[Post])
 
@@ -27,6 +28,7 @@ class RetrieveTaggedPosts extends RetrieveData {
   /**
     * Entry point for this actor, handles the RetrieveEntities(params) message by creating a RetrieveEntitiesService
     * with the suitable parameters and requesting a data retrieval
+    *
     * @return Nothing
     */
   def receive = {
@@ -47,7 +49,8 @@ class RetrieveTaggedPosts extends RetrieveData {
     * - PartialResult(entities): a partial result, sends it back to client
     * - FinishedRetrievingEntities(entities): last retrieved entities, sends it to client
     * - NotEnoughData(entities): not enough data was found, sends the found ones to client
-    * @param client original requester
+    *
+    * @param client      original requester
     * @param entityCount current retrieved entities count
     * @return Nothing
     */

@@ -99,8 +99,7 @@ class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: String) 
       "HAHA" -> MCWhoReactedToYourPostWithHAHA,
       "LOVE" -> MCWhoReactedToYourPostWithLOVE,
       "SAD" -> MCWhoReactedToYourPostWithSAD,
-      "ANGRY" -> MCWhoReactedToYourPostWithANGRY,
-      "THANKFUL" -> MCWhoReactedToYourPostWithTHANKFUL
+      "ANGRY" -> MCWhoReactedToYourPostWithANGRY
     )(reactionType)
   }
 }

@@ -28,6 +28,7 @@ object DeletionWorker {
   case class DropCollection()
 
   case class DeletionResult(ok: Boolean)
+
 }
 
 /**
