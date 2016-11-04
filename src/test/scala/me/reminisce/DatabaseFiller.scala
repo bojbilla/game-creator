@@ -16,42 +16,68 @@ import scala.io.Source
 
 object DatabaseFiller {
 
-  class ItemSummarySerializer extends CustomSerializer[ItemSummary](implicit formats => ( {
-    case summary: JObject =>
-      val id = None
-      val userId = (summary \ "userId").extract[String]
-      val itemId = (summary \ "itemId").extract[String]
-      val itemType = (summary \ "itemType").extract[String]
-      val dataTypes = (summary \ "dataTypes").extract[Array[Any]].map(x => stringToType(x.asInstanceOf[String])).toList
-      val dataCount = (summary \ "dataCount").extract[Int]
-      ItemSummary(id, userId, itemId, itemType, dataTypes, dataCount)
+  implicit val formats = DefaultFormats + new DataTypeSerializer + new ListDTypeSerializer
+
+  class DataTypeSerializer extends CustomSerializer[DataType](implicit formats => ( {
+    case dType: JString =>
+      stringToType(dType.values)
   }, {
-    case ItemSummary(id, userId, itemId, itemType, dataTypes, dataCount) =>
-      JObject(List(JField("userId", JString(userId)), JField("itemId", JString(itemId)), JField("itemType", JString(itemType)),
-        JField("dataTypes", JArray(dataTypes.map(dType => JString(dType.name)))), JField("dataCount", JInt(dataCount))))
+    case dType: DataType =>
+      JString(dType.name)
   }))
 
-  def populateWithTestData(db: DefaultDB, folder: String): Unit = {
+  class ListDTypeSerializer extends CustomSerializer[List[DataType]](implicit formats => ( {
+    case dTypes: JArray =>
+      dTypes.arr.map(x => x.extract[DataType])
+  }, {
+    case dTypes: List[DataType] =>
+      JArray(dTypes.map(x => JString(x.name)))
+  }))
 
-    implicit val formats = DefaultFormats + new CustomSerializer[DataType](implicit formats => ( {
-      case dType: JString =>
-        stringToType(dType.values)
-    }, {
-      case dType: DataType =>
-        JString(dType.name)
-    })) + new CustomSerializer[List[DataType]](implicit formats => ( {
-      case dTypes: JArray =>
-        dTypes.arr.map(x => x.extract[DataType])
-    }, {
-      case dTypes: List[DataType] =>
-        JArray(dTypes.map(x => JString(x.name)))
-    }))
+  def parseUserSummaries(lines: Iterator[String]): Iterator[UserSummary] = lines.map {
+    l =>
+      val json = parse(l)
 
-    val pages = simpleExtract[FBPage](folder + "/fbPages.json")
-    storeObjects(db, "fbPages", pages)
+      json match {
+        case summary: JObject =>
+          val id = None
+          val userId = (summary \ "userId").extract[String]
+          val dataTypeCounts = (summary \ "dataTypeCounts").extract[Map[String, Int]].map {
+            case (key, value) => stringToType(key) -> value
+          }
+          val questionCounts = (summary \ "questionCounts").extract[Map[String, Int]].map {
+            case (key, value) => strToKind(key) -> value
+          }
+          val reactioners = (summary \ "reactioners").extract[Set[FBReaction]]
+
+          UserSummary(id, userId, dataTypeCounts, questionCounts, reactioners)
+        case _ =>
+          throw new IllegalArgumentException("Impossible match case.")
+      }
+  }
+
+
+  def parseItemSummaries(lines: Iterator[String]): Iterator[ItemSummary] = lines.map {
+    l =>
+      val json = parse(l)
+
+      json match {
+        case summary: JObject =>
+          val id = None
+          val userId = (summary \ "userId").extract[String]
+          val itemId = (summary \ "itemId").extract[String]
+          val itemType = (summary \ "itemType").extract[String]
+          val dataTypes = (summary \ "dataTypes").extract[List[DataType]]
+          val dataCount = (summary \ "dataCount").extract[Int]
+          ItemSummary(id, userId, itemId, itemType, dataTypes, dataCount)
+        case _ =>
+          throw new IllegalArgumentException("Impossible match case.")
+      }
+  }
+
+  def parsePageLikes(lines: Iterator[String]): Iterator[FBPageLike] = {
     val formatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(DateTimeZone.UTC)
-    val pageLikesLines = Source.fromURL(getClass.getResource(folder + "/fbPageLikes.json")).getLines()
-    val pageLikes = pageLikesLines.map {
+    lines.map {
       l =>
         val json = parse(l)
         // this allows the extract method to work properly
@@ -75,52 +101,27 @@ object DatabaseFiller {
             throw new IllegalArgumentException("Impossible match case.")
         }
     }
+  }
+
+  def populateWithTestData(db: DefaultDB, folder: String): Unit = {
+
+    implicit val formats = DefaultFormats + new DataTypeSerializer + new ListDTypeSerializer
+
+    val pages = simpleExtract[FBPage](folder + "/fbPages.json")
+    storeObjects(db, "fbPages", pages)
+
+    val pageLikesLines = Source.fromURL(getClass.getResource(folder + "/fbPageLikes.json")).getLines()
+    val pageLikes = parsePageLikes(pageLikesLines)
     storeObjects(db, MongoCollections.fbPageLikes, pageLikes)
 
     val posts = simpleExtract[FBPost](folder + "/fbPosts.json")
     storeObjects(db, MongoCollections.fbPosts, posts)
     val userSummariesLines = Source.fromURL(getClass.getResource(folder + "/userSummaries.json")).getLines()
-    val userSummaries = userSummariesLines.map {
-      l =>
-        val json = parse(l)
-
-        json match {
-          case summary: JObject =>
-            val id = None
-            val userId = (summary \ "userId").extract[String]
-            val dataTypeCounts = (summary \ "dataTypeCounts").extract[Map[String, Int]].map {
-              case (key, value) => stringToType(key) -> value
-            }
-            val questionCounts = (summary \ "questionCounts").extract[Map[String, Int]].map {
-              case (key, value) => strToKind(key) -> value
-            }
-            val reactioners = (summary \ "reactioners").extract[Set[FBReaction]]
-
-            Some(UserSummary(id, userId, dataTypeCounts, questionCounts, reactioners))
-          case _ =>
-            None
-        }
-    }.flatten
+    val userSummaries = parseUserSummaries(userSummariesLines)
     storeObjects(db, MongoCollections.userSummaries, userSummaries)
 
     val itemsSummariesLines = Source.fromURL(getClass.getResource(folder + "/itemsSummaries.json")).getLines()
-    val itemsSummaries = itemsSummariesLines.map {
-      l =>
-        val json = parse(l)
-
-        json match {
-          case summary: JObject =>
-            val id = None
-            val userId = (summary \ "userId").extract[String]
-            val itemId = (summary \ "itemId").extract[String]
-            val itemType = (summary \ "itemType").extract[String]
-            val dataTypes = (summary \ "dataTypes").extract[List[DataType]]
-            val dataCount = (summary \ "dataCount").extract[Int]
-            Some(ItemSummary(id, userId, itemId, itemType, dataTypes, dataCount))
-          case _ =>
-            None
-        }
-    }.flatten
+    val itemsSummaries = parseItemSummaries(itemsSummariesLines)
     storeObjects(db, MongoCollections.itemsSummaries, itemsSummaries)
   }
 }
