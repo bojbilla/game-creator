@@ -5,6 +5,7 @@ import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.MongoDBEntities.FBComment.simpleReactionFromComment
 import me.reminisce.database.MongoDBEntities.{AbstractReaction, FBFriend, FBFrom}
 import me.reminisce.fetching.config.GraphResponses.Friend
+import me.reminisce.database.MongoDBEntities.{FBReaction, FBFrom}
 import me.reminisce.gameboard.board.GameboardEntities.{QuestionKind, strToKind}
 import reactivemongo.bson._
 
