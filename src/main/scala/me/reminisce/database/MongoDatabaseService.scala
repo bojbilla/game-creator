@@ -26,7 +26,7 @@ object MongoDatabaseService {
     * @return props for the created MongoDatabaseService
     */
   def props(userId: String, db: DefaultDB): Props =
-  Props(new MongoDatabaseService(userId, db))
+    Props(new MongoDatabaseService(userId, db))
 
   /**
     * Converts a [[me.reminisce.fetching.config.GraphResponses.Page]] to a [[me.reminisce.database.MongoDBEntities.FBPage]]

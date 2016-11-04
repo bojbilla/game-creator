@@ -19,6 +19,8 @@ import spray.http.StatusCodes._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
+import me.reminisce.database.MongoDBEntities.FBReaction
+import scala.concurrent.Await
 
 /**
   * Factory for [[me.reminisce.fetching.FetcherService]] and case classes for message passing
@@ -83,7 +85,7 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
     case _ =>
       log.info("Fetcher service Received unexpected message")
   }
-
+    
   /**
     * If the service starts fetching, we wait for the worker's feedback then acknowledge the end of the fetching to the
     * initial client

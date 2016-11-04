@@ -17,7 +17,7 @@ import scala.util.Random
 object RandomBoardGenerator
 
 /**
-  * Abstract implmentation of a random board generator
+  * Abstract implementation of a random board generator
   *
   * @param database database in which the data is stored
   * @param userId   user for which the board is generated
@@ -30,7 +30,7 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
   /**
     * Awaits feedback from workers. Handles the following messages:
     * - FinishedTileCreation(usrId, tile): a tile was created, add it to tiles and check if all the tiles are done
-    * - FailedTIleCreation(message): failed to generate a tile, report to client
+    * - FailedTileCreation(message): failed to generate a tile, report to client
     *
     * @param client original requester
     * @param tiles  already generated tiles
