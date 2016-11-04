@@ -5,6 +5,7 @@ import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.MongoDBEntities.FBComment.simpleReactionFromComment
 import me.reminisce.database.MongoDBEntities.{AbstractReaction, FBFriend, FBFrom}
 import me.reminisce.fetching.config.GraphResponses.Friend
+import me.reminisce.database.MongoDBEntities.{FBReaction, FBFrom}
 import me.reminisce.gameboard.board.GameboardEntities.{QuestionKind, strToKind}
 import reactivemongo.bson._
 
@@ -204,6 +205,7 @@ object AnalysisEntities {
                          reactionersReactionsCount: Map[String, Int] = Map())
                          
   object UserSummary {
+
     def getMapStringIntWriter(implicit intWriter: BSONWriter[Int, BSONInteger]): BSONDocumentWriter[Map[String, Int]] = {
       new BSONDocumentWriter[Map[String, Int]] {
         def write(mapIntString: Map[String, Int]): BSONDocument = {
@@ -215,7 +217,7 @@ object AnalysisEntities {
       }
     }
 
-  def getMapStringIntReader(implicit intReader: BSONReader[BSONInteger, Int]): BSONDocumentReader[Map[String, Int]] = {
+    def getMapStringIntReader(implicit intReader: BSONReader[BSONInteger, Int]): BSONDocumentReader[Map[String, Int]] = {
       new BSONDocumentReader[Map[String, Int]] {
         def read(doc: BSONDocument): Map[String, Int] = {
           val elements = doc.elements.map {
@@ -275,7 +277,7 @@ object AnalysisEntities {
     implicit val mapStringIntReader = getMapStringIntReader
 
     implicit val mapKindIntWriter = getMapKindIntWriter
-
+    
     implicit val mapKindIntReader = getMapKindIntReader
 
     implicit val mapDataTypeIntReader = getMapDataTypeIntReader
