@@ -46,19 +46,21 @@ object RetrieveEntitiesService {
 
   /**
     * Creates a retrieve entities service
+    *
     * @param filter filters out unwanted entities
-    * @param mf implicit manifest used for automatic json parsing
+    * @param mf     implicit manifest used for automatic json parsing
     * @tparam T type of the retrieved entities
     * @return props for the created service
     */
   def props[T](filter: (Vector[T]) => Vector[T])(implicit mf: Manifest[T]): Props =
-    Props(new RetrieveEntitiesService[T](filter))
+  Props(new RetrieveEntitiesService[T](filter))
 }
 
 class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: Manifest[T]) extends FBCommunicationManager {
 
   /**
     * Entry point of the service, handles the RetrieveEntities(params) message.
+    *
     * @return Nothing
     */
   def receive = {
@@ -91,6 +93,7 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
     * - NotEnoughRetrieved(client, paging, minimum, count, entities): states that not enough entities were retrieved up
     * to now, a GetEntities(client, path, minimum, count) message will be sent to self if paging contains enough
     * information to get more entities
+    *
     * @return Nothing
     */
   private def retrieveEntities(): Receive = {
@@ -107,10 +110,11 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
     * Handles a GetEntities request by sending a request to Facebook and parsing the content. If enough entities
     * are retrieved a termination message is sent ot the client otherwise a prtial result is sent to the client and a
     * NotEnoughRetrieved message is sent to self
-    * @param client original requester
-    * @param path request path
+    *
+    * @param client  original requester
+    * @param path    request path
     * @param minimum minimum number of entities to retrieve, 0 means no minimum
-    * @param count current number of entities retrieved
+    * @param count   current number of entities retrieved
     */
   private def handleGetEntities(client: ActorRef, path: String, minimum: Int, count: Int = 0): Unit = {
     log.debug(s"Retriever path: $path")
@@ -159,10 +163,11 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
     * Handles NotEnoughRetrieved message. If paging provides enough information a GetEntities request is sent to self,
     * otherwise if the minimum is not met sends a failure message to the client, finally if the minimum is met, a
     * termination message is sent to the client.
-    * @param client original requester
-    * @param paging paging information (see Facebook graph api documentation)
-    * @param minimum minimum number of information to retrieve, 0 means no minimum
-    * @param count current number of entities retrieved
+    *
+    * @param client   original requester
+    * @param paging   paging information (see Facebook graph api documentation)
+    * @param minimum  minimum number of information to retrieve, 0 means no minimum
+    * @param count    current number of entities retrieved
     * @param entities the retrieved entities with last request
     */
   private def handleNotEnough(client: ActorRef, paging: Option[Paging], minimum: Int, count: Int = 0,
@@ -194,6 +199,7 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
 
   /**
     * Extracts a root object from a json object
+    *
     * @param json json object to parse
     * @return the extracted root
     */
@@ -209,6 +215,7 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
 
   /**
     * Extracts a single value from a root object and a json object
+    *
     * @param root the root to be examined
     * @param json the json to be parsed
     * @return an optional value which was extracted

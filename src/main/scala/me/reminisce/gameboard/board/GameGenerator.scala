@@ -20,12 +20,13 @@ object GameGenerator {
 
   /**
     * Create a game generator class which operates for user userId and with the help of database db
+    *
     * @param database database from which to get data
-    * @param userId user for which to generate the game
+    * @param userId   user for which to generate the game
     * @return props for created game generator
     */
   def props(database: DefaultDB, userId: String): Props =
-    Props(new GameGenerator(database, userId))
+  Props(new GameGenerator(database, userId))
 
   case class CreateBoard(accessToken: String, strategy: String) extends RestMessage
 
@@ -35,8 +36,9 @@ object GameGenerator {
 
 /**
   * Coordinates the whole game generation process (generating a board, requesting a data update and sending feedback)
+  *
   * @param database database which holds the data
-  * @param userId user for which the game is created
+  * @param userId   user for which the game is created
   */
 class GameGenerator(database: DefaultDB, userId: String) extends Actor with ActorLogging {
   implicit def dispatcher: ExecutionContextExecutor = context.dispatcher
@@ -46,6 +48,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
   /**
     * Entry point for this actors, it only handles the CreateBoard message which supplies an access token for the data
     * refresh and a strategy for generating the game.
+    *
     * @return Nothing
     */
   def receive = {
@@ -63,6 +66,7 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
 
   /**
     * Associates a generator to a strategy.
+    *
     * @param strategy selected strategy
     * @return a game board generator
     */
@@ -93,12 +97,13 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
     * the board has been generated and report to the client.
     * - AlreadyFresh(message): the fetcher acknowledges the request but the data is fresh. Verify that the board has
     * been generated and report to the client.
-    * @param client game requester
-    * @param worker game board generator worker
-    * @param tiles generated tiles
+    *
+    * @param client       game requester
+    * @param worker       game board generator worker
+    * @param tiles        generated tiles
     * @param fetcherAcked has the fetcher acknowleged
     * @param isTokenStale is the token invalid
-    * @param strategy chosen strategy (reported by the worker)
+    * @param strategy     chosen strategy (reported by the worker)
     * @return Nothing
     */
   private def awaitFeedBack(client: ActorRef, worker: ActorRef, tiles: List[Tile],
@@ -138,10 +143,11 @@ class GameGenerator(database: DefaultDB, userId: String) extends Actor with Acto
   /**
     * Verifies that both the game board was generated and the fetcher acknowledged the answer. If so, sends the answer
     * to the client.
-    * @param client game requester
-    * @param tiles generated tiles
-    * @param ack has the fetcher acknowledged
-    * @param stale is the token invalid
+    *
+    * @param client   game requester
+    * @param tiles    generated tiles
+    * @param ack      has the fetcher acknowledged
+    * @param stale    is the token invalid
     * @param strategy chosen strategy
     */
   private def verifyAndAnswer(client: ActorRef, tiles: List[Tile], ack: Boolean, stale: Boolean, strategy: String): Unit = {

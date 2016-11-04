@@ -1,12 +1,12 @@
 package me.reminisce.gameboard.board
 
 import akka.actor.{ActorRef, PoisonPill, Props}
+import me.reminisce.analysis.DataTypes._
 import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.{GameQuestion, _}
 import me.reminisce.gameboard.board.TileGenerator.{CreateTile, FailedTileCreation, FinishedTileCreation}
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import me.reminisce.gameboard.questions._
-import me.reminisce.analysis.DataTypes._
 import reactivemongo.api.DefaultDB
 
 /**
@@ -15,11 +15,12 @@ import reactivemongo.api.DefaultDB
 object TileGenerator {
   /**
     * Creates a tile generator actor
+    *
     * @param database the database from which the data is read
     * @return props for the created tile generator
     */
   def props(database: DefaultDB): Props =
-    Props(new TileGenerator(database))
+  Props(new TileGenerator(database))
 
   // The List[(String, String)] is for (itemId, itemType)
   case class CreateTile(userId: String, choices: List[(QuestionKind, DataType, List[(String, String)])], tpe: QuestionKind = Misc)
@@ -34,6 +35,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
   /**
     * This actor's entry point, handles the CreateTile(userId, choices, tpe) message. For each choice it instantiates the
     * appropriate question generator and requests a question generation.
+    *
     * @return Nothing
     */
   def receive = {
@@ -61,6 +63,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
 
   /**
     * Determines which question has to be generated based on the QuestionKind and the DataType
+    *
     * @param kindTypeWithItem a tuple representing a question
     * @return a question generator
     */
@@ -113,9 +116,10 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
     * checks if three questions were created and if so, reports back to client
     * - MongoDBError(message): an error occurred while contacting the database, report to the client
     * - NotEnoughData(message): there was not enough data, report to the client
-    * @param client tile requester
-    * @param userId user for which the questions are created
-    * @param qType tile question type (can be Misc)
+    *
+    * @param client    tile requester
+    * @param userId    user for which the questions are created
+    * @param qType     tile question type (can be Misc)
     * @param questions already generated questions
     * @return Nothing
     */

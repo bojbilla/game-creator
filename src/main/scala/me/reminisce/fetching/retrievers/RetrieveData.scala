@@ -1,7 +1,7 @@
 package me.reminisce.fetching.retrievers
 
 import akka.actor.{Actor, ActorContext, ActorLogging}
-import akka.event.{LogSource, Logging}
+import akka.event.LogSource
 import me.reminisce.fetching.config.FacebookServiceConfig
 import org.json4s.DefaultFormats
 import spray.client.pipelining._

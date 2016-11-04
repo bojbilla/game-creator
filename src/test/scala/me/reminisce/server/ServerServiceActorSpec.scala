@@ -112,4 +112,5 @@ class ServerServiceActorSpec extends DatabaseTester("ServerServiceActorSpec") {
   }
 
   case class SimpleMessageFormat(message: String)
+
 }

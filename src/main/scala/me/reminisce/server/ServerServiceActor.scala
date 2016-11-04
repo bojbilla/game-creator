@@ -4,13 +4,11 @@ import akka.actor.{Actor, ActorLogging}
 import org.json4s.{DefaultFormats, Formats}
 import reactivemongo.api.{MongoConnection, MongoDriver}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 /**
   * The actor handling the http request in this application. It handles the requests according to the
   * routes defined in [[me.reminisce.server.GameCreatorService]]
   *
-  * @param mongoHost host for the mongodb
+  * @param mongoHost   host for the mongodb
   * @param mongoDbName name of the mongoDb to connect to
   */
 class ServerServiceActor(mongoHost: String, mongoDbName: String) extends Actor with GameCreatorServiceActor with ActorLogging {
