@@ -1,69 +1,144 @@
 package me.reminisce.gameboard.board
 
 import me.reminisce.database.MongoDBEntities.{FBFrom, FBLocation}
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.QuestionKind
-import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType.SpecificQuestionType
-import me.reminisce.gameboard.board.GameboardEntities.SubjectType.SubjectType
-import me.reminisce.gameboard.board.GameboardEntities.TimeUnit.TimeUnit
 import me.reminisce.server.domain.RestMessage
+import me.reminisce.server.jsonserializer.NamedClassSerialization.NamedCaseClass
 
 /**
-  * Defines the data types used to represend a game board.
+  * Defines the data types used to represent a game board.
   */
 object GameboardEntities {
 
   /**
     * Specific question type (combination of question kind and data type). Used only for display purposes.
     */
-  object SpecificQuestionType extends Enumeration {
-    type SpecificQuestionType = Value
-    val TLWhenDidYouShareThisPost = Value("TLWhenDidYouShareThisPost")
-    val TLWhenDidYouLikeThisPage = Value("TLWhenDidYouLikeThisPage")
-    val GeoWhatCoordinatesWereYouAt = Value("GeoWhatCoordinatesWereYouAt")
-    val MCWhoMadeThisCommentOnYourPost = Value("MCWhoMadeThisCommentOnYourPost")
-    val MCWhichPageDidYouLike = Value("MCWhichPageDidYouLike")
-    val MCWhoReactedToYourPost = Value("MCWhoLikedYourPost")
-    val MCWhoReactedToYourPostWithLIKE = Value("MCWhoReactedToYourPostWithLIKE")
-    val MCWhoReactedToYourPostWithWOW = Value("MCWhoReactedToYourPostWithWOW")
-    val MCWhoReactedToYourPostWithHAHA = Value("MCWhoReactedToYourPostWithHAHA")
-    val MCWhoReactedToYourPostWithLOVE = Value("MCWhoReactedToYourPostWithLOVE")
-    val MCWhoReactedToYourPostWithSAD = Value("MCWhoReactedToYourPostWithSAD")
-    val MCWhoReactedToYourPostWithANGRY = Value("MCWhoReactedToYourPostWithANGRY")
-    val ORDPageLikes = Value("ORDPageLikes")
-    val ORDPostCommentsNumber = Value("ORDPostCommentsNumber")
-    val ORDPostLikesNumber = Value("ORDPostLikesNumber")
-    val ORDPostTime = Value("ORDPostTime")
-    val ORDPageLikeTime = Value("ORDPageLikeTime")
+  sealed class SpecificQuestionType(id: String) extends NamedCaseClass {
+    override val name: String = id
   }
 
-  object QuestionKind extends Enumeration {
-    type QuestionKind = Value
-    val MultipleChoice = Value("MultipleChoice")
-    val Timeline = Value("Timeline")
-    val Geolocation = Value("Geolocation")
-    val Order = Value("Order")
-    val Misc = Value("Misc")
+  case object TLWhenDidYouShareThisPost extends SpecificQuestionType("TLWhenDidYouShareThisPost")
+
+  case object TLWhenDidYouLikeThisPage extends SpecificQuestionType("TLWhenDidYouLikeThisPage")
+
+  case object GeoWhatCoordinatesWereYouAt extends SpecificQuestionType("GeoWhatCoordinatesWereYouAt")
+
+  case object MCWhoMadeThisCommentOnYourPost extends SpecificQuestionType("MCWhoMadeThisCommentOnYourPost")
+
+  case object MCWhichPageDidYouLike extends SpecificQuestionType("MCWhichPageDidYouLike")
+
+  case object MCWhoReactedToYourPost extends SpecificQuestionType("MCWhoReactedToYourPost")
+
+  case object MCWhoReactedToYourPostWithLIKE extends SpecificQuestionType("MCWhoReactedToYourPostWithLIKE")
+
+  case object MCWhoReactedToYourPostWithWOW extends SpecificQuestionType("MCWhoReactedToYourPostWithWOW")
+
+  case object MCWhoReactedToYourPostWithHAHA extends SpecificQuestionType("MCWhoReactedToYourPostWithHAHA")
+
+  case object MCWhoReactedToYourPostWithLOVE extends SpecificQuestionType("MCWhoReactedToYourPostWithLOVE")
+
+  case object MCWhoReactedToYourPostWithSAD extends SpecificQuestionType("MCWhoReactedToYourPostWithSAD")
+
+  case object MCWhoReactedToYourPostWithANGRY extends SpecificQuestionType("MCWhoReactedToYourPostWithANGRY")
+
+  case object ORDPageLikes extends SpecificQuestionType("ORDPageLikes")
+
+  case object ORDPostCommentsNumber extends SpecificQuestionType("ORDPostCommentsNumber")
+
+  case object ORDPostLikesNumber extends SpecificQuestionType("ORDPostLikesNumber")
+
+  case object ORDPostTime extends SpecificQuestionType("ORDPostTime")
+
+  case object ORDPageLikeTime extends SpecificQuestionType("ORDPageLikeTime")
+
+  def strToType(string: String): SpecificQuestionType = string match {
+    case TLWhenDidYouShareThisPost.name => TLWhenDidYouShareThisPost
+    case TLWhenDidYouLikeThisPage.name => TLWhenDidYouLikeThisPage
+    case GeoWhatCoordinatesWereYouAt.name => GeoWhatCoordinatesWereYouAt
+    case MCWhoMadeThisCommentOnYourPost.name => MCWhoMadeThisCommentOnYourPost
+    case MCWhichPageDidYouLike.name => MCWhichPageDidYouLike
+    case MCWhoReactedToYourPost.name => MCWhoReactedToYourPost
+    case MCWhoReactedToYourPostWithLIKE.name => MCWhoReactedToYourPostWithLIKE
+    case MCWhoReactedToYourPostWithWOW.name => MCWhoReactedToYourPostWithWOW
+    case MCWhoReactedToYourPostWithHAHA.name => MCWhoReactedToYourPostWithHAHA
+    case MCWhoReactedToYourPostWithLOVE.name => MCWhoReactedToYourPostWithLOVE
+    case MCWhoReactedToYourPostWithSAD.name => MCWhoReactedToYourPostWithSAD
+    case MCWhoReactedToYourPostWithANGRY.name => MCWhoReactedToYourPostWithANGRY
+    case ORDPageLikes.name => ORDPageLikes
+    case ORDPostCommentsNumber.name => ORDPostCommentsNumber
+    case ORDPostLikesNumber.name => ORDPostLikesNumber
+    case ORDPostTime.name => ORDPostTime
+    case ORDPageLikeTime.name => ORDPageLikeTime
   }
+
+  sealed class QuestionKind(id: String) extends NamedCaseClass {
+    override val name: String = id
+  }
+
+  case object MultipleChoice extends QuestionKind("MultipleChoice")
+
+  case object Timeline extends QuestionKind("Timeline")
+
+  case object Geolocation extends QuestionKind("Geolocation")
+
+  case object Order extends QuestionKind("Order")
+
+  case object Misc extends QuestionKind("Misc")
+
+
+  def strToKind(string: String): QuestionKind = string match {
+    case MultipleChoice.name => MultipleChoice
+    case Timeline.name => Timeline
+    case Geolocation.name => Geolocation
+    case Order.name => Order
+    case Misc.name => Misc
+  }
+
 
   /**
     * Time units used in Timeline questions
     */
-  object TimeUnit extends Enumeration {
-    type TimeUnit = Value
-    val Day = Value("Day")
-    val Week = Value("Week")
-    val Month = Value("Month")
-    val Year = Value("Year")
+  sealed class TimeUnit(id: String) extends NamedCaseClass {
+    override val name: String = id
   }
 
-  object SubjectType extends Enumeration {
-    type SubjectType = Value
-    val PageSubject = Value("Page")
-    val TextPost = Value("TextPost")
-    val ImagePost = Value("ImagePost")
-    val VideoPost = Value("VideoPost")
-    val LinkPost = Value("LinkPost")
-    val CommentSubject = Value("Comment")
+  case object Day extends TimeUnit("Day")
+
+  case object Week extends TimeUnit("Week")
+
+  case object Month extends TimeUnit("Month")
+
+  case object Year extends TimeUnit("Year")
+
+  def strToTimeUnit(string: String): TimeUnit = string match {
+    case Day.name => Day
+    case Week.name => Week
+    case Month.name => Month
+    case Year.name => Year
+  }
+
+  sealed class SubjectType(id: String) extends NamedCaseClass {
+    override val name: String = id
+  }
+
+  case object PageSubject extends SubjectType("Page")
+
+  case object TextPost extends SubjectType("TextPost")
+
+  case object ImagePost extends SubjectType("ImagePost")
+
+  case object VideoPost extends SubjectType("VideoPost")
+
+  case object LinkPost extends SubjectType("LinkPost")
+
+  case object CommentSubject extends SubjectType("Comment")
+
+  def strToSubjectType(string: String): SubjectType = string match {
+    case PageSubject.name => PageSubject
+    case TextPost.name => TextPost
+    case ImagePost.name => ImagePost
+    case VideoPost.name => VideoPost
+    case LinkPost.name => LinkPost
+    case CommentSubject.name => CommentSubject
   }
 
   /**
@@ -77,24 +152,24 @@ object GameboardEntities {
 
   case class PageSubject(name: String, pageId: String,
                          photoUrl: Option[String],
-                         `type`: SubjectType = SubjectType.PageSubject) extends Subject(`type`)
+                         `type`: SubjectType = PageSubject) extends Subject(`type`)
 
-  case class TextPostSubject(text: String, `type`: SubjectType = SubjectType.TextPost,
+  case class TextPostSubject(text: String, `type`: SubjectType = TextPost,
                              from: Option[FBFrom]) extends PostSubject(`type`, text, from)
 
   case class ImagePostSubject(text: String, imageUrl: Option[String], facebookImageUrl: Option[String],
-                              `type`: SubjectType = SubjectType.ImagePost,
+                              `type`: SubjectType = ImagePost,
                               from: Option[FBFrom]) extends PostSubject(`type`, text, from)
 
   case class VideoPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String],
-                              `type`: SubjectType = SubjectType.VideoPost,
+                              `type`: SubjectType = VideoPost,
                               from: Option[FBFrom]) extends PostSubject(`type`, text, from)
 
   case class LinkPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String],
-                             `type`: SubjectType = SubjectType.LinkPost,
+                             `type`: SubjectType = LinkPost,
                              from: Option[FBFrom]) extends PostSubject(`type`, text, from)
 
-  case class CommentSubject(comment: String, post: PostSubject, `type`: SubjectType = SubjectType.CommentSubject) extends Subject(`type`)
+  case class CommentSubject(comment: String, post: PostSubject, `type`: SubjectType = CommentSubject) extends Subject(`type`)
 
 
   /**

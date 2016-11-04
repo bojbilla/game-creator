@@ -4,9 +4,7 @@ import akka.actor.Props
 import com.github.nscala_time.time.Imports._
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
-import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
-import me.reminisce.gameboard.board.GameboardEntities.TimelineQuestion
+import me.reminisce.gameboard.board.GameboardEntities.{TLWhenDidYouLikeThisPage, Timeline, TimelineQuestion}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError, NotEnoughData}
 import me.reminisce.gameboard.questions.TimeQuestionGenerator._
 import reactivemongo.api.DefaultDB

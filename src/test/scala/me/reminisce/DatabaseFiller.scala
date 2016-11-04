@@ -1,19 +1,51 @@
 package me.reminisce
 
 import com.github.nscala_time.time.Imports._
+import me.reminisce.analysis.DataTypes.{DataType, stringToType}
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoCollections
-import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike, FBPost}
+import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike, FBPost, FBReaction}
+import me.reminisce.gameboard.board.GameboardEntities.strToKind
 import me.reminisce.testutils.database.DatabaseTestHelper._
-import org.json4s.DefaultFormats
+import org.json4s.JsonAST._
 import org.json4s.jackson.JsonMethods._
+import org.json4s.{CustomSerializer, DefaultFormats}
 import reactivemongo.api.DefaultDB
 
 import scala.io.Source
 
 object DatabaseFiller {
+
+  class ItemSummarySerializer extends CustomSerializer[ItemSummary](implicit formats => ( {
+    case summary: JObject =>
+      val id = None
+      val userId = (summary \ "userId").extract[String]
+      val itemId = (summary \ "itemId").extract[String]
+      val itemType = (summary \ "itemType").extract[String]
+      val dataTypes = (summary \ "dataTypes").extract[Array[Any]].map(x => stringToType(x.asInstanceOf[String])).toList
+      val dataCount = (summary \ "dataCount").extract[Int]
+      ItemSummary(id, userId, itemId, itemType, dataTypes, dataCount)
+  }, {
+    case ItemSummary(id, userId, itemId, itemType, dataTypes, dataCount) =>
+      JObject(List(JField("userId", JString(userId)), JField("itemId", JString(itemId)), JField("itemType", JString(itemType)),
+        JField("dataTypes", JArray(dataTypes.map(dType => JString(dType.name)))), JField("dataCount", JInt(dataCount))))
+  }))
+
   def populateWithTestData(db: DefaultDB, folder: String): Unit = {
-    implicit val formats = DefaultFormats
+
+    implicit val formats = DefaultFormats + new CustomSerializer[DataType](implicit formats => ( {
+      case dType: JString =>
+        stringToType(dType.values)
+    }, {
+      case dType: DataType =>
+        JString(dType.name)
+    })) + new CustomSerializer[List[DataType]](implicit formats => ( {
+      case dTypes: JArray =>
+        dTypes.arr.map(x => x.extract[DataType])
+    }, {
+      case dTypes: List[DataType] =>
+        JArray(dTypes.map(x => JString(x.name)))
+    }))
 
     val pages = simpleExtract[FBPage](folder + "/fbPages.json")
     storeObjects(db, "fbPages", pages)
@@ -22,7 +54,7 @@ object DatabaseFiller {
     val pageLikes = pageLikesLines.map {
       l =>
         val json = parse(l)
-        // this allows the extract method to work properly  
+        // this allows the extract method to work properly
         val converted = json.mapField {
           case (field, value) =>
             if (field == "likeTime") {
@@ -47,9 +79,48 @@ object DatabaseFiller {
 
     val posts = simpleExtract[FBPost](folder + "/fbPosts.json")
     storeObjects(db, MongoCollections.fbPosts, posts)
-    val userSummary = simpleExtract[UserSummary](folder + "/userSummaries.json")
-    storeObjects(db, MongoCollections.userSummaries, userSummary)
-    val itemsSummaries = simpleExtract[ItemSummary](folder + "/itemsSummaries.json")
+    val userSummariesLines = Source.fromURL(getClass.getResource(folder + "/userSummaries.json")).getLines()
+    val userSummaries = userSummariesLines.map {
+      l =>
+        val json = parse(l)
+
+        json match {
+          case summary: JObject =>
+            val id = None
+            val userId = (summary \ "userId").extract[String]
+            val dataTypeCounts = (summary \ "dataTypeCounts").extract[Map[String, Int]].map {
+              case (key, value) => stringToType(key) -> value
+            }
+            val questionCounts = (summary \ "questionCounts").extract[Map[String, Int]].map {
+              case (key, value) => strToKind(key) -> value
+            }
+            val reactioners = (summary \ "reactioners").extract[Set[FBReaction]]
+
+            Some(UserSummary(id, userId, dataTypeCounts, questionCounts, reactioners))
+          case _ =>
+            None
+        }
+    }.flatten
+    storeObjects(db, MongoCollections.userSummaries, userSummaries)
+
+    val itemsSummariesLines = Source.fromURL(getClass.getResource(folder + "/itemsSummaries.json")).getLines()
+    val itemsSummaries = itemsSummariesLines.map {
+      l =>
+        val json = parse(l)
+
+        json match {
+          case summary: JObject =>
+            val id = None
+            val userId = (summary \ "userId").extract[String]
+            val itemId = (summary \ "itemId").extract[String]
+            val itemType = (summary \ "itemType").extract[String]
+            val dataTypes = (summary \ "dataTypes").extract[List[DataType]]
+            val dataCount = (summary \ "dataCount").extract[Int]
+            Some(ItemSummary(id, userId, itemId, itemType, dataTypes, dataCount))
+          case _ =>
+            None
+        }
+    }.flatten
     storeObjects(db, MongoCollections.itemsSummaries, itemsSummaries)
   }
 }

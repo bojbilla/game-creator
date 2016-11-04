@@ -1,7 +1,6 @@
 package me.reminisce.analysis
 
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.QuestionKind
+import me.reminisce.gameboard.board.GameboardEntities._
 
 /**
   * Defines the data types necessary to generate the user summaries.
@@ -37,13 +36,13 @@ object DataTypes {
     * @return list of data types
     */
   def possibleTypes(questionKind: QuestionKind): List[DataType] = questionKind match {
-    case QuestionKind.MultipleChoice =>
+    case MultipleChoice =>
       List(PostWhoReacted, PostWhoCommented, PageWhichLiked)
-    case QuestionKind.Timeline =>
+    case Timeline =>
       List(Time)
-    case QuestionKind.Geolocation =>
+    case Geolocation =>
       List(PostGeolocation)
-    case QuestionKind.Order =>
+    case Order =>
       List(LikeNumber, PostCommentsNumber, Time)
     case _ =>
       List()
@@ -57,19 +56,19 @@ object DataTypes {
     */
   def possibleKind(dataType: DataType): List[QuestionKind] = dataType match {
     case Time =>
-      List(QuestionKind.Timeline, QuestionKind.Order)
+      List(Timeline, Order)
     case PostGeolocation =>
-      List(QuestionKind.Geolocation)
+      List(Geolocation)
     case PostWhoCommented =>
-      List(QuestionKind.MultipleChoice)
+      List(MultipleChoice)
     case PostWhoReacted =>
-      List(QuestionKind.MultipleChoice)
+      List(MultipleChoice)
     case PostCommentsNumber =>
-      List(QuestionKind.Order)
+      List(Order)
     case PageWhichLiked =>
-      List(QuestionKind.MultipleChoice)
+      List(MultipleChoice)
     case LikeNumber =>
-      List(QuestionKind.Order)
+      List(Order)
     case _ =>
       List()
   }

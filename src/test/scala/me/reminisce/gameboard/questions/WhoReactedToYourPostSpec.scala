@@ -113,7 +113,7 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
           }.toList
 
           val freshUser = userId + "Fresh"
-          val userSummary = UserSummary(userId = freshUser, likers = likers.toSet)
+          val userSummary = UserSummary(userId = freshUser, reactioners = likers.toSet)
           Await.result(userSummariesCollection.update(userSummary, userSummary, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
           val postsCollection = db[BSONCollection](MongoCollections.fbPosts)

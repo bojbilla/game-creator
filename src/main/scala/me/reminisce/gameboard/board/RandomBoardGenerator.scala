@@ -5,8 +5,7 @@ import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoCollections
 import me.reminisce.gameboard.board.BoardGenerator.{FailedBoardGeneration, FinishedBoardGeneration, createBuckets}
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
-import me.reminisce.gameboard.board.GameboardEntities.Tile
+import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.gameboard.board.TileGenerator.{CreateTile, FailedTileCreation, FinishedTileCreation}
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
 import reactivemongo.api.DefaultDB
@@ -70,7 +69,7 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
     // An order question is made of multiple items
     val normalizedCounts = userSummary.questionCounts.map {
       case (k, v) =>
-        if (k == Order.toString) {
+        if (k == Order) {
           k -> v / orderingItemsNumber
         } else {
           k -> v
@@ -80,17 +79,17 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
     val totalCount = normalizedCounts.toList.map { case (k, v) => v }.sum
 
     if (totalCount >= 27) {
-      val tlCount = normalizedCounts.getOrElse(Timeline.toString, 0)
-      val ordCount = normalizedCounts.getOrElse(Order.toString, 0)
-      val mcCount = normalizedCounts.getOrElse(MultipleChoice.toString, 0)
-      val geoCount = normalizedCounts.getOrElse(Geolocation.toString, 0)
+      val tlCount = normalizedCounts.getOrElse(Timeline, 0)
+      val ordCount = normalizedCounts.getOrElse(Order, 0)
+      val mcCount = normalizedCounts.getOrElse(MultipleChoice, 0)
+      val geoCount = normalizedCounts.getOrElse(Geolocation, 0)
       val selectedKinds = randomKindDrawer(List(tlCount, ordCount, mcCount, geoCount),
         List(Timeline, Order, MultipleChoice, Geolocation), 27, 1)
 
       val pairsKindType: List[(QuestionKind, DataType)] = selectedKinds.groupBy(el => el).toList.flatMap {
         case (kind, kindList) =>
           val possTypes = possibleTypes(kind)
-          val counts = possTypes.map(t => userSummary.dataTypeCounts.getOrElse(t.name, 0))
+          val counts = possTypes.map(t => userSummary.dataTypeCounts.getOrElse(t, 0))
           val selectedTypes =
             if (kind == Order) {
               randomTypeDrawer(counts, possTypes, kindList.length, orderingItemsNumber)
@@ -103,6 +102,7 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
       generateWithKindTypePairs(List(), pairsKindType, client)
 
     } else {
+      log.error(s"Not enough question kinds for user $userId.")
       client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
     }
 
@@ -123,7 +123,7 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
       pairsKindType.partition { case (kind, dType) => (kind == cKind) && (dType == cType) } match {
         case (current, rest) =>
           val itemsSummariesCollection = database[BSONCollection](MongoCollections.itemsSummaries)
-          val query = BSONDocument("userId" -> userId, "dataTypes" -> BSONDocument("$in" -> List(cType.name)), "readForSummary" -> true)
+          val query = BSONDocument("userId" -> userId, "dataTypes" -> BSONDocument("$in" -> List(cType.name)))
           findSomeRandom[ItemSummary](itemsSummariesCollection, query, client) {
             itemsSummaries =>
               cKind match {
@@ -142,9 +142,11 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
                       }
                       generateWithKindTypePairs(alreadyGenerated ++ newFound, rest, client)
                     } else {
+                      log.error(s"Not enough buckets generated for user $userId.")
                       client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
                     }
                   } else {
+                    log.error(s"Not enough items for ordering on user $userId.")
                     client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
                   }
                 case _ =>
@@ -155,6 +157,7 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
                     }
                     generateWithKindTypePairs(alreadyGenerated ++ newFound, rest, client)
                   } else {
+                    log.error(s"Not enough items on user $userId.")
                     client ! FailedBoardGeneration(s"Failed to generate board for user $userId : not enough data.")
                   }
               }

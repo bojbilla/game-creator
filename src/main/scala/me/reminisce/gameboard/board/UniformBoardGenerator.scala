@@ -5,7 +5,7 @@ import me.reminisce.analysis.DataTypes.DataType
 import me.reminisce.database.AnalysisEntities.UserSummary
 import me.reminisce.database.MongoCollections
 import me.reminisce.gameboard.board.BoardGenerator.{FailedBoardGeneration, drawItemsAtRandomFromBags, drawUniformlyFromBags}
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.QuestionKind
+import me.reminisce.gameboard.board.GameboardEntities.QuestionKind
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument

@@ -1,15 +1,17 @@
 package me.reminisce.analysis
 
 import com.github.nscala_time.time.Imports._
-import me.reminisce.analysis.DataTypes.{PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoReacted}
+import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoDBEntities.FBReaction
 import me.reminisce.fetching.config.GraphResponses._
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
+import me.reminisce.gameboard.board.GameboardEntities.{Geolocation, MultipleChoice, Order, QuestionKind}
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
 import me.reminisce.testutils.AssertHelpers._
 import org.joda.time.DateTime
 import org.scalatest.FunSuite
+
+import scala.util.Random
 
 class DataAnalyserSuite extends FunSuite {
 
@@ -156,12 +158,15 @@ class DataAnalyserSuite extends FunSuite {
     val types = (0 until itemsNumber).map {
       nb => s"Type$nb"
     }
+
+    val possibleDataTypes = Random.shuffle(List(Time, PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoReacted))
+
     val dataTypes = (0 until itemsNumber).map {
-      nb => (0 to nb).map(nbb => s"dType$nbb").toList // no empty list here (usage of to)
+      nb => (0 to nb).map(nbb => possibleDataTypes(nb % possibleDataTypes.length)).toList // no empty list here (usage of to)
     }
     val counts = 1 to itemsNumber //No count equal to 0
     val itemSummaries = (0 until itemsNumber).map {
-      nb => ItemSummary(None, users(nb), items(nb), types(nb), dataTypes(nb), counts(nb), readForSummary = true)
+      nb => ItemSummary(None, users(nb), items(nb), types(nb), dataTypes(nb), counts(nb))
     }.toList
 
     val empty = DataAnalyser.getItemSummary("Ha", "He", "Hi", itemSummaries)
@@ -182,12 +187,12 @@ class DataAnalyserSuite extends FunSuite {
 
   test("Add new counts to user summary.") {
     val userId = "UserId"
-    val oldLikers = (1 to 10).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
-    val newLikers = (11 to 20).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
-    assert(oldLikers != newLikers)
+    val oldReactioners = (1 to 10).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
+    val newReactioners = (11 to 20).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
+    assert(oldReactioners != newReactioners)
 
-    val oldDataTypes = Map((PostGeolocation.name, 2), (PostWhoCommented.name, 4), (PostWhoReacted.name, 13)) // linked with below counts
-    val newDataTypes = List((PostWhoReacted.name, 7), (PostCommentsNumber.name, 17)) // prime number is important to test the rounding
+    val oldDataTypes = Map[DataType, Int](PostGeolocation -> 2, PostWhoCommented -> 4, PostWhoReacted -> 13) // linked with below counts
+    val newDataTypes = List[(DataType, Int)]((PostWhoReacted, 7), (PostCommentsNumber, 17)) // prime number is important to test the rounding
     val newItemsSummaries = newDataTypes.flatMap {
       case (tpe, count) => (1 to count).map {
         any => ItemSummary(userId = userId, itemId = s"item$userId", itemType = "Post", dataTypes = List(tpe), dataCount = 1)
@@ -196,26 +201,26 @@ class DataAnalyserSuite extends FunSuite {
 
     val expectedOrderCount = 17 - (17 % QuestionGenerationConfig.orderingItemsNumber)
 
-    val oldQuestionCounts = Map((Geolocation.toString, 2), (MultipleChoice.toString, 17))
+    val oldQuestionCounts = Map[QuestionKind, Int]((Geolocation, 2), (MultipleChoice, 17))
 
     val userSummary = UserSummary(userId = userId, dataTypeCounts = oldDataTypes, questionCounts = oldQuestionCounts,
-      likers = oldLikers)
+      reactioners = oldReactioners)
 
-    val newUserSummary = DataAnalyser.userSummaryWithNewCounts(newLikers, newItemsSummaries, userSummary)
+    val newUserSummary = DataAnalyser.userSummaryWithNewCounts(newReactioners, newItemsSummaries, userSummary)
 
     assert(userSummary.userId == newUserSummary.userId)
-    assert(newUserSummary.likers == newLikers)
+    assert(newUserSummary.reactioners == newReactioners)
 
     assert(newUserSummary.dataTypeCounts.size == userSummary.dataTypeCounts.size + 1)
-    assert(newUserSummary.dataTypeCounts.getOrElse(PostGeolocation.name, 0) == 2)
-    assert(newUserSummary.dataTypeCounts.getOrElse(PostWhoCommented.name, 0) == 4)
-    assert(newUserSummary.dataTypeCounts.getOrElse(PostWhoReacted.name, 0) == 20)
-    assert(newUserSummary.dataTypeCounts.getOrElse(PostCommentsNumber.name, 0) == 17)
+    assert(newUserSummary.dataTypeCounts.getOrElse(PostGeolocation, 0) == 2)
+    assert(newUserSummary.dataTypeCounts.getOrElse(PostWhoCommented, 0) == 4)
+    assert(newUserSummary.dataTypeCounts.getOrElse(PostWhoReacted, 0) == 20)
+    assert(newUserSummary.dataTypeCounts.getOrElse(PostCommentsNumber, 0) == 17)
 
     assert(newUserSummary.questionCounts.size == userSummary.questionCounts.size + 1)
-    assert(newUserSummary.questionCounts.getOrElse(Geolocation.toString, 0) == 2)
-    assert(newUserSummary.questionCounts.getOrElse(MultipleChoice.toString, 0) == 24)
-    assert(newUserSummary.questionCounts.getOrElse(Order.toString, 0) == expectedOrderCount)
+    assert(newUserSummary.questionCounts.getOrElse(Geolocation, 0) == 2)
+    assert(newUserSummary.questionCounts.getOrElse(MultipleChoice, 0) == 24)
+    assert(newUserSummary.questionCounts.getOrElse(Order, 0) == expectedOrderCount)
   }
 
 }

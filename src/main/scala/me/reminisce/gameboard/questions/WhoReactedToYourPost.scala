@@ -4,9 +4,7 @@ import akka.actor.Props
 import me.reminisce.database.AnalysisEntities.UserSummary
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.FBPost
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.MultipleChoice
-import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType.MCWhoReactedToYourPost
-import me.reminisce.gameboard.board.GameboardEntities.{MultipleChoiceQuestion, Possibility}
+import me.reminisce.gameboard.board.GameboardEntities.{MCWhoReactedToYourPost, MultipleChoice, MultipleChoiceQuestion, Possibility}
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
@@ -64,8 +62,8 @@ class WhoReactedToYourPost(db: DefaultDB) extends QuestionGenerator {
               post <- maybePost
               likes <- post.reactions
               liker <- Random.shuffle(likes).headOption
-              if !((userSummary.likers -- likes.toSet).size < 3)
-              choices = (liker :: Random.shuffle((userSummary.likers -- likes.toSet).toList).take(3)) map {
+              if !((userSummary.reactioners -- likes.toSet).size < 3)
+              choices = (liker :: Random.shuffle((userSummary.reactioners -- likes.toSet).toList).take(3)) map {
                 choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
               }
               answer <- choices.headOption

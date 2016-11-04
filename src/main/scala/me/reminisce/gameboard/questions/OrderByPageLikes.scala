@@ -2,9 +2,7 @@ package me.reminisce.gameboard.questions
 
 import akka.actor.Props
 import me.reminisce.database.MongoCollections
-import me.reminisce.gameboard.board.GameboardEntities.OrderQuestion
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
-import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
+import me.reminisce.gameboard.board.GameboardEntities.{ORDPageLikes, Order, OrderQuestion}
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection

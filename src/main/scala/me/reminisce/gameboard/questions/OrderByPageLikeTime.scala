@@ -3,9 +3,7 @@ package me.reminisce.gameboard.questions
 import akka.actor.Props
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike}
-import me.reminisce.gameboard.board.GameboardEntities.OrderQuestion
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
-import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
+import me.reminisce.gameboard.board.GameboardEntities.{ORDPageLikeTime, Order, OrderQuestion}
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import org.joda.time.DateTime
 import reactivemongo.api.DefaultDB

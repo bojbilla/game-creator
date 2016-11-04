@@ -3,8 +3,6 @@ package me.reminisce.gameboard.questions
 import akka.actor.Props
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBComment, FBFrom, FBPost}
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
-import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
 import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError, NotEnoughData}
 import reactivemongo.api.DefaultDB

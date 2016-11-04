@@ -4,8 +4,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 import akka.actor._
 import com.github.nscala_time.time.Imports._
-import me.reminisce.analysis.DataAnalyser
-import me.reminisce.analysis.DataAnalyser.FinalAnalysis
 import me.reminisce.database.MongoDBEntities.LastFetched
 import me.reminisce.database.MongoDatabaseService.SaveLastFetchedTime
 import me.reminisce.database.{MongoCollections, MongoDatabaseService}
@@ -155,11 +153,9 @@ class FetcherService(database: DefaultDB) extends FBCommunicationManager {
           currentlyFetching.remove(userId)
       }
     } else {
+      log.info(s"Data for user $userId is already fresh.")
       client ! AlreadyFresh(s"Data for user $userId is fresh.")
       currentlyFetching.remove(userId)
-      val dataAnalyser = context.actorOf(DataAnalyser.props(userId, database))
-      dataAnalyser ! FinalAnalysis(Set(), Set())
-      log.info(s"Requesting summary update for user $userId.")
     }
   }
 }

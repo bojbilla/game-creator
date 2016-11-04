@@ -5,7 +5,7 @@ import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoCollections
 import me.reminisce.gameboard.board.BoardGenerator._
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
+import me.reminisce.gameboard.board.GameboardEntities.{Order, QuestionKind}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.{BSONArray, BSONDocument}
@@ -50,11 +50,11 @@ class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends Rand
     // (because we cannot have a guarantee of the number of available items as we do not have user summary)
     // PostWhoReacted is also excluded as it cannot be generated without UserSummary (even though this type should not be
     // marked as available on an item if no UserSummary was generated)
-    val excluded = (PostWhoReacted :: possibleTypes(Order).filter(t => possibleKind(t).size == 1)).map(_.name)
+    val excluded = PostWhoReacted :: possibleTypes(Order).filter(t => possibleKind(t).size == 1)
     val selector = BSONDocument("userId" -> userId,
       "$or" -> BSONArray(
         BSONDocument("dataCount" -> BSONDocument("$gt" -> excluded.size)),
-        BSONDocument("dataTypes" -> BSONDocument("$nin" -> excluded))))
+        BSONDocument("dataTypes" -> BSONDocument("$nin" -> excluded.map(_.name)))))
     val itemsSummariesCollection = database[BSONCollection](MongoCollections.itemsSummaries)
     findSomeRandom[ItemSummary](itemsSummariesCollection, selector, client) {
       itemsSummaries =>
@@ -64,7 +64,7 @@ class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends Rand
           val shuffledList = Random.shuffle(itemsSummaries).take(27)
           val tuples = shuffledList.flatMap {
             is =>
-              val okTypes = is.dataTypes.filterNot(t => excluded.contains(t)).map(stringToType)
+              val okTypes = is.dataTypes.filterNot(t => excluded.contains(t))
               for {
                 chosenType <- Random.shuffle(okTypes).headOption
                 chosenKind <- Random.shuffle(possibleKind(chosenType).filterNot(k => k == Order)).headOption

@@ -8,7 +8,7 @@ import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities._
 import me.reminisce.fetching.config.GraphResponses.Post
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind.Order
+import me.reminisce.gameboard.board.GameboardEntities.{Order, QuestionKind}
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
@@ -38,13 +38,14 @@ object DataAnalyser {
   Props(new DataAnalyser(userId, db))
 
   /**
-    * Adds a new type (or some quantity of new items of a type already accounted for) to a map holding counts for each type
+    * Add a new count to a map of items => count
     *
-    * @param typeAndCount new type
-    * @param oldMap       map containing counts
-    * @return new map
+    * @param typeAndCount new count
+    * @param oldMap       current counts
+    * @tparam T the type of item being counted
+    * @return the new map
     */
-  private def addTypeToMap(typeAndCount: (String, Int), oldMap: Map[String, Int]): Map[String, Int] = typeAndCount match {
+  private def addTypeToMap[T](typeAndCount: (T, Int), oldMap: Map[T, Int]): Map[T, Int] = typeAndCount match {
     case (tpe, count) =>
       if (oldMap.contains(tpe)) {
         oldMap.updated(tpe, oldMap(tpe) + count)
@@ -54,14 +55,15 @@ object DataAnalyser {
   }
 
   /**
-    * Adds new types  (or some quantity of new items of types already accounted for) to a map holding counts for each type
+    * Adds new counts to a map of item => count
     *
-    * @param typesAndCounts new type
-    * @param oldMap         map containing counts
-    * @return new map
+    * @param typesAndCounts new counts
+    * @param oldMap         current counts
+    * @tparam T type of item counted
+    * @return the new map
     */
   @tailrec
-  def addTypesToMap(typesAndCounts: List[(String, Int)], oldMap: Map[String, Int]): Map[String, Int] = {
+  def addTypesToMap[T](typesAndCounts: List[(T, Int)], oldMap: Map[T, Int]): Map[T, Int] = {
     typesAndCounts match {
       case Nil => oldMap
       case x :: xs => addTypesToMap(xs, addTypeToMap(x, oldMap))
@@ -180,23 +182,23 @@ object DataAnalyser {
   }
 
   /**
-    * Aggregates new post likers and new items summaries and the old counts in the old user summary to create new user summary
+    * Aggregates new post reactioners and new items summaries and the old counts in the old user summary to create new user summary
     *
-    * @param newLikers         new post likers
+    * @param newLikers         new post reactioners
     * @param newItemsSummaries new items summaries
     * @param userSummary       old user summary
     * @return new user summary
     */
   def userSummaryWithNewCounts(newLikers: Set[FBReaction], newItemsSummaries: List[ItemSummary], userSummary: UserSummary): UserSummary = {
     val newDataTypes = newItemsSummaries.foldLeft(userSummary.dataTypeCounts) {
-      case (acc, itemSummary) => addTypesToMap(itemSummary.dataTypes.map(dType => (dType, 1)), acc)
+      case (acc, itemSummary) => addTypesToMap[DataType](itemSummary.dataTypes.map(dType => (dType, 1)), acc)
     }
 
     // One has to be careful as the count for order is just the count of items that have a data type suited for ordering
     // Ordering have to be a multiple of the number of items to order
-    val newQuestionCounts: Map[String, Int] = newDataTypes.foldLeft(Map[String, Int]()) {
+    val newQuestionCounts: Map[QuestionKind, Int] = newDataTypes.foldLeft(Map[QuestionKind, Int]()) {
       case (acc, (tpe, cnt)) =>
-        val kinds = possibleKind(stringToType(tpe))
+        val kinds = possibleKind(tpe)
         val newCounts = kinds.map {
           kind =>
             val count = kind match {
@@ -206,9 +208,9 @@ object DataAnalyser {
               case _ =>
                 cnt
             }
-            (kind.toString, count)
+            (kind, count)
         }
-        addTypesToMap(newCounts, acc)
+        addTypesToMap[QuestionKind](newCounts, acc)
     }
 
     UserSummary(userSummary.id, userSummary.userId, newDataTypes, newQuestionCounts, newLikers)
@@ -268,7 +270,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     fbPosts.foreach {
       post =>
         val selector = BSONDocument("userId" -> userId, "itemId" -> post.id)
-        val availableData = availableDataTypes(post).map(dType => dType.name)
+        val availableData = availableDataTypes(post)
         val itemSummary = ItemSummary(None, userId, post.id, "Post", availableData, availableData.length)
         itemsSummariesCollection.update(selector, itemSummary, upsert = true)
     }
@@ -277,7 +279,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
 
   /**
     * If there are posts or pages in fbPostsIds and fbPagesIds, use those items to finalize the summary (this time taking
-    * into account everything such as post likers, number of similar data types to compute the number of order questions
+    * into account everything such as post reactioners, number of similar data types to compute the number of order questions
     * etc...) otherwise only aggregates the not read ones in the database (initially the items summaries are stored as not
     * read because they were not aggregated completely with old user summary).
     *
@@ -315,24 +317,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
           log.error(s"Could not reach database : $e")
       }
     } else {
-      val selectOldItems = BSONDocument("userId" -> userId, "readForSummary" -> false)
-      val itemsSummariesCursor = itemsSummariesCollection.find(selectOldItems).cursor[ItemSummary]()
-      (for {
-        itemSummaries <- itemsSummariesCursor.collect[List](stopOnError = true)
-
-        postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> itemSummaries.map(is => is.itemId)))
-        postsCursor = postCollection.find(postSelector).cursor[FBPost]()
-        fbPosts <- postsCursor.collect[List](itemSummaries.length, stopOnError = true) if itemSummaries.nonEmpty
-      } yield dealWithOldSummaries(fbPosts, itemSummaries, userSummary, itemsSummariesCollection, userSummaryCollection)
-        ) onFailure {
-        case e =>
-          e.getMessage match {
-            case "Future.filter predicate is not satisfied" =>
-              log.info("There was no element in old summaries.")
-            case any =>
-              log.error(s"Could not reach database : $e")
-          }
-      }
+      log.info(s"There was no final stats to generate (empty lists).")
     }
   }
 
@@ -350,9 +335,9 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   private def finalizeSummary(fbPosts: List[FBPost], fbPages: List[FBPage], notLikedPagesCount: Int, userSummary: UserSummary,
                               itemSummaries: List[ItemSummary], itemsSummariesCollection: BSONCollection,
                               userSummariesCollection: BSONCollection): Unit = {
-    val newLikers = accumulateLikes(fbPosts) ++ userSummary.likers
+    val newReactioners = accumulateReactions(fbPosts) ++ userSummary.reactioners
 
-    val updatedPosts: List[ItemSummary] = updatePostsSummaries(fbPosts, newLikers, itemSummaries)
+    val updatedPosts: List[ItemSummary] = updatePostsSummaries(fbPosts, newReactioners, itemSummaries)
 
     val updatedPages: List[ItemSummary] = updatePagesSummaries(fbPages, notLikedPagesCount)
 
@@ -362,7 +347,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
 
     val newItemsSummaries = (updatedPosts ++ untouchedPosts ++ updatedPages).map {
       is =>
-        ItemSummary(is.id, is.userId, is.itemId, is.itemType, is.dataTypes, is.dataCount, readForSummary = true)
+        ItemSummary(is.id, is.userId, is.itemId, is.itemType, is.dataTypes, is.dataCount)
     }
 
     newItemsSummaries.foreach {
@@ -371,56 +356,18 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
         itemsSummariesCollection.update(selector, itemSummary, upsert = true)
     }
 
-    val newUserSummaries = userSummaryWithNewCounts(newLikers, newItemsSummaries, userSummary)
+    val newUserSummaries = userSummaryWithNewCounts(newReactioners, newItemsSummaries, userSummary)
     val selector = BSONDocument("userId" -> userId)
     userSummariesCollection.update(selector, newUserSummaries, upsert = true)
   }
 
   /**
-    * Aggregates not read items summaries with the user summary.
-    *
-    * @param fbPosts                  handled posts
-    * @param itemSummaries            not read items summaries
-    * @param userSummary              old user summary
-    * @param itemsSummariesCollection collection containing items summaries
-    * @param userSummariesCollection  collection containing user summaries
-    */
-  private def dealWithOldSummaries(fbPosts: List[FBPost], itemSummaries: List[ItemSummary], userSummary: UserSummary,
-                                   itemsSummariesCollection: BSONCollection, userSummariesCollection: BSONCollection): Unit = {
-
-    val newLikers = accumulateLikes(fbPosts) ++ userSummary.likers
-
-    val updatedPosts: List[ItemSummary] = updatePostsSummaries(fbPosts, newLikers, itemSummaries)
-
-
-    val untouchedPosts = itemSummaries.filterNot(
-      is => updatedPosts.exists(ui => ui.userId == is.userId && ui.itemId == is.itemId)
-    )
-
-    val newItemsSummaries = (updatedPosts ++ untouchedPosts).map {
-      is =>
-        ItemSummary(is.id, is.userId, is.itemId, is.itemType, is.dataTypes, is.dataCount, readForSummary = true)
-    }
-
-    newItemsSummaries.foreach {
-      itemSummary =>
-        val selector = BSONDocument("userId" -> userId, "itemId" -> itemSummary.itemId)
-        itemsSummariesCollection.update(selector, itemSummary, upsert = true)
-    }
-
-    val newUserSummary = userSummaryWithNewCounts(newLikers, newItemsSummaries, userSummary)
-    val selector = BSONDocument("userId" -> userId)
-    userSummariesCollection.update(selector, newUserSummary, upsert = true)
-
-  }
-
-  /**
-    * Gets likes from a list of posts
+    * Gets reactions from a list of posts
     *
     * @param fbPosts posts to handle
-    * @return list of likes
+    * @return set of reactions
     */
-  private def accumulateLikes(fbPosts: List[FBPost]): Set[FBReaction] = {
+  private def accumulateReactions(fbPosts: List[FBPost]): Set[FBReaction] = {
     fbPosts.foldLeft(Set[FBReaction]()) {
       (acc: Set[FBReaction], post: FBPost) => {
         post.reactions match {
@@ -432,21 +379,21 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   }
 
   /**
-    * Update post items summaries based on the number of likers
+    * Update post items summaries based on the number of reactioners
     *
     * @param fbPosts       posts to handle
-    * @param likers        likers
+    * @param reactioners   reactioners
     * @param itemSummaries items summaries to update
     * @return list of updated items summaries
     */
-  private def updatePostsSummaries(fbPosts: List[FBPost], likers: Set[FBReaction],
+  private def updatePostsSummaries(fbPosts: List[FBPost], reactioners: Set[FBReaction],
                                    itemSummaries: List[ItemSummary]): List[ItemSummary] = {
     fbPosts.flatMap {
       fbPost =>
-        val likeNumber = fbPost.reactionCount.getOrElse(0)
-        if (likers.size - likeNumber >= 3 && likeNumber > 0) {
+        val reactionsNumber = fbPost.reactionCount.getOrElse(0)
+        if (reactioners.size - reactionsNumber >= 3 && reactionsNumber > 0) {
           val oldItemStat = getItemSummary(userId, fbPost.postId, "Post", itemSummaries)
-          val newDataListing = oldItemStat.dataTypes.toSet + PostWhoReacted.name
+          val newDataListing = oldItemStat.dataTypes.toSet + PostWhoReacted
           Some(ItemSummary(None, userId, oldItemStat.itemId, "Post", newDataListing.toList, newDataListing.size))
         } else {
           None
@@ -464,9 +411,9 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   private def updatePagesSummaries(fbPages: List[FBPage], notLikedPagesCount: Int): List[ItemSummary] = {
     val newDataListing =
       if (notLikedPagesCount >= 3) {
-        List(Time.name, LikeNumber.name, PageWhichLiked.name)
+        List(Time, LikeNumber, PageWhichLiked)
       } else {
-        List(Time.name, LikeNumber.name)
+        List(Time, LikeNumber)
       }
     fbPages.map {
       fbPage =>

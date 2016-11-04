@@ -7,7 +7,6 @@ import me.reminisce.DatabaseFiller
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBFrom, LastFetched}
 import me.reminisce.gameboard.board.GameGenerator.CreateBoard
-import me.reminisce.gameboard.board.GameboardEntities.SubjectType.SubjectType
 import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.server.domain.Domain.InternalError
 import me.reminisce.testutils.database.DatabaseTester
@@ -28,7 +27,7 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
     "generate valid boards." in {
       testWithDb {
         db =>
-          val userId = Source.fromURL(getClass.getResource(testDb + "/userId")).getLines().toList.headOption match {
+          val userId = Source.fromURL(getClass.getResource(s"$testDb/userId")).getLines().toList.headOption match {
             case Some(id) =>
               id
             case None =>
@@ -65,23 +64,23 @@ class GameboardGeneratorSpec extends DatabaseTester("GameBoardGeneratorSpec") {
   def validateSubject(subject: Subject): Unit = {
     subject match {
       case PageSubject(name: String, pageId: String, photoUrl: Option[String], tpe: SubjectType) =>
-        assert(tpe == SubjectType.PageSubject)
+        assert(tpe == PageSubject)
         assert(name.nonEmpty)
         assert(pageId.nonEmpty)
       case TextPostSubject(text: String, tpe: SubjectType, from: Option[FBFrom]) =>
-        assert(tpe == SubjectType.TextPost)
+        assert(tpe == TextPost)
         assert(text.nonEmpty)
       case ImagePostSubject(text: String, imageUrl: Option[String], facebookImageUrl: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
-        assert(tpe == SubjectType.ImagePost)
+        assert(tpe == ImagePost)
         assert(text.nonEmpty)
       case VideoPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
-        assert(tpe == SubjectType.VideoPost)
+        assert(tpe == VideoPost)
         assert(text.nonEmpty)
       case LinkPostSubject(text: String, thumbnailUrl: Option[String], url: Option[String], tpe: SubjectType, from: Option[FBFrom]) =>
-        assert(tpe == SubjectType.LinkPost)
+        assert(tpe == LinkPost)
         assert(text.nonEmpty)
       case CommentSubject(comment: String, post: PostSubject, tpe: SubjectType) =>
-        assert(tpe == SubjectType.CommentSubject)
+        assert(tpe == CommentSubject)
         assert(comment.nonEmpty)
         validateSubject(post)
       case _ =>

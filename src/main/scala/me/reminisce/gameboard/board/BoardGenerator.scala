@@ -4,8 +4,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef}
 import me.reminisce.analysis.DataTypes.DataType
 import me.reminisce.gameboard.board.BoardGenerator.FailedBoardGeneration
 import me.reminisce.gameboard.board.GameGenerator.InitBoardCreation
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
-import me.reminisce.gameboard.board.GameboardEntities.Tile
+import me.reminisce.gameboard.board.GameboardEntities.{Misc, QuestionKind, Tile}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, QueryOpts}
 import reactivemongo.bson.{BSONDocument, BSONDocumentReader}

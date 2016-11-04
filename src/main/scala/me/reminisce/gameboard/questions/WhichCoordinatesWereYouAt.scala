@@ -4,9 +4,7 @@ import akka.actor.Props
 import akka.event.Logging
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.FBPost
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
-import me.reminisce.gameboard.board.GameboardEntities.SpecificQuestionType._
-import me.reminisce.gameboard.board.GameboardEntities.{GeolocationQuestion, Location}
+import me.reminisce.gameboard.board.GameboardEntities.{GeoWhatCoordinatesWereYouAt, Geolocation, GeolocationQuestion, Location}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, FinishedQuestionCreation, MongoDBError, NotEnoughData}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection

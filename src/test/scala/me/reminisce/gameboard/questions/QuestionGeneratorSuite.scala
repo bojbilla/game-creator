@@ -34,7 +34,7 @@ class QuestionGeneratorSuite extends FunSuite {
     subject match {
       case ImagePostSubject(text, pImageUrl, facebookImageUrl, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
-        assert(tpe == SubjectType.ImagePost)
+        assert(tpe == ImagePost)
         assert(pImageUrl.getOrElse("") == imageUrl)
         assert(facebookImageUrl.getOrElse("") == fbImageUrl)
       case x => fail(s"Wrong subject type extracted : $x.")
@@ -51,7 +51,7 @@ class QuestionGeneratorSuite extends FunSuite {
     subject match {
       case VideoPostSubject(text, thumbUrl, vidUrl, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
-        assert(tpe == SubjectType.VideoPost)
+        assert(tpe == VideoPost)
         assert(thumbUrl.getOrElse("") == thumbnailUrl)
         assert(vidUrl.getOrElse("") == videoUrl)
       case x => fail(s"Wrong subject type extracted : $x.")
@@ -68,7 +68,7 @@ class QuestionGeneratorSuite extends FunSuite {
     subject match {
       case LinkPostSubject(text, thumbUrl, shrdLink, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
-        assert(tpe == SubjectType.LinkPost)
+        assert(tpe == LinkPost)
         assert(thumbUrl.getOrElse("") == thumbnailUrl)
         assert(shrdLink.getOrElse("") == sharedUrl)
       case x => fail(s"Wrong subject type extracted : $x.")
@@ -87,7 +87,7 @@ class QuestionGeneratorSuite extends FunSuite {
     subject match {
       case TextPostSubject(text, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
-        assert(tpe == SubjectType.TextPost)
+        assert(tpe == TextPost)
       case x => fail(s"Wrong subject type extracted : $x.")
     }
   }
@@ -101,7 +101,7 @@ class QuestionGeneratorSuite extends FunSuite {
     subject match {
       case TextPostSubject(text, tpe, from) =>
         assert(text == postMessage + "\n" + postStory)
-        assert(tpe == SubjectType.TextPost)
+        assert(tpe == TextPost)
       case x => fail(s"Wrong subject type extracted : $x.")
     }
   }
@@ -172,7 +172,7 @@ class QuestionGeneratorSuite extends FunSuite {
 
     val subjectNoPhotoNoName = QuestionGenerator.subjectFromPage(pageNoPhotoNoName)
 
-    assert(subjectNoPhotoNoName.`type` == SubjectType.PageSubject)
+    assert(subjectNoPhotoNoName.`type` == PageSubject)
     assert(subjectNoPhotoNoName.name == "")
     assert(subjectNoPhotoNoName.pageId == "PageId")
     assert(subjectNoPhotoNoName.photoUrl.isEmpty)
@@ -182,7 +182,7 @@ class QuestionGeneratorSuite extends FunSuite {
 
     val subjectNoPhotoSource = QuestionGenerator.subjectFromPage(pageNoPhotoSource)
 
-    assert(subjectNoPhotoSource.`type` == SubjectType.PageSubject)
+    assert(subjectNoPhotoSource.`type` == PageSubject)
     assert(subjectNoPhotoSource.name == "PageName")
     assert(subjectNoPhotoSource.pageId == "PageId")
     assert(subjectNoPhotoSource.photoUrl.isEmpty)
@@ -191,7 +191,7 @@ class QuestionGeneratorSuite extends FunSuite {
     val fbPage = FBPage(None, "PageId", Some("PageName"), photos = Some(fbPhoto), 0)
     val subject = QuestionGenerator.subjectFromPage(fbPage)
 
-    assert(subject.`type` == SubjectType.PageSubject)
+    assert(subject.`type` == PageSubject)
     assert(subject.name == "PageName")
     assert(subject.pageId == "PageId")
     assert(subject.photoUrl.contains("PhotoUrl"))

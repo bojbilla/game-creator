@@ -5,10 +5,12 @@ import java.util.concurrent.TimeUnit
 import akka.testkit.TestActorRef
 import com.github.nscala_time.time.Imports._
 import me.reminisce.analysis.DataAnalyser.{FinalAnalysis, TransientPostsAnalysis}
+import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.{MongoCollections, MongoDatabaseService}
 import me.reminisce.fetching.config.GraphResponses._
+import me.reminisce.gameboard.board.GameboardEntities.{Geolocation, MultipleChoice, Order, Timeline}
 import me.reminisce.testutils.Retry
 import me.reminisce.testutils.database.DatabaseTester
 import org.joda.time.DateTime
@@ -47,42 +49,6 @@ class DataAnalyserSpec extends DatabaseTester("DataAnalyserSpec") {
                 itemSummary => assert(summaries.contains(itemSummary))
               }
           }
-      }
-    }
-
-    "Deal with old summaries." in {
-      testWithDb {
-        db =>
-          val itemsSummariesCollection = db[BSONCollection](MongoCollections.itemsSummaries)
-          val postCollection = db[BSONCollection](MongoCollections.fbPosts)
-          AnalysisTestData.referenceResult.foreach {
-            itemSummary =>
-              val selector = BSONDocument("userId" -> AnalysisTestData.userId, "itemId" -> itemSummary.itemId)
-              Await.result(itemsSummariesCollection.update(selector, itemSummary, upsert = true), Duration(10, TimeUnit.SECONDS))
-          }
-
-          val fbPosts = AnalysisTestData.posts.map(MongoDatabaseService.postToFBPost(_, AnalysisTestData.userId))
-
-          fbPosts.foreach {
-            post =>
-              val selector = BSONDocument("userId" -> AnalysisTestData.userId, "postId" -> post.postId)
-              Await.result(postCollection.update(selector, post, upsert = true), Duration(10, TimeUnit.SECONDS))
-          }
-
-          val ref = TestActorRef(DataAnalyser.props(AnalysisTestData.userId, db))
-          ref ! FinalAnalysis(Set(), Set())
-
-          val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
-
-          val selector = BSONDocument("userId" -> AnalysisTestData.userId)
-
-          val userSummary = Retry.find[UserSummary](userSummariesCollection, selector, 0)(_ => true)
-
-          val expectedUserSummary = UserSummary(None, "TestDataAnalyserSpec",
-            Map("LikeNumber" -> 1, "PostWhoCommented" -> 1, "PostGeolocation" -> 1, "Time" -> 1, "PostCommentsNumber" -> 1),
-            Map("Order" -> 0, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 1), Set(FBReaction("1", "me", "")))
-
-          assert(userSummary.contains(expectedUserSummary))
       }
     }
 
@@ -133,12 +99,12 @@ class DataAnalyserSpec extends DatabaseTester("DataAnalyserSpec") {
 
           //likers is supposed to grow
           val userSummary = Retry.find[UserSummary](userSummariesCollection, selector, 0) {
-            _.likers.size > AnalysisTestData.sampleUserSummary.likers.size
+            _.reactioners.size > AnalysisTestData.sampleUserSummary.reactioners.size
           }
 
           val expectedUserSummary = UserSummary(None, "TestDataAnalyserSpec",
-            Map("LikeNumber" -> 22, "PostWhoReacted" -> 1, "PostWhoCommented" -> 2, "PostGeolocation" -> 2, "Time" -> 22,
-              "PostCommentsNumber" -> 2), Map("Order" -> 42, "MultipleChoice" -> 3, "Geolocation" -> 2, "Timeline" -> 22),
+            Map(LikeNumber -> 22, PostWhoReacted -> 1, PostWhoCommented -> 2, PostGeolocation -> 2, Time -> 22,
+              PostCommentsNumber -> 2), Map(Order -> 42, MultipleChoice -> 3, Geolocation -> 2, Timeline -> 22),
             Set(FBReaction("1", "me", ""), FBReaction("2", "me2", ""), FBReaction("3", "me3", ""), FBReaction("4", "me4", "")))
 
           assert(userSummary.contains(expectedUserSummary))
@@ -183,10 +149,10 @@ object AnalysisTestData {
   val posts = List(pLikes, pComments, pLoc, pTime)
 
   val referenceResult =
-    List(ItemSummary(None, "TestDataAnalyserSpec", "id1", "Post", List("LikeNumber"), 1, readForSummary = false),
-      ItemSummary(None, "TestDataAnalyserSpec", "id2", "Post", List("PostWhoCommented", "PostCommentsNumber"), 2, readForSummary = false),
-      ItemSummary(None, "TestDataAnalyserSpec", "id3", "Post", List("PostGeolocation"), 1, readForSummary = false),
-      ItemSummary(None, "TestDataAnalyserSpec", "id4", "Post", List("Time"), 1, readForSummary = false))
+    List(ItemSummary(None, "TestDataAnalyserSpec", "id1", "Post", List(LikeNumber), 1),
+      ItemSummary(None, "TestDataAnalyserSpec", "id2", "Post", List(PostWhoCommented, PostCommentsNumber), 2),
+      ItemSummary(None, "TestDataAnalyserSpec", "id3", "Post", List(PostGeolocation), 1),
+      ItemSummary(None, "TestDataAnalyserSpec", "id4", "Post", List(Time), 1))
 
   val pages = (1 to 10).map {
     index =>
@@ -199,8 +165,8 @@ object AnalysisTestData {
   }
 
   val sampleUserSummary = UserSummary(None, userId,
-    Map("LikeNumber" -> 11, "PostWhoCommented" -> 1, "PostGeolocation" -> 1, "Time" -> 11, "PostCommentsNumber" -> 1),
-    Map("Order" -> 18, "MultipleChoice" -> 1, "Geolocation" -> 1, "Timeline" -> 11),
+    Map(LikeNumber -> 11, PostWhoCommented -> 1, PostGeolocation -> 1, Time -> 11, PostCommentsNumber -> 1),
+    Map(Order -> 18, MultipleChoice -> 1, Geolocation -> 1, Timeline -> 11),
     Set(FBReaction("2", "me2", ""), FBReaction("3", "me3", ""), FBReaction("4", "me4", "")))
 
 }

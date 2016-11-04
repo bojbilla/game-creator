@@ -1,7 +1,9 @@
 package me.reminisce.database
 
 import com.github.nscala_time.time.Imports._
+import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.MongoDBEntities.FBReaction
+import me.reminisce.gameboard.board.GameboardEntities.{QuestionKind, strToKind}
 import reactivemongo.bson._
 
 /**
@@ -137,39 +139,71 @@ object MongoDBEntities {
   */
 object AnalysisEntities {
 
+  implicit object DataTypeHandler extends BSONHandler[BSONString, DataType] {
+    override def write(t: DataType): BSONString = BSONString(t.name)
+
+    override def read(bson: BSONString): DataType = stringToType(bson.value)
+  }
+
   case class UserSummary(id: Option[BSONObjectID] = None,
                          userId: String,
-                         dataTypeCounts: Map[String, Int] = Map(),
-                         questionCounts: Map[String, Int] = Map(),
-                         likers: Set[FBReaction] = Set())
+                         dataTypeCounts: Map[DataType, Int] = Map(),
+                         questionCounts: Map[QuestionKind, Int] = Map(),
+                         reactioners: Set[FBReaction] = Set())
 
   object UserSummary {
 
-    def getMapStringIntWriter(implicit intWriter: BSONWriter[Int, BSONInteger]): BSONDocumentWriter[Map[String, Int]] = {
-      new BSONDocumentWriter[Map[String, Int]] {
-        def write(mapIntString: Map[String, Int]): BSONDocument = {
+    def getMapKindIntWriter(implicit intWriter: BSONWriter[Int, BSONInteger]): BSONDocumentWriter[Map[QuestionKind, Int]] = {
+      new BSONDocumentWriter[Map[QuestionKind, Int]] {
+        def write(mapIntString: Map[QuestionKind, Int]): BSONDocument = {
           val elements = mapIntString.toStream.map {
-            case (key, value) => key -> intWriter.write(value)
+            case (key, value) => key.name -> intWriter.write(value)
           }
           BSONDocument(elements)
         }
       }
     }
 
-    def getMapStringIntReader(implicit intReader: BSONReader[BSONInteger, Int]): BSONDocumentReader[Map[String, Int]] = {
-      new BSONDocumentReader[Map[String, Int]] {
-        def read(doc: BSONDocument): Map[String, Int] = {
+    def getMapKindIntReader(implicit intReader: BSONReader[BSONInteger, Int]): BSONDocumentReader[Map[QuestionKind, Int]] = {
+      new BSONDocumentReader[Map[QuestionKind, Int]] {
+        def read(doc: BSONDocument): Map[QuestionKind, Int] = {
           val elements = doc.elements.map {
-            case (key, value) => key -> intReader.read(value.seeAsOpt[BSONInteger].get)
+            case (key, value) => strToKind(key) -> intReader.read(value.seeAsOpt[BSONInteger].get)
           }
           elements.toMap
         }
       }
     }
 
-    implicit val mapStringIntWriter = getMapStringIntWriter
+    def getMapDataTypeIntWriter(implicit intWriter: BSONWriter[Int, BSONInteger]): BSONDocumentWriter[Map[DataType, Int]] = {
+      new BSONDocumentWriter[Map[DataType, Int]] {
+        def write(mapIntString: Map[DataType, Int]): BSONDocument = {
+          val elements = mapIntString.toStream.map {
+            case (key, value) => key.name -> intWriter.write(value)
+          }
+          BSONDocument(elements)
+        }
+      }
+    }
 
-    implicit val mapStringIntReader = getMapStringIntReader
+    def getMapDataTypeIntReader(implicit intReader: BSONReader[BSONInteger, Int]): BSONDocumentReader[Map[DataType, Int]] = {
+      new BSONDocumentReader[Map[DataType, Int]] {
+        def read(doc: BSONDocument): Map[DataType, Int] = {
+          val elements = doc.elements.map {
+            case (key, value) => stringToType(key) -> intReader.read(value.seeAsOpt[BSONInteger].get)
+          }
+          elements.toMap
+        }
+      }
+    }
+
+    implicit val mapKindIntWriter = getMapKindIntWriter
+
+    implicit val mapKindIntReader = getMapKindIntReader
+
+    implicit val mapDataTypeIntReader = getMapDataTypeIntReader
+
+    implicit val mapDataTypeIntWriter = getMapDataTypeIntWriter
 
     implicit val fbReactionFormat = MongoDBEntities.FBReaction.fbReactionFormat
 
@@ -191,9 +225,8 @@ object AnalysisEntities {
                          userId: String,
                          itemId: String,
                          itemType: String,
-                         dataTypes: List[String],
-                         dataCount: Int,
-                         readForSummary: Boolean = false)
+                         dataTypes: List[DataType],
+                         dataCount: Int)
 
   object ItemSummary {
     implicit val itemSummaryFormat = Macros.handler[ItemSummary]

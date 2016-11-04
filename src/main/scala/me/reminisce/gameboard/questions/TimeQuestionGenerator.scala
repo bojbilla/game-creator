@@ -1,8 +1,7 @@
 package me.reminisce.gameboard.questions
 
 import com.github.nscala_time.time.Imports._
-import me.reminisce.gameboard.board.GameboardEntities.TimeUnit
-import me.reminisce.gameboard.board.GameboardEntities.TimeUnit.TimeUnit
+import me.reminisce.gameboard.board.GameboardEntities._
 
 import scala.util.Random
 
@@ -14,7 +13,7 @@ object TimeQuestionGenerator {
     * Each position in the array corresponds to an element in [[org.joda.time.Period]] getValues array, this is used to
     * convert to our custom time units
     */
-  val periodValuesToUnits = Array(TimeUnit.Year, TimeUnit.Month, TimeUnit.Week, TimeUnit.Day)
+  val periodValuesToUnits = Array(Year, Month, Week, Day)
 
   /**
     * Given a date in the past generate a range used for a Timeline question
@@ -39,7 +38,7 @@ object TimeQuestionGenerator {
         val min = actualDate - 1.day.multipliedBy(QuestionGenerationConfig.timelineStepsNumber)
         val defaultNumber = Random.nextInt(QuestionGenerationConfig.timelineStepsNumber + 1)
         val default = min + 1.day.multipliedBy(defaultNumber)
-        (min, default, actualDate, TimeUnit.Day, 1)
+        (min, default, actualDate, Day, 1)
     }
   }
 
@@ -50,11 +49,11 @@ object TimeQuestionGenerator {
     * @return a period which lasts one unit
     */
   def unitToPeriod(unit: TimeUnit): Period = unit match {
-    case TimeUnit.Year =>
+    case Year =>
       1.year
-    case TimeUnit.Month =>
+    case Month =>
       1.month
-    case TimeUnit.Week =>
+    case Week =>
       1.week
     case _ =>
       1.day

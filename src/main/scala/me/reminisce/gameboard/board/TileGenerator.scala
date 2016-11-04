@@ -2,7 +2,6 @@ package me.reminisce.gameboard.board
 
 import akka.actor.{ActorRef, PoisonPill, Props}
 import me.reminisce.analysis.DataTypes._
-import me.reminisce.gameboard.board.GameboardEntities.QuestionKind._
 import me.reminisce.gameboard.board.GameboardEntities.{GameQuestion, _}
 import me.reminisce.gameboard.board.TileGenerator.{CreateTile, FailedTileCreation, FinishedTileCreation}
 import me.reminisce.gameboard.questions.QuestionGenerator._
@@ -44,16 +43,23 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
       val client = sender()
       choices.foreach {
         case (questionKind, dataType, itemIdTypes) =>
-          val generator = questionInference((questionKind, dataType, itemIdTypes))
-          if (questionKind == Order) {
-            generator ! CreateQuestionWithMultipleItems(userId, itemIdTypes.map { case (itemId, itemType) => itemId })
-          } else {
-            itemIdTypes.headOption match {
-              case Some((itemId, itemType)) =>
-                generator ! CreateQuestion(userId, itemId)
-              case None =>
-                client ! FailedTileCreation(s"Choice had no itemId.")
-            }
+          val maybeGenerator = questionInference((questionKind, dataType, itemIdTypes))
+          maybeGenerator match {
+            case Some(generator) =>
+              if (questionKind == Order) {
+                generator ! CreateQuestionWithMultipleItems(userId, itemIdTypes.map {
+                  case (itemId, itemType) => itemId
+                })
+              } else {
+                itemIdTypes.headOption match {
+                  case Some((itemId, itemType)) =>
+                    generator ! CreateQuestion(userId, itemId)
+                  case None =>
+                    client ! FailedTileCreation(s"Choice had no itemId.")
+                }
+              }
+            case None =>
+              log.error(s"Generator could not be inferred from kind $questionKind and type $dataType for user $userId.")
           }
       }
       context.become(awaitingQuestions(client, userId, tpe, List[GameQuestion]()))
@@ -67,7 +73,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
     * @param kindTypeWithItem a tuple representing a question
     * @return a question generator
     */
-  private def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): ActorRef = kindTypeWithItem match {
+  private def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): Option[ActorRef] = kindTypeWithItem match {
     case (kind, tpe, item) =>
       kind match {
         case Order =>
@@ -75,38 +81,41 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
             case LikeNumber =>
               item.headOption match {
                 case Some((_, "Post")) =>
-                  context.actorOf(OrderByPostLikesNumber.props(db))
+                  Some(context.actorOf(OrderByPostLikesNumber.props(db)))
                 case _ =>
-                  context.actorOf(OrderByPageLikes.props(db))
+                  Some(context.actorOf(OrderByPageLikes.props(db)))
               }
             case PostCommentsNumber =>
-              context.actorOf(OrderByPostCommentsNumber.props(db))
+              Some(context.actorOf(OrderByPostCommentsNumber.props(db)))
             case Time =>
               item.headOption match {
                 case Some((_, "Post")) =>
-                  context.actorOf(OrderByPostTime.props(db))
+                  Some(context.actorOf(OrderByPostTime.props(db)))
                 case _ =>
-                  context.actorOf(OrderByPageLikeTime.props(db))
+                  Some(context.actorOf(OrderByPageLikeTime.props(db)))
               }
           }
         case MultipleChoice =>
           tpe match {
             case PostWhoReacted =>
-              context.actorOf(WhoReactedToYourPost.props(db))
+              Some(context.actorOf(WhoReactedToYourPost.props(db)))
             case PostWhoCommented =>
-              context.actorOf(WhoMadeThisCommentOnYourPost.props(db))
+              Some(context.actorOf(WhoMadeThisCommentOnYourPost.props(db)))
             case PageWhichLiked =>
-              context.actorOf(WhichPageDidYouLike.props(db))
+              Some(context.actorOf(WhichPageDidYouLike.props(db)))
           }
         case Timeline =>
           item.headOption match {
             case Some((_, "Post")) =>
-              context.actorOf(WhenDidYouShareThisPost.props(db))
+              Some(context.actorOf(WhenDidYouShareThisPost.props(db)))
             case _ =>
-              context.actorOf(WhenDidYouLikeThisPage.props(db))
+              Some(context.actorOf(WhenDidYouLikeThisPage.props(db)))
           }
         case Geolocation =>
-          context.actorOf(WhichCoordinatesWereYouAt.props(db))
+          Some(context.actorOf(WhichCoordinatesWereYouAt.props(db)))
+
+        case _ =>
+          None
       }
   }
 
