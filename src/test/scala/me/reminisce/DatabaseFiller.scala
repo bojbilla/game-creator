@@ -1,7 +1,7 @@
 package me.reminisce
 
 import com.github.nscala_time.time.Imports._
-import me.reminisce.analysis.DataTypes.{DataType, stringToType}
+import me.reminisce.analysis.DataTypes.{DataType, stringToType, strToItemType}
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike, FBPost, FBReaction}
@@ -26,12 +26,12 @@ object DatabaseFiller {
       JString(dType.name)
   }))
 
-  class ListDTypeSerializer extends CustomSerializer[List[DataType]](implicit formats => ( {
+  class ListDTypeSerializer extends CustomSerializer[Set[DataType]](implicit formats => ( {
     case dTypes: JArray =>
-      dTypes.arr.map(x => x.extract[DataType])
+      dTypes.arr.map(x => x.extract[DataType]).toSet
   }, {
-    case dTypes: List[DataType] =>
-      JArray(dTypes.map(x => JString(x.name)))
+    case dTypes: Set[DataType] =>
+      JArray(dTypes.map(x => JString(x.name)).toList)
   }))
 
   def parseUserSummaries(lines: Iterator[String]): Iterator[UserSummary] = lines.map {
@@ -48,9 +48,10 @@ object DatabaseFiller {
           val questionCounts = (summary \ "questionCounts").extract[Map[String, Int]].map {
             case (key, value) => strToKind(key) -> value
           }
-          val reactioners = (summary \ "reactioners").extract[Set[FBReaction]]
 
-          UserSummary(id, userId, dataTypeCounts, questionCounts, reactioners)
+          val reactioners = (summary \ "reactioners").extract[List[FBReaction]]
+
+          UserSummary(id, userId, dataTypeCounts, questionCounts, reactioners.toSet)
         case _ =>
           throw new IllegalArgumentException("Impossible match case.")
       }
@@ -66,8 +67,8 @@ object DatabaseFiller {
           val id = None
           val userId = (summary \ "userId").extract[String]
           val itemId = (summary \ "itemId").extract[String]
-          val itemType = (summary \ "itemType").extract[String]
-          val dataTypes = (summary \ "dataTypes").extract[List[DataType]]
+          val itemType = strToItemType((summary \ "itemType").extract[String])
+          val dataTypes = (summary \ "dataTypes").extract[Set[DataType]]
           val dataCount = (summary \ "dataCount").extract[Int]
           ItemSummary(id, userId, itemId, itemType, dataTypes, dataCount)
         case _ =>
@@ -116,6 +117,7 @@ object DatabaseFiller {
 
     val posts = simpleExtract[FBPost](folder + "/fbPosts.json")
     storeObjects(db, MongoCollections.fbPosts, posts)
+
     val userSummariesLines = Source.fromURL(getClass.getResource(folder + "/userSummaries.json")).getLines()
     val userSummaries = parseUserSummaries(userSummariesLines)
     storeObjects(db, MongoCollections.userSummaries, userSummaries)

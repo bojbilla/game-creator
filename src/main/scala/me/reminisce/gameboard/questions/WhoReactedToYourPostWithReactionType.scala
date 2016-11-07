@@ -1,9 +1,10 @@
 package me.reminisce.gameboard.questions
 
 import akka.actor.Props
+import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.UserSummary
 import me.reminisce.database.MongoCollections
-import me.reminisce.database.MongoDBEntities.FBPost
+import me.reminisce.database.MongoDBEntities.{FBPost, filterReaction}
 import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import reactivemongo.api.DefaultDB
@@ -25,7 +26,7 @@ object WhoReactedToYourPostWithReactionType {
     * @param database database from which to take the data
     * @return props for the created actor
     */
-  def props(database: DefaultDB, reactionType: String): Props =
+  def props(database: DefaultDB, reactionType: ReactionType): Props =
   Props(new WhoReactedToYourPostWithReactionType(database, reactionType))
 
 }
@@ -35,7 +36,7 @@ object WhoReactedToYourPostWithReactionType {
   *
   * @param db database from which to take the data
   */
-class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: String) extends QuestionGenerator {
+class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: ReactionType) extends QuestionGenerator {
 
   /**
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
@@ -54,7 +55,7 @@ class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: String) 
       (for {
         maybeUserSummary <- userCollection.find(BSONDocument("userId" -> userId)).one[UserSummary]
         postCollection = db[BSONCollection](MongoCollections.fbPosts)
-        maybePost <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId, "reactions" -> BSONDocument("reactionType" -> reactionType))).one[FBPost]
+        maybePost <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost]
       }
         yield {
           val maybeQuestion =
@@ -62,9 +63,7 @@ class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: String) 
               userSummary <- maybeUserSummary
               post <- maybePost
               reactions <- post.reactions
-              reactionerWithType <- Random.shuffle(reactions.filter {
-                _.reactionType == reactionType
-              }).headOption
+              reactionerWithType <- Random.shuffle(filterReaction(reactions, reactionType)).headOption
               if !((userSummary.reactioners -- reactions.toSet).size < 3)
               choices = (reactionerWithType :: Random.shuffle((userSummary.reactioners -- reactions.toSet).toList).take(3)) map {
                 choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
@@ -74,7 +73,7 @@ class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: String) 
               postSubject = subjectFromPost(post)
             }
               yield {
-                MultipleChoiceQuestion(userId, MultipleChoice, getSpecificQuestionType(reactionType), Some(postSubject), shuffled, shuffled.indexOf(answer))
+                MultipleChoiceQuestion(userId, MultipleChoice, reactionDataToQuestion(reactionType), Some(postSubject), shuffled, shuffled.indexOf(answer))
               }
           maybeQuestion match {
             case Some(question) =>
@@ -90,14 +89,14 @@ class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: String) 
     case any => log.error(s"WhoReactedToYourPostWithReactionType received a unexpected message $any")
   }
 
-  private def getSpecificQuestionType(reactionType: String) = {
-    Map(
-      "LIKE" -> MCWhoReactedToYourPostWithLIKE,
-      "WOW" -> MCWhoReactedToYourPostWithWOW,
-      "HAHA" -> MCWhoReactedToYourPostWithHAHA,
-      "LOVE" -> MCWhoReactedToYourPostWithLOVE,
-      "SAD" -> MCWhoReactedToYourPostWithSAD,
-      "ANGRY" -> MCWhoReactedToYourPostWithANGRY
-    )(reactionType)
-  }
+
+  private val reactionDataToQuestion = Map[DataType, SpecificQuestionType](
+    PostWhoLiked -> MCWhoReactedToYourPostWithLIKE,
+    PostWhoWowed -> MCWhoReactedToYourPostWithWOW,
+    PostWhoLaughed -> MCWhoReactedToYourPostWithHAHA,
+    PostWhoLoved -> MCWhoReactedToYourPostWithLOVE,
+    PostWhoGotSad -> MCWhoReactedToYourPostWithSAD,
+    PostWhoGotAngry -> MCWhoReactedToYourPostWithANGRY
+  )
+
 }

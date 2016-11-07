@@ -7,7 +7,6 @@ import me.reminisce.database.MongoDBEntities.FBReaction
 import me.reminisce.fetching.config.GraphResponses._
 import me.reminisce.gameboard.board.GameboardEntities.{Geolocation, MultipleChoice, Order, QuestionKind}
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
-import me.reminisce.testutils.AssertHelpers._
 import org.joda.time.DateTime
 import org.scalatest.FunSuite
 
@@ -62,13 +61,13 @@ class DataAnalyserSuite extends FunSuite {
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
     val timeIsHere = DataAnalyser.availableDataTypes(storyAndTime)
     assert(timeIsHere.nonEmpty && timeIsHere.size == 1)
-    listHeadAssert(timeIsHere)(tpe => tpe == DataTypes.Time)(() => fail("Type not defined."))
+    assert(timeIsHere.contains(Time))
 
     val messageAndTime = Post("id", from = None, message = Some("message"), story = None, place = None, reactions = None,
       `type` = None, link = None, created_time = Some(now), attachments = None, comments = None)
     val timeIsAlsoHere = DataAnalyser.availableDataTypes(messageAndTime)
     assert(timeIsAlsoHere.nonEmpty && timeIsAlsoHere.size == 1)
-    listHeadAssert(timeIsAlsoHere)(tpe => tpe == DataTypes.Time)(() => fail("Type not defined."))
+    assert(timeIsAlsoHere.contains(Time))
   }
 
   test("Geolocation data type.") {
@@ -105,7 +104,7 @@ class DataAnalyserSuite extends FunSuite {
       reactions = None, `type` = None, link = None, created_time = None, attachments = None, comments = None)
     val dataTypes = DataAnalyser.availableDataTypes(p5)
     assert(dataTypes.nonEmpty && dataTypes.size == 1)
-    listHeadAssert(dataTypes)(tpe => tpe == DataTypes.PostGeolocation)(() => fail("Type not defined."))
+    assert(dataTypes.contains(PostGeolocation))
   }
 
   test("WhoCommented and CommentsNumber data types.") {
@@ -149,6 +148,9 @@ class DataAnalyserSuite extends FunSuite {
 
   test("Extract item summary from list of items summaries.") {
     val itemsNumber = 10
+
+    val possibleItemTypes: List[ItemType] = Random.shuffle(List(PostType, PageType))
+
     val users = (0 until itemsNumber).map {
       nb => s"User$nb"
     }
@@ -156,23 +158,23 @@ class DataAnalyserSuite extends FunSuite {
       nb => s"Item$nb"
     }
     val types = (0 until itemsNumber).map {
-      nb => s"Type$nb"
+      nb => possibleItemTypes(nb % possibleItemTypes.length)
     }
 
-    val possibleDataTypes = Random.shuffle(List(Time, PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoReacted))
+    val possibleDataTypes: List[DataType] = Random.shuffle(List(Time, PostCommentsNumber, PostGeolocation, PostWhoCommented, PostWhoReacted))
 
     val dataTypes = (0 until itemsNumber).map {
-      nb => (0 to nb).map(nbb => possibleDataTypes(nb % possibleDataTypes.length)).toList // no empty list here (usage of to)
+      nb => (0 to nb).map(nbb => possibleDataTypes(nb % possibleDataTypes.length)).toSet // no empty list here (usage of to)
     }
     val counts = 1 to itemsNumber //No count equal to 0
     val itemSummaries = (0 until itemsNumber).map {
       nb => ItemSummary(None, users(nb), items(nb), types(nb), dataTypes(nb), counts(nb))
     }.toList
 
-    val empty = DataAnalyser.getItemSummary("Ha", "He", "Hi", itemSummaries)
+    val empty = DataAnalyser.getItemSummary("Ha", "He", PostType, itemSummaries)
     assert(empty.userId == "Ha")
     assert(empty.itemId == "He")
-    assert(empty.itemType == "Hi")
+    assert(empty.itemType == PostType)
     assert(empty.dataTypes.isEmpty)
     assert(empty.dataCount == 0)
 
@@ -195,7 +197,7 @@ class DataAnalyserSuite extends FunSuite {
     val newDataTypes = List[(DataType, Int)]((PostWhoReacted, 7), (PostCommentsNumber, 17)) // prime number is important to test the rounding
     val newItemsSummaries = newDataTypes.flatMap {
       case (tpe, count) => (1 to count).map {
-        any => ItemSummary(userId = userId, itemId = s"item$userId", itemType = "Post", dataTypes = List(tpe), dataCount = 1)
+        any => ItemSummary(userId = userId, itemId = s"item$userId", itemType = PostType, dataTypes = Set(tpe), dataCount = 1)
       }
     }
 

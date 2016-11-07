@@ -63,10 +63,11 @@ object DataAnalyser {
     * @return the new map
     */
   @tailrec
-  def addTypesToMap[T](typesAndCounts: List[(T, Int)], oldMap: Map[T, Int]): Map[T, Int] = {
-    typesAndCounts match {
-      case Nil => oldMap
-      case x :: xs => addTypesToMap(xs, addTypeToMap(x, oldMap))
+  def addTypesToMap[T](typesAndCounts: Iterable[(T, Int)], oldMap: Map[T, Int]): Map[T, Int] = {
+    if (typesAndCounts.isEmpty) {
+      oldMap
+    } else {
+      addTypesToMap(typesAndCounts.tail, addTypeToMap(typesAndCounts.head, oldMap))
     }
   }
 
@@ -77,8 +78,8 @@ object DataAnalyser {
     * @param post post to handle
     * @return a list of data types
     */
-  def availableDataTypes(post: Post): List[DataType] = {
-    List(hasTimeData(post), hasGeolocationData(post), hasWhoCommentedData(post),
+  def availableDataTypes(post: Post): Set[DataType] = {
+    Set(hasTimeData(post), hasGeolocationData(post), hasWhoCommentedData(post),
       hasCommentNumber(post), hasReactionsNumber(post)).flatten
   }
 
@@ -171,10 +172,10 @@ object DataAnalyser {
     * @param itemsSummaries list of items summaries
     * @return found item summary
     */
-  def getItemSummary(userId: String, itemId: String, itemType: String, itemsSummaries: List[ItemSummary]): ItemSummary = {
+  def getItemSummary(userId: String, itemId: String, itemType: ItemType, itemsSummaries: List[ItemSummary]): ItemSummary = {
     itemsSummaries.filter(is => is.userId == userId && is.itemId == itemId) match {
       case Nil =>
-        ItemSummary(None, userId, itemId, itemType, List(), 0)
+        ItemSummary(None, userId, itemId, itemType, Set(), 0)
       case head :: tail =>
         //Normally only one match is possible
         head
@@ -184,12 +185,12 @@ object DataAnalyser {
   /**
     * Aggregates new post reactioners and new items summaries and the old counts in the old user summary to create new user summary
     *
-    * @param newLikers         new post reactioners
+    * @param newReactioners    new post reactioners
     * @param newItemsSummaries new items summaries
     * @param userSummary       old user summary
     * @return new user summary
     */
-  def userSummaryWithNewCounts(newLikers: Set[FBReaction], newItemsSummaries: List[ItemSummary], userSummary: UserSummary): UserSummary = {
+  def userSummaryWithNewCounts(newReactioners: Set[FBReaction], newItemsSummaries: List[ItemSummary], userSummary: UserSummary): UserSummary = {
     val newDataTypes = newItemsSummaries.foldLeft(userSummary.dataTypeCounts) {
       case (acc, itemSummary) => addTypesToMap[DataType](itemSummary.dataTypes.map(dType => (dType, 1)), acc)
     }
@@ -213,7 +214,7 @@ object DataAnalyser {
         addTypesToMap[QuestionKind](newCounts, acc)
     }
 
-    UserSummary(userSummary.id, userSummary.userId, newDataTypes, newQuestionCounts, newLikers)
+    UserSummary(userSummary.id, userSummary.userId, newDataTypes, newQuestionCounts, newReactioners)
   }
 
 }
@@ -271,7 +272,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
       post =>
         val selector = BSONDocument("userId" -> userId, "itemId" -> post.id)
         val availableData = availableDataTypes(post)
-        val itemSummary = ItemSummary(None, userId, post.id, "Post", availableData, availableData.length)
+        val itemSummary = ItemSummary(None, userId, post.id, PostType, availableData, availableData.size)
         itemsSummariesCollection.update(selector, itemSummary, upsert = true)
     }
 
@@ -390,14 +391,30 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
                                    itemSummaries: List[ItemSummary]): List[ItemSummary] = {
     fbPosts.flatMap {
       fbPost =>
+        val oldItemSummary = getItemSummary(userId, fbPost.postId, PostType, itemSummaries)
+        val reactions = fbPost.reactions.getOrElse(List())
+        val addedTypes = stringTypeToReactionType.values.flatMap(maybeReactionType(reactions, reactioners.size)(_)).toSet
         val reactionsNumber = fbPost.reactionCount.getOrElse(0)
         if (reactioners.size - reactionsNumber >= 3 && reactionsNumber > 0) {
-          val oldItemStat = getItemSummary(userId, fbPost.postId, "Post", itemSummaries)
-          val newDataListing = oldItemStat.dataTypes.toSet + PostWhoReacted
-          Some(ItemSummary(None, userId, oldItemStat.itemId, "Post", newDataListing.toList, newDataListing.size))
+          val finalListing = (oldItemSummary.dataTypes ++ addedTypes) + PostWhoReacted
+          Some(ItemSummary(None, userId, oldItemSummary.itemId, PostType, finalListing, finalListing.size))
         } else {
-          None
+          if (addedTypes.nonEmpty) {
+            val finalListing = oldItemSummary.dataTypes ++ addedTypes
+            Some(ItemSummary(None, userId, oldItemSummary.itemId, PostType, finalListing, finalListing.size))
+          } else {
+            None
+          }
         }
+    }
+  }
+
+  private def maybeReactionType(reactions: List[FBReaction], totalReactions: Int)( reactionType: ReactionType): Option[ReactionType] = {
+    val reactionCount = filterReaction(reactions, reactionType).size
+    if (totalReactions - reactionCount >= 3 && reactionCount > 0) {
+      Some(reactionType)
+    } else {
+      None
     }
   }
 
@@ -411,13 +428,13 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   private def updatePagesSummaries(fbPages: List[FBPage], notLikedPagesCount: Int): List[ItemSummary] = {
     val newDataListing =
       if (notLikedPagesCount >= 3) {
-        List(Time, PageLikeNumber, PageWhichLiked)
+        Set[DataType](Time, PageLikeNumber, PageWhichLiked)
       } else {
-        List(Time, PageLikeNumber)
+        Set[DataType](Time, PageLikeNumber)
       }
     fbPages.map {
       fbPage =>
-        ItemSummary(None, userId, fbPage.pageId, "Page", newDataListing, newDataListing.size)
+        ItemSummary(None, userId, fbPage.pageId, PageType, newDataListing, newDataListing.size)
     }
   }
 }

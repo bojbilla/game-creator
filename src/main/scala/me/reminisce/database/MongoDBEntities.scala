@@ -132,6 +132,10 @@ object MongoDBEntities {
     implicit val fbPostFormat = Macros.handler[FBPost]
   }
 
+  def filterReaction(fbReactions: Iterable[FBReaction], reactionType: ReactionType): Iterable[FBReaction] = fbReactions.filter {
+    react => stringTypeToReactionType(react.reactionType) == reactionType
+  }
+
 }
 
 /**
@@ -224,11 +228,18 @@ object AnalysisEntities {
   case class ItemSummary(id: Option[BSONObjectID] = None,
                          userId: String,
                          itemId: String,
-                         itemType: String,
-                         dataTypes: List[DataType],
+                         itemType: ItemType,
+                         dataTypes: Set[DataType],
                          dataCount: Int)
 
   object ItemSummary {
+    implicit val itemTypeWriter = new BSONWriter[ItemType, BSONString] {
+      def write(itemType: ItemType): BSONString = BSONString(itemType.name)
+    }
+
+    implicit val itemTypeReader = new BSONReader[BSONString, ItemType] {
+      def read(value: BSONString): ItemType = strToItemType(value.as[String])
+    }
     implicit val itemSummaryFormat = Macros.handler[ItemSummary]
   }
 

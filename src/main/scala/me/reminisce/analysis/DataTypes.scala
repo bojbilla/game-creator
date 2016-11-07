@@ -35,6 +35,25 @@ object DataTypes {
   // Both
   case object Time extends DataType("Time")
 
+  sealed abstract class ItemType(id: String) {
+    val name: String = id
+  }
+  case object PostType extends ItemType("Post")
+  case object PageType extends ItemType("Page")
+
+  def strToItemType(typeName: String): ItemType = typeName match {
+    case PostType.name => PostType
+    case PageType.name => PageType
+  }
+
+  val stringTypeToReactionType = Map[String, ReactionType] (
+    "LIKE" -> PostWhoLiked,
+    "WOW" -> PostWhoWowed,
+    "HAHA" -> PostWhoLaughed,
+    "LOVE" -> PostWhoLoved,
+    "SAD" -> PostWhoGotSad,
+    "ANGRY" -> PostWhoGotAngry
+  )
 
   val kindToTypes = Map[QuestionKind, List[DataType]](
     MultipleChoice ->

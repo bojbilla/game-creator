@@ -1,7 +1,7 @@
 package me.reminisce.gameboard.board
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import me.reminisce.analysis.DataTypes.DataType
+import me.reminisce.analysis.DataTypes.{DataType, ItemType}
 import me.reminisce.gameboard.board.BoardGenerator.FailedBoardGeneration
 import me.reminisce.gameboard.board.GameGenerator.InitBoardCreation
 import me.reminisce.gameboard.board.GameboardEntities.{Misc, QuestionKind, Tile}
@@ -344,8 +344,8 @@ abstract class BoardGenerator(database: DefaultDB, userId: String) extends Actor
     * @param client          original requester
     * @return the list of tiles definitions
     */
-  protected def generateTiles(generatedTuples: List[(QuestionKind, DataType, List[(String, String)])], client: ActorRef):
-  List[(QuestionKind, List[(QuestionKind, DataType, List[(String, String)])])] = {
+  protected def generateTiles(generatedTuples: List[(QuestionKind, DataType, List[(String, ItemType)])], client: ActorRef):
+  List[(QuestionKind, List[(QuestionKind, DataType, List[(String, ItemType)])])] = {
     if (generatedTuples.length > 27) {
       client ! FailedBoardGeneration(s"Too many tuples generated ${generatedTuples.length}")
     }

@@ -57,7 +57,7 @@ lazy val `game-creator` = project.in(file(".")).configs(IntegrationTest).
     buildInfoPackage := "me.reminisce.server"
   )
 
-lazy val statsModule = RootProject(uri("git://github.com/reminisceme/stats.git#5e7bcd137d9a2134378d8aa2ec381331bc89f7cb"))
+lazy val statsModule = RootProject(uri("git://github.com/reminisceme/stats.git#6a589d316f92c583bb7cba2e53cd372d858efb92"))
 
 buildInfoOptions += BuildInfoOption.BuildTime
 buildInfoOptions += BuildInfoOption.ToJson

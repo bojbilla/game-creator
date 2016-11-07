@@ -22,7 +22,7 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
-@DoNotDiscover
+
 class DataAnalyserSpec extends DatabaseTester("DataAnalyserSpec") {
 
 
@@ -103,10 +103,11 @@ class DataAnalyserSpec extends DatabaseTester("DataAnalyserSpec") {
           }
 
           val expectedUserSummary = UserSummary(None, "TestDataAnalyserSpec",
-            Map(PageLikeNumber-> 10, PostReactionNumber -> 12, PostWhoReacted -> 1, PostWhoCommented -> 2, PostGeolocation -> 2, Time -> 22,
-              PostCommentsNumber -> 2), Map(Order -> 42, MultipleChoice -> 3, Geolocation -> 2, Timeline -> 22),
-            Set(FBReaction("1", "me", ""), FBReaction("2", "me2", ""), FBReaction("3", "me3", ""), FBReaction("4", "me4", "")))
-
+            Map(PostWhoLiked -> 1, PostWhoWowed -> 1, PageLikeNumber-> 10, PostReactionNumber -> 12, PostWhoReacted -> 1,
+              PostWhoCommented -> 2, PostGeolocation -> 2, Time -> 22, PostCommentsNumber -> 2),
+            Map(Order -> 42, MultipleChoice -> 5, Geolocation -> 2, Timeline -> 22),
+            Set(FBReaction("1", "me", "LIKE"), FBReaction("2", "me2", "LIKE"), FBReaction("3", "me3", "LIKE"),
+              FBReaction("4", "me4", "LIKE"), FBReaction("5", "me5", "WOW"), FBReaction("6", "me6", "WOW")))
           assert(userSummary.contains(expectedUserSummary))
       }
     }
@@ -117,9 +118,10 @@ object AnalysisTestData {
 
   val userId = "TestDataAnalyserSpec"
 
-  val like1 = Reaction("1", "me", "")
-  val likes1 = Root[List[Reaction]](data = Some(List(like1)), paging = None, summary = None)
-  val pLikes = Post("id1", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = Some(likes1),
+  val reaction1 = Reaction("1", "me", "LIKE")
+  val reaction2 = Reaction("6", "me6", "WOW")
+  val reactions1 = Root[List[Reaction]](data = Some(List(reaction1, reaction2)), paging = None, summary = None)
+  val pLikes = Post("id1", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = Some(reactions1),
     `type` = None, link = None, created_time = None, attachments = None, comments = None)
 
   val from2 = From(id = "2", name = "a")
@@ -149,10 +151,10 @@ object AnalysisTestData {
   val posts = List(pLikes, pComments, pLoc, pTime)
 
   val referenceResult =
-    List(ItemSummary(None, "TestDataAnalyserSpec", "id1", "Post", List(PostReactionNumber), 1),
-      ItemSummary(None, "TestDataAnalyserSpec", "id2", "Post", List(PostWhoCommented, PostCommentsNumber), 2),
-      ItemSummary(None, "TestDataAnalyserSpec", "id3", "Post", List(PostGeolocation), 1),
-      ItemSummary(None, "TestDataAnalyserSpec", "id4", "Post", List(Time), 1))
+    List(ItemSummary(None, "TestDataAnalyserSpec", "id1", PostType, Set(PostReactionNumber), 1),
+      ItemSummary(None, "TestDataAnalyserSpec", "id2", PostType, Set(PostWhoCommented, PostCommentsNumber), 2),
+      ItemSummary(None, "TestDataAnalyserSpec", "id3", PostType, Set(PostGeolocation), 1),
+      ItemSummary(None, "TestDataAnalyserSpec", "id4", PostType, Set(Time), 1))
 
   val pages = (1 to 10).map {
     index =>
@@ -167,6 +169,7 @@ object AnalysisTestData {
   val sampleUserSummary = UserSummary(None, userId,
     Map(PostReactionNumber -> 11, PostWhoCommented -> 1, PostGeolocation -> 1, Time -> 11, PostCommentsNumber -> 1),
     Map(Order -> 18, MultipleChoice -> 1, Geolocation -> 1, Timeline -> 11),
-    Set(FBReaction("2", "me2", ""), FBReaction("3", "me3", ""), FBReaction("4", "me4", "")))
+    Set(FBReaction("2", "me2", "LIKE"), FBReaction("3", "me3", "LIKE"), FBReaction("4", "me4", "LIKE"),
+      FBReaction("5", "me5", "WOW")))
 
 }

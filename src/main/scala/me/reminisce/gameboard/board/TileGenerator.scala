@@ -21,8 +21,8 @@ object TileGenerator {
   def props(database: DefaultDB): Props =
   Props(new TileGenerator(database))
 
-  // The List[(String, String)] is for (itemId, itemType)
-  case class CreateTile(userId: String, choices: List[(QuestionKind, DataType, List[(String, String)])], tpe: QuestionKind = Misc)
+  // The List[(String, ItemType)] is for (itemId, itemType)
+  case class CreateTile(userId: String, choices: List[(QuestionKind, DataType, List[(String, ItemType)])], tpe: QuestionKind = Misc)
 
   case class FinishedTileCreation(userId: String, tile: Tile)
 
@@ -73,7 +73,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
     * @param kindTypeWithItem a tuple representing a question
     * @return a question generator
     */
-  private def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, String)])): Option[ActorRef] = kindTypeWithItem match {
+  private def questionInference(kindTypeWithItem: (QuestionKind, DataType, List[(String, ItemType)])): Option[ActorRef] = kindTypeWithItem match {
     case (kind, tpe, item) =>
       kind match {
         case Order =>
@@ -86,7 +86,7 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
               Some(context.actorOf(OrderByPostCommentsNumber.props(db)))
             case Time =>
               item.headOption match {
-                case Some((_, "Post")) =>
+                case Some((_, PostType)) =>
                   Some(context.actorOf(OrderByPostTime.props(db)))
                 case _ =>
                   Some(context.actorOf(OrderByPageLikeTime.props(db)))
@@ -102,12 +102,14 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
               Some(context.actorOf(WhoMadeThisCommentOnYourPost.props(db)))
             case PageWhichLiked =>
               Some(context.actorOf(WhichPageDidYouLike.props(db)))
+            case reaction: ReactionType =>
+              Some(context.actorOf(WhoReactedToYourPostWithReactionType.props(db, reaction)))
             case _ =>
               None
           }
         case Timeline =>
           item.headOption match {
-            case Some((_, "Post")) =>
+            case Some((_, PostType)) =>
               Some(context.actorOf(WhenDidYouShareThisPost.props(db)))
             case _ =>
               Some(context.actorOf(WhenDidYouLikeThisPage.props(db)))
