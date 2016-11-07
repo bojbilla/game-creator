@@ -17,37 +17,24 @@ object GameboardEntities {
   }
 
   case object TLWhenDidYouShareThisPost extends SpecificQuestionType("TLWhenDidYouShareThisPost")
-
   case object TLWhenDidYouLikeThisPage extends SpecificQuestionType("TLWhenDidYouLikeThisPage")
 
   case object GeoWhatCoordinatesWereYouAt extends SpecificQuestionType("GeoWhatCoordinatesWereYouAt")
 
   case object MCWhoMadeThisCommentOnYourPost extends SpecificQuestionType("MCWhoMadeThisCommentOnYourPost")
-
   case object MCWhichPageDidYouLike extends SpecificQuestionType("MCWhichPageDidYouLike")
-
   case object MCWhoReactedToYourPost extends SpecificQuestionType("MCWhoReactedToYourPost")
-
   case object MCWhoReactedToYourPostWithLIKE extends SpecificQuestionType("MCWhoReactedToYourPostWithLIKE")
-
   case object MCWhoReactedToYourPostWithWOW extends SpecificQuestionType("MCWhoReactedToYourPostWithWOW")
-
   case object MCWhoReactedToYourPostWithHAHA extends SpecificQuestionType("MCWhoReactedToYourPostWithHAHA")
-
   case object MCWhoReactedToYourPostWithLOVE extends SpecificQuestionType("MCWhoReactedToYourPostWithLOVE")
-
   case object MCWhoReactedToYourPostWithSAD extends SpecificQuestionType("MCWhoReactedToYourPostWithSAD")
-
   case object MCWhoReactedToYourPostWithANGRY extends SpecificQuestionType("MCWhoReactedToYourPostWithANGRY")
 
   case object ORDPageLikes extends SpecificQuestionType("ORDPageLikes")
-
   case object ORDPostCommentsNumber extends SpecificQuestionType("ORDPostCommentsNumber")
-
   case object ORDPostLikesNumber extends SpecificQuestionType("ORDPostLikesNumber")
-
   case object ORDPostTime extends SpecificQuestionType("ORDPostTime")
-
   case object ORDPageLikeTime extends SpecificQuestionType("ORDPageLikeTime")
 
   def strToType(string: String): SpecificQuestionType = string match {
@@ -70,18 +57,14 @@ object GameboardEntities {
     case ORDPageLikeTime.name => ORDPageLikeTime
   }
 
-  sealed class QuestionKind(id: String) extends NamedCaseClass {
+  sealed abstract class QuestionKind(id: String) extends NamedCaseClass {
     override val name: String = id
   }
 
   case object MultipleChoice extends QuestionKind("MultipleChoice")
-
   case object Timeline extends QuestionKind("Timeline")
-
   case object Geolocation extends QuestionKind("Geolocation")
-
   case object Order extends QuestionKind("Order")
-
   case object Misc extends QuestionKind("Misc")
 
 
@@ -102,11 +85,8 @@ object GameboardEntities {
   }
 
   case object Day extends TimeUnit("Day")
-
   case object Week extends TimeUnit("Week")
-
   case object Month extends TimeUnit("Month")
-
   case object Year extends TimeUnit("Year")
 
   def strToTimeUnit(string: String): TimeUnit = string match {
@@ -121,15 +101,10 @@ object GameboardEntities {
   }
 
   case object PageSubject extends SubjectType("Page")
-
   case object TextPost extends SubjectType("TextPost")
-
   case object ImagePost extends SubjectType("ImagePost")
-
   case object VideoPost extends SubjectType("VideoPost")
-
   case object LinkPost extends SubjectType("LinkPost")
-
   case object CommentSubject extends SubjectType("Comment")
 
   def strToSubjectType(string: String): SubjectType = string match {

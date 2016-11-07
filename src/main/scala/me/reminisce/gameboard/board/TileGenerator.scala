@@ -91,6 +91,8 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
                 case _ =>
                   Some(context.actorOf(OrderByPageLikeTime.props(db)))
               }
+            case _ =>
+              None
           }
         case MultipleChoice =>
           tpe match {
@@ -100,6 +102,8 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
               Some(context.actorOf(WhoMadeThisCommentOnYourPost.props(db)))
             case PageWhichLiked =>
               Some(context.actorOf(WhichPageDidYouLike.props(db)))
+            case _ =>
+              None
           }
         case Timeline =>
           item.headOption match {

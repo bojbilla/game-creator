@@ -88,7 +88,7 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
 
       val pairsKindType: List[(QuestionKind, DataType)] = selectedKinds.groupBy(el => el).toList.flatMap {
         case (kind, kindList) =>
-          val possTypes = possibleTypes(kind)
+          val possTypes = kindToTypes(kind)
           val counts = possTypes.map(t => userSummary.dataTypeCounts.getOrElse(t, 0))
           val selectedTypes =
             if (kind == Order) {

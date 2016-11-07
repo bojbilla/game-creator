@@ -1,82 +1,54 @@
 package me.reminisce.analysis
 
 import me.reminisce.gameboard.board.GameboardEntities._
+import me.reminisce.collections.MapExtension._
 
 /**
   * Defines the data types necessary to generate the user summaries.
   */
 object DataTypes {
 
-  abstract class DataType(id: String) {
+  sealed abstract class DataType(id: String) {
     val name: String = id
   }
 
   // Post only
   case object PostGeolocation extends DataType("PostGeolocation")
-
   case object PostWhoCommented extends DataType("PostWhoCommented")
-
-  case object PostWhoReacted extends DataType("PostWhoReacted")
-
   case object PostCommentsNumber extends DataType("PostCommentsNumber")
-
   case object PostReactionNumber extends DataType("PostReactionNumber")
+
+  // Reactions
+  abstract class ReactionType(id: String) extends DataType(id)
+  case object PostWhoReacted extends ReactionType("PostWhoReacted")
+  case object PostWhoLiked extends ReactionType("PostWhoLiked")
+  case object PostWhoWowed extends ReactionType("PostWhoWowed")
+  case object PostWhoLaughed extends ReactionType("PostWhoLaughed")
+  case object PostWhoLoved extends ReactionType("PostWhoLoved")
+  case object PostWhoGotSad extends ReactionType("PostWhoGotSad")
+  case object PostWhoGotAngry extends ReactionType("PostWhoGotAngry")
 
   // Page Only
   case object PageWhichLiked extends DataType("PageWhichLiked")
-
   case object PageLikeNumber extends DataType("PageLikeNumber")
 
   // Both
   case object Time extends DataType("Time")
 
 
-  /**
-    * Possible data types for a given question kind
-    *
-    * @param questionKind question kind
-    * @return list of data types
-    */
-  def possibleTypes(questionKind: QuestionKind): List[DataType] = questionKind match {
-    case MultipleChoice =>
-      List(PostWhoReacted, PostWhoCommented, PageWhichLiked)
-    case Timeline =>
-      List(Time)
-    case Geolocation =>
-      List(PostGeolocation)
-    case Order =>
+  val kindToTypes = Map[QuestionKind, List[DataType]](
+    MultipleChoice ->
+      List(PostWhoReacted, PostWhoCommented, PageWhichLiked, PostWhoLiked, PostWhoWowed, PostWhoLaughed, PostWhoLoved,
+      PostWhoGotSad, PostWhoGotAngry),
+    Timeline ->
+      List(Time),
+    Geolocation ->
+      List(PostGeolocation),
+    Order ->
       List(PostReactionNumber, PageLikeNumber, PostCommentsNumber, Time)
-    case _ =>
-      List()
-  }
+  )
 
-  /**
-    * Possible question kinds for given data type
-    *
-    * @param dataType data type
-    * @return list of question kinds
-    */
-  def possibleKind(dataType: DataType): List[QuestionKind] = dataType match {
-    case Time =>
-      List(Timeline, Order)
-    case PostGeolocation =>
-      List(Geolocation)
-    case PostWhoCommented =>
-      List(MultipleChoice)
-    case PostWhoReacted =>
-      List(MultipleChoice)
-    case PostCommentsNumber =>
-      List(Order)
-    case PageWhichLiked =>
-      List(MultipleChoice)
-    case PostReactionNumber =>
-      List(Order)
-    case PageLikeNumber =>
-      List(Order)
-    case _ =>
-      List()
-  }
-
+  val typeToKinds = kindToTypes.reverse
   /**
     * Converts a string naming a data type to a DataType object
     *
@@ -90,6 +62,12 @@ object DataTypes {
     case PostCommentsNumber.name => PostCommentsNumber
     case PageWhichLiked.name => PageWhichLiked
     case PostReactionNumber.name => PostReactionNumber
+    case PostWhoLiked.name => PostWhoLiked
+    case PostWhoWowed.name => PostWhoWowed
+    case PostWhoLaughed.name => PostWhoLaughed
+    case PostWhoLoved.name => PostWhoLoved
+    case PostWhoGotSad.name => PostWhoGotSad
+    case PostWhoGotAngry.name => PostWhoGotAngry
     case PageLikeNumber.name => PageLikeNumber
     case Time.name => Time
   }
