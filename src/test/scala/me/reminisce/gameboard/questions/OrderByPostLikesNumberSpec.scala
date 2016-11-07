@@ -26,7 +26,7 @@ class OrderByPostLikesNumberSpec extends QuestionTester("OrderByPostLikesNumberS
         db =>
           val itemIds = List("This user does not exist")
 
-          val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
+          val actorRef = TestActorRef(OrderByPostReactionsNumber.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
           testProbe.expectMsg(NotEnoughData(s"Not enough posts in list."))
@@ -54,7 +54,7 @@ class OrderByPostLikesNumberSpec extends QuestionTester("OrderByPostLikesNumberS
               Await.result(postsCollection.update(posts(nb), posts(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
           }
 
-          val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
+          val actorRef = TestActorRef(OrderByPostReactionsNumber.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
 

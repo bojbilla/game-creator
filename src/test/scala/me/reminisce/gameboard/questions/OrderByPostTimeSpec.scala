@@ -58,7 +58,7 @@ class OrderByPostTimeSpec extends QuestionTester("OrderByPostTimeSpec") {
               Await.result(postsCollection.update(posts(nb), posts(nb), WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
           }
 
-          val actorRef = TestActorRef(OrderByPostLikesNumber.props(db))
+          val actorRef = TestActorRef(OrderByPostReactionsNumber.props(db))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestionWithMultipleItems(userId, itemIds))
 

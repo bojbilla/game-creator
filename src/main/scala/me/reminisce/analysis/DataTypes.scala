@@ -20,12 +20,14 @@ object DataTypes {
 
   case object PostCommentsNumber extends DataType("PostCommentsNumber")
 
+  case object PostReactionNumber extends DataType("PostReactionNumber")
+
   // Page Only
   case object PageWhichLiked extends DataType("PageWhichLiked")
 
-  // Both
-  case object LikeNumber extends DataType("LikeNumber")
+  case object PageLikeNumber extends DataType("PageLikeNumber")
 
+  // Both
   case object Time extends DataType("Time")
 
 
@@ -43,7 +45,7 @@ object DataTypes {
     case Geolocation =>
       List(PostGeolocation)
     case Order =>
-      List(LikeNumber, PostCommentsNumber, Time)
+      List(PostReactionNumber, PageLikeNumber, PostCommentsNumber, Time)
     case _ =>
       List()
   }
@@ -67,7 +69,9 @@ object DataTypes {
       List(Order)
     case PageWhichLiked =>
       List(MultipleChoice)
-    case LikeNumber =>
+    case PostReactionNumber =>
+      List(Order)
+    case PageLikeNumber =>
       List(Order)
     case _ =>
       List()
@@ -81,17 +85,12 @@ object DataTypes {
     */
   def stringToType(typeName: String): DataType = typeName match {
     case PostGeolocation.name => PostGeolocation
-
     case PostWhoCommented.name => PostWhoCommented
-
     case PostWhoReacted.name => PostWhoReacted
-
     case PostCommentsNumber.name => PostCommentsNumber
-
     case PageWhichLiked.name => PageWhichLiked
-
-    case LikeNumber.name => LikeNumber
-
+    case PostReactionNumber.name => PostReactionNumber
+    case PageLikeNumber.name => PageLikeNumber
     case Time.name => Time
   }
 

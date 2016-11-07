@@ -138,13 +138,13 @@ class DataAnalyserSuite extends FunSuite {
   test("LikesNumber data type.") {
     val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(!DataAnalyser.availableDataTypes(p1).contains(DataTypes.LikeNumber))
+    assert(!DataAnalyser.availableDataTypes(p1).contains(DataTypes.PostReactionNumber))
 
     val like1 = Reaction("1", "", "")
     val likes1 = Root[List[Reaction]](data = Some(List(like1)), paging = None, summary = None)
     val p2 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = Some(likes1),
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
-    assert(DataAnalyser.availableDataTypes(p2).contains(DataTypes.LikeNumber))
+    assert(DataAnalyser.availableDataTypes(p2).contains(DataTypes.PostReactionNumber))
   }
 
   test("Extract item summary from list of items summaries.") {

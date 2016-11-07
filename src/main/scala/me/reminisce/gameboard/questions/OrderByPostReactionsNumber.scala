@@ -8,9 +8,9 @@ import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
 
 /**
-  * Factory for [[me.reminisce.gameboard.questions.OrderByPostLikesNumber]]
+  * Factory for [[me.reminisce.gameboard.questions.OrderByPostReactionsNumber]]
   */
-object OrderByPostLikesNumber {
+object OrderByPostReactionsNumber {
 
   /**
     * Creates an OrderByPostLikesNumber question generator
@@ -19,7 +19,7 @@ object OrderByPostLikesNumber {
     * @return props for the created actor
     */
   def props(database: DefaultDB): Props =
-  Props(new OrderByPostLikesNumber(database))
+  Props(new OrderByPostReactionsNumber(database))
 }
 
 /**
@@ -27,7 +27,7 @@ object OrderByPostLikesNumber {
   *
   * @param db database from which to take the data
   */
-class OrderByPostLikesNumber(db: DefaultDB) extends OrderQuestionGenerator {
+class OrderByPostReactionsNumber(db: DefaultDB) extends OrderQuestionGenerator {
 
   /**
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the

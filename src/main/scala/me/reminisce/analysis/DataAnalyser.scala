@@ -79,7 +79,7 @@ object DataAnalyser {
     */
   def availableDataTypes(post: Post): List[DataType] = {
     List(hasTimeData(post), hasGeolocationData(post), hasWhoCommentedData(post),
-      hasCommentNumber(post), hasLikeNumber(post)).flatten
+      hasCommentNumber(post), hasReactionsNumber(post)).flatten
   }
 
   /**
@@ -148,15 +148,15 @@ object DataAnalyser {
   }
 
   /**
-    * Checks if post has likes
+    * Checks if post has reactions
     *
     * @param post post to handle
     * @return a data type option
     */
-  private def hasLikeNumber(post: Post): Option[DataType] = {
-    val likeCount = post.reactions.flatMap(root => root.data).getOrElse(List()).size
-    if (likeCount > 0) {
-      Some(LikeNumber)
+  private def hasReactionsNumber(post: Post): Option[DataType] = {
+    val reactionsCount = post.reactions.flatMap(root => root.data).getOrElse(List()).size
+    if (reactionsCount > 0) {
+      Some(PostReactionNumber)
     } else {
       None
     }
@@ -411,9 +411,9 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   private def updatePagesSummaries(fbPages: List[FBPage], notLikedPagesCount: Int): List[ItemSummary] = {
     val newDataListing =
       if (notLikedPagesCount >= 3) {
-        List(Time, LikeNumber, PageWhichLiked)
+        List(Time, PageLikeNumber, PageWhichLiked)
       } else {
-        List(Time, LikeNumber)
+        List(Time, PageLikeNumber)
       }
     fbPages.map {
       fbPage =>
