@@ -22,9 +22,8 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
-
+@DoNotDiscover
 class DataAnalyserSpec extends DatabaseTester("DataAnalyserSpec") {
-
 
   "DataAnalyser" must {
     "Save \"on the fly\" analysis." in {
