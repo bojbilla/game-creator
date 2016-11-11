@@ -11,7 +11,14 @@ object MapExtension {
           (key, values) <- map.toIterable
           value <- values
         } yield (value, key)
-      ).groupBy(_._1).map(elm => (elm._1, elm._2.map(_._2).toList))
+      ).groupBy {
+        case (key, value) => key
+      }.map {
+        case (key, iterable) =>
+          key -> (iterable.unzip match {
+            case (keys, values) => values.toList
+          })
+      }
     }
   }
 
