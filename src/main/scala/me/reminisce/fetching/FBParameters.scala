@@ -8,14 +8,12 @@ import com.github.nscala_time.time.Imports._
   * @param userId          user for which we want data
   * @param access_token    access_token for the user
   * @param query           the actual query
-  * @param minimalEntities minimum number of entities
   * @param since           from which we want entities
   * @param until           until when we want entities
   */
 case class FBParameters(userId: Option[String] = None,
                         access_token: Option[String] = None,
                         query: Option[String] = None,
-                        minimalEntities: Int = 0,
                         since: DateTime = DateTime.now - 1.year,
                         until: DateTime = DateTime.now) {
   /**

@@ -1,8 +1,8 @@
 package me.reminisce.fetching.retrievers
 
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorRef, PoisonPill, Props}
 import me.reminisce.fetching.config.GraphResponses.Page
-import me.reminisce.fetching.retrievers.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, PartialResult, RetrieveEntities}
+import me.reminisce.fetching.retrievers.RetrieveEntitiesService.{FinishedRetrievingEntities, RetrieveError, PartialResult, RetrieveEntities}
 import me.reminisce.fetching.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
 
 /**
@@ -46,7 +46,7 @@ class RetrieveLikedPages extends RetrieveData {
     * Awaits the response from the RetrieveEntitiesService. Handles the following messages:
     * - PartialResult(entities): a partial result, sends it back to client
     * - FinishedRetrievingEntities(entities): last retrieved entities, sends it to client
-    * - NotEnoughData(entities): not enough data was found, sends the found ones to client
+    * - RetrieveError(message): error while retrieving
     *
     * @param client      original requester
     * @param entityCount current retrieved entities count
@@ -59,9 +59,11 @@ class RetrieveLikedPages extends RetrieveData {
     case FinishedRetrievingEntities(entities) =>
       log.info(s"Received ${entityCount + entities.length} liked pages.")
       client ! FinishedRetrievingLikedPages(entities.asInstanceOf[Vector[Page]])
-    case NotEnoughFound(entities) =>
-      log.info(s"Received not enough (${entityCount + entities.length}) liked pages.")
-      client ! FinishedRetrievingLikedPages(entities.asInstanceOf[Vector[Page]])
+      sender() ! PoisonPill
+    case RetrieveError(message) =>
+      log.info(s"Retrieval error : $message")
+      client ! FinishedRetrievingLikedPages(Vector())
+      sender() ! PoisonPill
     case _ => log.error("RetrieveLikedPages received unexpected message")
   }
 }

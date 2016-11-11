@@ -11,7 +11,6 @@ import spray.client.pipelining._
 import spray.http.StatusCodes._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success, Try}
 
@@ -20,29 +19,16 @@ import scala.util.{Failure, Success, Try}
   */
 object RetrieveEntitiesService {
 
-  //Used for starting to fetch data on facebook
   case class RetrieveEntities(params: FBParameters) extends RestMessage
 
-  //Will be sent if not enough entities were found in the provided time span
-  //facebook parameter since <-> until
-  case class NotEnoughFound[A: TypeTag : ClassTag](entities: Vector[A])
+  case class RetrieveError(message: String = "")
 
-  //Will be sent if the required minimum or more entities were found
   case class FinishedRetrievingEntities[A: TypeTag](entities: Vector[A])
 
   case class PartialResult[A: TypeTag](entities: Vector[A])
 
-
-  private case class NotEnoughRetrieved[A](client: ActorRef,
-                                           paging: Option[Paging],
-                                           minimum: Int,
-                                           count: Int = 0,
-                                           entities: Vector[A] = Vector())
-
   private case class GetEntities[A](client: ActorRef,
-                                    path: String,
-                                    minimum: Int,
-                                    count: Int = 0)
+                                    path: String)
 
   /**
     * Creates a retrieve entities service
@@ -79,8 +65,8 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
         }
       }
       // The retriever will keep retrieving entities as long as GetEntities messages are sent
-      context.become(retrieveEntities())
-      self ! GetEntities[T](originalSender, path, params.minimalEntities)
+      context.become(retrieveEntities(path))
+      self ! GetEntities[T](originalSender, path)
     case any =>
       log.error(s"RetrieveEntitiesService received an unexpected message : $any.")
   }
@@ -90,17 +76,13 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
     * are received. The following messages are handled:
     * - GetEntities(client, path, minimum, count): retrieves new entities for client with path, at least minimum entities
     * must be retrieved, the current number of entities is count
-    * - NotEnoughRetrieved(client, paging, minimum, count, entities): states that not enough entities were retrieved up
-    * to now, a GetEntities(client, path, minimum, count) message will be sent to self if paging contains enough
-    * information to get more entities
     *
+    * @param originalPath original path, used when after is provided but not next in paging
     * @return Nothing
     */
-  private def retrieveEntities(): Receive = {
-    case GetEntities(client, path, minimum, count) =>
-      handleGetEntities(client, path, minimum, count)
-    case NotEnoughRetrieved(client, paging, minimum, count, entities: Vector[T]) =>
-      handleNotEnough(client, paging, minimum, count, entities)
+  private def retrieveEntities(originalPath: String): Receive = {
+    case GetEntities(client, path) =>
+      handleGetEntities(client, originalPath, path)
     case any =>
       log.error(s"RetrieveEntitiesService received an unexpected message : $any.")
   }
@@ -111,13 +93,12 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
     * are retrieved a termination message is sent ot the client otherwise a prtial result is sent to the client and a
     * NotEnoughRetrieved message is sent to self
     *
-    * @param client  original requester
-    * @param path    request path
-    * @param minimum minimum number of entities to retrieve, 0 means no minimum
-    * @param count   current number of entities retrieved
+    * @param client       original requester
+    * @param originalPath original path, used when after is provided but not next in paging
+    * @param path         request path
     */
-  private def handleGetEntities(client: ActorRef, path: String, minimum: Int, count: Int = 0): Unit = {
-    log.debug(s"Retriever path: $path")
+  private def handleGetEntities(client: ActorRef, originalPath: String, path: String): Unit = {
+    log.error(s"Retriever path: $path")
     val responseF = pipelineRawJson(Get(path))
     responseF.onComplete {
       case Success(r) =>
@@ -134,66 +115,44 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
                 filter(Vector(entity))
             }
 
-            val newCount = count + newEntities.length
-            if (newCount < minimum || minimum == 0) {
-              self ! NotEnoughRetrieved(client, root.paging, minimum, newCount, newEntities)
-            } else {
-              client ! FinishedRetrievingEntities[T](newEntities)
-            }
+            handlePaging(client, root.paging, newEntities, originalPath)
+
           case BadRequest =>
-            log.error(s"Facebook gave bad request for path: $path")
-            client ! NotEnoughFound(Vector[T]())
+            client ! RetrieveError(s"Facebook gave bad request for path: $path")
           case _ =>
-            client ! NotEnoughFound(Vector[T]())
-            log.error(s"Can't retrieve entities due to unknown error ${r.status}")
+            client ! RetrieveError(s"Can't retrieve entities due to unknown error ${r.status}")
         }
       case Failure(error) =>
-        log.error(s"Facebook didn't respond \npath:$path\n  ${error.toString}")
-        client ! NotEnoughFound(Vector[T]())
-        context.become(receive)
+        client ! RetrieveError(s"Facebook didn't respond, path:$path,  ${error.toString}")
 
       case _ =>
-        log.error(s"Facebook didn't respond \npath:$path.")
-        client ! NotEnoughFound(Vector[T]())
-        context.become(receive)
+        client ! RetrieveError(s"Facebook didn't respond, path:$path.")
     }
   }
 
   /**
-    * Handles NotEnoughRetrieved message. If paging provides enough information a GetEntities request is sent to self,
-    * otherwise if the minimum is not met sends a failure message to the client, finally if the minimum is met, a
-    * termination message is sent to the client.
+    * Looks into paging in order to continue retrieving more entities
     *
-    * @param client   original requester
-    * @param paging   paging information (see Facebook graph api documentation)
-    * @param minimum  minimum number of information to retrieve, 0 means no minimum
-    * @param count    current number of entities retrieved
-    * @param entities the retrieved entities with last request
+    * @param client       original requester
+    * @param maybePaging  paging information (see Facebook graph api documentation)
+    * @param entities     the retrieved entities with last request
+    * @param originalPath original path, used when after is provided but not next in paging
     */
-  private def handleNotEnough(client: ActorRef, paging: Option[Paging], minimum: Int, count: Int = 0,
-                              entities: Vector[T]): Unit = {
-    paging match {
-      case Some(p) => p.next match {
-        case Some(next) =>
-          self ! GetEntities(client, next, minimum, count)
-          client ! PartialResult(entities)
-        case None =>
-          if (minimum == 0) {
-            client ! FinishedRetrievingEntities(entities)
-          } else {
-            log.info(s"Not enough found end of paging")
-            client ! NotEnoughFound(entities)
-          }
-          context.become(receive)
-      }
+  private def handlePaging(client: ActorRef, maybePaging: Option[Paging], entities: Vector[T], originalPath: String): Unit = {
+    val maybeNext: Option[String] = maybePaging.flatMap(_.next)
+    maybeNext match {
+      case Some(next) =>
+        client ! PartialResult(entities)
+        handleGetEntities(client, originalPath, next)
       case None =>
-        if (minimum == 0) {
-          client ! FinishedRetrievingEntities(entities)
-        } else {
-          log.info(s"Not enough found end of paging")
-          client ! NotEnoughFound(entities)
+        val maybeAfter = maybePaging.flatMap(_.cursors.flatMap(_.after))
+        maybeAfter match {
+          case Some(after) =>
+            client ! PartialResult(entities)
+            handleGetEntities(client, originalPath, s"$originalPath&after=$after")
+          case None =>
+            client ! FinishedRetrievingEntities(entities)
         }
-        context.become(receive)
     }
   }
 

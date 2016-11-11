@@ -1,7 +1,6 @@
 package me.reminisce.fetching.retrievers
 
 import akka.actor.{Actor, ActorContext, ActorLogging}
-import akka.event.LogSource
 import me.reminisce.fetching.config.FacebookServiceConfig
 import org.json4s.DefaultFormats
 import spray.client.pipelining._
@@ -10,17 +9,6 @@ import spray.http.MediaTypes._
 import spray.http.{HttpRequest, HttpResponse}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
-
-/**
-  * Custom logging class
-  */
-object MyLogger {
-  implicit val logSource: LogSource[AnyRef] = new LogSource[AnyRef] {
-    def genString(o: AnyRef): String = o.getClass.getName
-
-    override def getClazz(o: AnyRef): Class[_] = o.getClass
-  }
-}
 
 /**
   * Basic abstract retriever actor class

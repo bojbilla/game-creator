@@ -1,8 +1,8 @@
 package me.reminisce.fetching.retrievers
 
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorRef, PoisonPill, Props}
 import me.reminisce.fetching.config.GraphResponses.Post
-import me.reminisce.fetching.retrievers.RetrieveEntitiesService.{FinishedRetrievingEntities, NotEnoughFound, PartialResult, RetrieveEntities}
+import me.reminisce.fetching.retrievers.RetrieveEntitiesService.{FinishedRetrievingEntities, RetrieveError, PartialResult, RetrieveEntities}
 import me.reminisce.fetching.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
 
 /**
@@ -49,7 +49,7 @@ class RetrievePosts extends RetrieveData {
     * Awaits the response from the RetrieveEntitiesService. Handles the following messages:
     * - PartialResult(entities): a partial result, sends it back to client
     * - FinishedRetrievingEntities(entities): last retrieved entities, sends it to client
-    * - NotEnoughData(entities): not enough data was found, sends the found ones to client
+    * - RetrieveError(message): error while retrieving
     *
     * @param client      original requester
     * @param entityCount current retrieved entities count
@@ -62,9 +62,11 @@ class RetrievePosts extends RetrieveData {
     case PartialResult(entities) =>
       context.become(awaitResponse(client, entityCount + entities.length))
       client ! PartialPostsResult(entities.asInstanceOf[Vector[Post]])
-    case NotEnoughFound(entities) =>
-      log.info(s"Received not enough (${entityCount + entities.length}) posts.")
-      client ! FinishedRetrievingPosts(entities.asInstanceOf[Vector[Post]])
+      sender() ! PoisonPill
+    case RetrieveError(message) =>
+      log.info(s"Retrieval error : $message")
+      client ! FinishedRetrievingPosts(Vector())
+      sender() ! PoisonPill
     case _ => log.error("RetrievingTaggedPosts received unexpected message")
 
   }
