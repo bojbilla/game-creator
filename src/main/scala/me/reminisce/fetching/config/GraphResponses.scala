@@ -14,7 +14,9 @@ object GraphResponses {
 
   case class Root[T](data: Option[T], paging: Option[Paging], summary: Option[Summary] = None)
 
-  case class Paging(previous: Option[String], next: Option[String])
+  case class Paging(previous: Option[String], next: Option[String], cursors: Option[Cursors])
+
+  case class Cursors(before: Option[String], after: Option[String])
 
   case class Post(id: String,
                   from: Option[From],
@@ -40,31 +42,11 @@ object GraphResponses {
 
   case class AttachmentImage(height: Int, width: Int, src: String)
 
-  case class UnloggedFaceBookUser(id: String, first_name: String, gender: String,
-                                  last_name: String, link: String, locale: String,
-                                  name: String, updated_time: String)
-
-  case class Avatar(url: String, width: Option[Double], height: Option[Double], is_silhouette: Boolean)
-
-  case class Pictures(picture: List[Picture])
-
-  //Picture needs to be optional as FB still returns picture less entities
-  //Even when searched for only with pictures
-  case class Picture(id: String,
-                     picture: Option[String],
-                     created_time: String,
-                     reactions: Root[List[Reaction]],
-                     comments: Root[List[Comment]],
-                     from: Option[From],
-                     images: Option[List[Image]],
-                     name: Option[String],
-                     tags: Option[List[Tag]])
-
   case class Tag(id: Option[String], name: Option[String], created_time: Option[DateTime], x: Option[Double], y: Option[Double])
 
   case class Image(height: Int, width: Int, source: String)
 
-  case class Friend(id: String, name: String, picture: Option[Root[Avatar]])
+  case class Friend(id: String, name: String)
 
   case class Reaction(id: String, name: String, `type`: String)
 
@@ -84,9 +66,6 @@ object GraphResponses {
                       longitude: Option[Double],
                       street: Option[String],
                       zip: Option[String])
-
-
-  case class Test(message: String)
 
   case class AccessTokenResponse(access_token: String, token_type: String, expires_in: Option[String])
 

@@ -94,7 +94,7 @@ class DataAnalyserSpec extends DatabaseTester("DataAnalyserSpec") {
           val fbPageIds = AnalysisTestData.pages.map(page => page.pageId).toSet
 
           val ref = TestActorRef(DataAnalyser.props(AnalysisTestData.userId, db))
-          ref ! FinalAnalysis(fbPostIds, fbPageIds)
+          ref ! FinalAnalysis(fbPostIds, fbPageIds, Set())
 
           //reactioners is supposed to grow
           val userSummary = Retry.find[UserSummary](userSummariesCollection, selector, 0) {
@@ -106,7 +106,7 @@ class DataAnalyserSpec extends DatabaseTester("DataAnalyserSpec") {
               PostWhoCommented -> 2, PostGeolocation -> 2, Time -> 22, PostCommentsNumber -> 2),
             Map(Order -> 42, MultipleChoice -> 5, Geolocation -> 2, Timeline -> 22),
             Set(FBReaction("1", "me", "LIKE"), FBReaction("2", "me2", "LIKE"), FBReaction("3", "me3", "LIKE"),
-              FBReaction("4", "me4", "LIKE"), FBReaction("5", "me5", "WOW"), FBReaction("6", "me6", "WOW")))
+              FBReaction("4", "me4", "LIKE"), FBReaction("5", "me5", "WOW"), FBReaction("6", "me6", "WOW")), Set())
           assert(userSummary.contains(expectedUserSummary))
       }
     }
@@ -169,6 +169,6 @@ object AnalysisTestData {
     Map(PostReactionNumber -> 11, PostWhoCommented -> 1, PostGeolocation -> 1, Time -> 11, PostCommentsNumber -> 1),
     Map(Order -> 18, MultipleChoice -> 1, Geolocation -> 1, Timeline -> 11),
     Set(FBReaction("2", "me2", "LIKE"), FBReaction("3", "me3", "LIKE"), FBReaction("4", "me4", "LIKE"),
-      FBReaction("5", "me5", "WOW")))
+      FBReaction("5", "me5", "WOW")), Set())
 
 }

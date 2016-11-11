@@ -2,7 +2,8 @@ package me.reminisce.database
 
 import com.github.nscala_time.time.Imports._
 import me.reminisce.analysis.DataTypes._
-import me.reminisce.database.MongoDBEntities.FBReaction
+import me.reminisce.database.MongoDBEntities.{FBFriend, FBReaction}
+import me.reminisce.fetching.config.GraphResponses.Friend
 import me.reminisce.gameboard.board.GameboardEntities.{QuestionKind, strToKind}
 import reactivemongo.bson._
 
@@ -136,6 +137,17 @@ object MongoDBEntities {
     react => stringTypeToReactionType(react.reactionType) == reactionType
   }
 
+  // Id is impossible to get for people not playing the game
+  case class FBFriend(name: String) {
+    def this(friend: Friend) = this(friend.name)
+  }
+
+  object FBFriend {
+    implicit val fbFriendFormat = Macros.handler[FBFriend]
+
+    def apply(friend: Friend): FBFriend = new FBFriend(friend)
+  }
+
 }
 
 /**
@@ -153,7 +165,8 @@ object AnalysisEntities {
                          userId: String,
                          dataTypeCounts: Map[DataType, Int] = Map(),
                          questionCounts: Map[QuestionKind, Int] = Map(),
-                         reactioners: Set[FBReaction] = Set())
+                         reactioners: Set[FBReaction] = Set(),
+                         friends: Set[FBFriend] = Set())
 
   object UserSummary {
 

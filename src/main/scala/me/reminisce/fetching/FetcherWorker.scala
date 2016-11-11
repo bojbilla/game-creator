@@ -8,12 +8,13 @@ import me.reminisce.database.MongoDatabaseService.{SaveFBPage, SaveFBPost}
 import me.reminisce.database.{DeletionService, MongoDatabaseService}
 import me.reminisce.fetching.FetcherService.{FetchDataSince, FinishedFetching}
 import me.reminisce.fetching.FetcherWorker._
-import me.reminisce.fetching.config.GraphResponses.{Page, Post}
+import me.reminisce.fetching.config.GraphResponses.{Friend, Page, Post}
 import me.reminisce.fetching.retrievers.RetrieveEntitiesService.RetrieveEntities
+import me.reminisce.fetching.retrievers.RetrieveFriends.FinishedRetrievingFriends
 import me.reminisce.fetching.retrievers.RetrieveLikedPages.{FinishedRetrievingLikedPages, PartialLikedPagesResult}
 import me.reminisce.fetching.retrievers.RetrievePosts.{FinishedRetrievingPosts, PartialPostsResult}
 import me.reminisce.fetching.retrievers.RetrieveTaggedPosts.{FinishedRetrievingTaggedPosts, PartialTaggedPostsResult}
-import me.reminisce.fetching.retrievers.{RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
+import me.reminisce.fetching.retrievers.{RetrieveFriends, RetrieveLikedPages, RetrievePosts, RetrieveTaggedPosts}
 import me.reminisce.server.domain.Domain.Done
 import reactivemongo.api.DefaultDB
 
@@ -72,8 +73,11 @@ class FetcherWorker(database: DefaultDB, userId: String) extends Actor with Acto
       val taggedRetriever = context.actorOf(RetrieveTaggedPosts.props())
       taggedRetriever ! RetrieveEntities(simpleParameters)
 
-      val workers = Set(pageRetriever, postRetriever, taggedRetriever)
-      context.become(awaitResults(client, userId, workers, Set(), Set()))
+      val friendsRetriever = context.actorOf(RetrieveFriends.props())
+      friendsRetriever ! RetrieveEntities(simpleParameters)
+
+      val workers = Set(pageRetriever, postRetriever, taggedRetriever, friendsRetriever)
+      context.become(awaitResults(client, userId, workers, Set(), Set(), Set()))
     case _ =>
       log.error("Fetcher worker received an unexpected message.")
   }
@@ -101,12 +105,13 @@ class FetcherWorker(database: DefaultDB, userId: String) extends Actor with Acto
     * @param foundPages fetched pages
     * @return Nothing
     */
-  private def awaitResults(client: ActorRef, userId: String, workers: Set[ActorRef], foundPosts: Set[String], foundPages: Set[String]): Receive = {
+  private def awaitResults(client: ActorRef, userId: String, workers: Set[ActorRef], foundPosts: Set[String],
+                           foundPages: Set[String], foundFriends : Set[Friend]): Receive = {
 
     case PartialLikedPagesResult(pages) =>
       val newFoundPages = pages.map(page => page.id).toSet ++ foundPages
       storePages(pages, userId)
-      context.become(awaitResults(client, userId, workers, foundPosts, newFoundPages))
+      context.become(awaitResults(client, userId, workers, foundPosts, newFoundPages, foundFriends))
 
     case FinishedRetrievingLikedPages(pages) =>
       log.info(s"Received liked pages for user: $userId")
@@ -114,25 +119,27 @@ class FetcherWorker(database: DefaultDB, userId: String) extends Actor with Acto
       val deletionService = context.actorOf(DeletionService.props(database))
       deletionService ! RemoveExtraLikes(userId, foundPages)
       val newFoundPages = pages.map(page => page.id).toSet ++ foundPages
-      verifyDone(client, userId, workers, Set(deletionService), Set(sender()), foundPosts, newFoundPages)
+      verifyDone(client, userId, workers, Set(deletionService), Set(sender()), foundPosts, newFoundPages, foundFriends)
 
 
     case PartialPostsResult(posts) =>
-      handlePosts(client, workers, posts, userId, foundPosts, foundPages, partial = true)
+      handlePosts(client, workers, posts, userId, foundPosts, foundPages, foundFriends, partial = true)
 
     case FinishedRetrievingPosts(posts) =>
-      handlePosts(client, workers, posts, userId, foundPosts, foundPages)
-
+      handlePosts(client, workers, posts, userId, foundPosts, foundPages, foundFriends)
 
     case PartialTaggedPostsResult(posts) =>
-      handlePosts(client, workers, posts, userId, foundPosts, foundPages, partial = true)
+      handlePosts(client, workers, posts, userId, foundPosts, foundPages, foundFriends, partial = true)
 
     case FinishedRetrievingTaggedPosts(posts) =>
-      handlePosts(client, workers, posts, userId, foundPosts, foundPages)
+      handlePosts(client, workers, posts, userId, foundPosts, foundPages, foundFriends)
 
     case Done(message) =>
       log.info(message)
-      verifyDone(client, userId, workers, Set(), Set(sender()), foundPosts, foundPages)
+      verifyDone(client, userId, workers, Set(), Set(sender()), foundPosts, foundPages, foundFriends)
+
+    case FinishedRetrievingFriends(friends) =>
+      verifyDone(client, userId, workers, Set(), Set(sender()), foundPosts, foundPages, friends)
 
     case _ =>
       log.error("Fetcher worker received unexpected message for " + userId)
@@ -152,13 +159,14 @@ class FetcherWorker(database: DefaultDB, userId: String) extends Actor with Acto
     * @param foundPages pages fetched
     */
   private def verifyDone(client: ActorRef, userId: String, workers: Set[ActorRef], newWorkers: Set[ActorRef],
-                         oldWorkers: Set[ActorRef], foundPosts: Set[String], foundPages: Set[String]) = {
+                         oldWorkers: Set[ActorRef], foundPosts: Set[String], foundPages: Set[String],
+                         foundFriends: Set[Friend]) = {
     val newWorkersSet = workers ++ newWorkers -- oldWorkers
     if (newWorkersSet.isEmpty) {
       client ! FinishedFetching(userId)
-      dataAnalyser ! FinalAnalysis(foundPosts, foundPages)
+      dataAnalyser ! FinalAnalysis(foundPosts, foundPages, foundFriends)
     }
-    context.become(awaitResults(client, userId, newWorkersSet, foundPosts, foundPages))
+    context.become(awaitResults(client, userId, newWorkersSet, foundPosts, foundPages, foundFriends))
   }
 
 
@@ -195,7 +203,8 @@ class FetcherWorker(database: DefaultDB, userId: String) extends Actor with Acto
     * @param partial    is the result partial
     */
   private def handlePosts(client: ActorRef, workers: Set[ActorRef], posts: Vector[Post], userId: String,
-                          foundPosts: Set[String], foundPages: Set[String], partial: Boolean = false): Unit = {
+                          foundPosts: Set[String], foundPages: Set[String], foundFriends: Set[Friend],
+                          partial: Boolean = false): Unit = {
     val prunedPosts = prunePosts(posts)
     storePosts(prunedPosts, userId)
     val oldWorkers = if (partial) {
@@ -203,7 +212,7 @@ class FetcherWorker(database: DefaultDB, userId: String) extends Actor with Acto
     } else {
       Set(sender())
     }
-    verifyDone(client, userId, workers, Set(), oldWorkers, foundPosts ++ prunedPosts.map(p => p.id), foundPages)
+    verifyDone(client, userId, workers, Set(), oldWorkers, foundPosts ++ prunedPosts.map(p => p.id), foundPages, foundFriends)
   }
 
   /**

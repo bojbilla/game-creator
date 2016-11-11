@@ -206,9 +206,9 @@ class DataAnalyserSuite extends FunSuite {
     val oldQuestionCounts = Map[QuestionKind, Int]((Geolocation, 2), (MultipleChoice, 17))
 
     val userSummary = UserSummary(userId = userId, dataTypeCounts = oldDataTypes, questionCounts = oldQuestionCounts,
-      reactioners = oldReactioners)
+      reactioners = oldReactioners, friends = Set())
 
-    val newUserSummary = DataAnalyser.userSummaryWithNewCounts(newReactioners, newItemsSummaries, userSummary)
+    val newUserSummary = DataAnalyser.userSummaryWithNewCounts(newReactioners, newItemsSummaries, Set(), userSummary)
 
     assert(userSummary.userId == newUserSummary.userId)
     assert(newUserSummary.reactioners == newReactioners)

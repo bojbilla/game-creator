@@ -7,7 +7,7 @@ import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities._
-import me.reminisce.fetching.config.GraphResponses.Post
+import me.reminisce.fetching.config.GraphResponses.{Friend, Post}
 import me.reminisce.gameboard.board.GameboardEntities.{Order, QuestionKind}
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
 import reactivemongo.api.DefaultDB
@@ -23,7 +23,7 @@ import scala.util.{Failure, Success}
   */
 object DataAnalyser {
 
-  case class FinalAnalysis(fbPosts: Set[String], fbPages: Set[String])
+  case class FinalAnalysis(fbPosts: Set[String], fbPages: Set[String], fbFriends: Set[Friend])
 
   case class TransientPostsAnalysis(fbPosts: List[Post])
 
@@ -188,9 +188,11 @@ object DataAnalyser {
     * @param newReactioners    new post reactioners
     * @param newItemsSummaries new items summaries
     * @param userSummary       old user summary
+    * @param friends           found friends
     * @return new user summary
     */
-  def userSummaryWithNewCounts(newReactioners: Set[FBReaction], newItemsSummaries: List[ItemSummary], userSummary: UserSummary): UserSummary = {
+  def userSummaryWithNewCounts(newReactioners: Set[FBReaction], newItemsSummaries: List[ItemSummary], friends: Set[Friend],
+                               userSummary: UserSummary): UserSummary = {
     val newDataTypes = newItemsSummaries.foldLeft(userSummary.dataTypeCounts) {
       case (acc, itemSummary) => addTypesToMap[DataType](itemSummary.dataTypes.map(dType => (dType, 1)), acc)
     }
@@ -214,7 +216,9 @@ object DataAnalyser {
         addTypesToMap[QuestionKind](newCounts, acc)
     }
 
-    UserSummary(userSummary.id, userSummary.userId, newDataTypes, newQuestionCounts, newReactioners)
+    val newFbFriends = friends.map(FBFriend(_))
+
+    UserSummary(userSummary.id, userSummary.userId, newDataTypes, newQuestionCounts, newReactioners, newFbFriends)
   }
 
 }
@@ -238,17 +242,13 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     * @return Nothing
     */
   def receive = {
-    case FinalAnalysis(fbPosts, fbPages) =>
+    case FinalAnalysis(fbPosts, fbPages, fbFriends) =>
       val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
-      val itemsSummariesCollection = db[BSONCollection](MongoCollections.itemsSummaries)
-      val postCollection = db[BSONCollection](MongoCollections.fbPosts)
-      val pagesCollection = db[BSONCollection](MongoCollections.fbPages)
       val selector = BSONDocument("userId" -> userId)
       userSummariesCollection.find(selector).one[UserSummary].onComplete {
         case Success(maybeUserSummary) =>
-          lazy val emptyUserSummary = UserSummary(None, userId, Map(), Map(), Set())
-          finalizeSummary(fbPosts.toList, fbPages.toList, maybeUserSummary.getOrElse(emptyUserSummary), postCollection,
-            pagesCollection, userSummariesCollection, itemsSummariesCollection)
+          lazy val emptyUserSummary = UserSummary(None, userId, Map(), Map(), Set(), Set())
+          finalizeSummary(fbPosts.toList, fbPages.toList, fbFriends, maybeUserSummary.getOrElse(emptyUserSummary))
         case Failure(e) =>
           log.error(s"Database could not be reached : $e.")
         case any =>
@@ -284,18 +284,16 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     * etc...) otherwise only aggregates the not read ones in the database (initially the items summaries are stored as not
     * read because they were not aggregated completely with old user summary).
     *
-    * @param fbPostsIds               ids of posts to handle
-    * @param fbPagesIds               ids of pages to handle
-    * @param userSummary              old user summary
-    * @param postCollection           collection containing posts
-    * @param pagesCollection          collection containing pages
-    * @param userSummaryCollection    collection containing user summaries
-    * @param itemsSummariesCollection collection containing items summaries
+    * @param fbPostsIds  ids of posts to handle
+    * @param fbPagesIds  ids of pages to handle
+    * @param friends     found friends
+    * @param userSummary old user summary
     */
-  private def finalizeSummary(fbPostsIds: List[String], fbPagesIds: List[String], userSummary: UserSummary,
-                              postCollection: BSONCollection, pagesCollection: BSONCollection, userSummaryCollection: BSONCollection,
-                              itemsSummariesCollection: BSONCollection): Unit = {
-    if ((fbPagesIds ++ fbPostsIds).nonEmpty) {
+  private def finalizeSummary(fbPostsIds: List[String], fbPagesIds: List[String], friends: Set[Friend], userSummary: UserSummary): Unit = {
+    if ((fbPagesIds ++ fbPostsIds).nonEmpty || friends.nonEmpty) {
+      val postCollection = db[BSONCollection](MongoCollections.fbPosts)
+      val pagesCollection = db[BSONCollection](MongoCollections.fbPages)
+      val itemsSummariesCollection = db[BSONCollection](MongoCollections.itemsSummaries)
       val postSelector = BSONDocument("userId" -> userId, "postId" -> BSONDocument("$in" -> fbPostsIds))
       val postsCursor = postCollection.find(postSelector).cursor[FBPost]()
       (for {
@@ -312,7 +310,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
         queryNotLiked = BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$nin" -> fbPagesIds))
         collection = db[BSONCollection](MongoCollections.fbPageLikes)
         notLikedPagesCount <- collection.count(Some(queryNotLiked))
-      } yield finalizeSummary(fbPosts, fbPages, notLikedPagesCount, userSummary, itemSummaries, itemsSummariesCollection, userSummaryCollection)
+      } yield finalizeSummaryWithIds(fbPosts, fbPages, friends, notLikedPagesCount, userSummary, itemSummaries)
         ) onFailure {
         case e =>
           log.error(s"Could not reach database : $e")
@@ -325,17 +323,15 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   /**
     * Concretely performs the aggregation
     *
-    * @param fbPosts                  posts to handle
-    * @param fbPages                  pages to handle
-    * @param notLikedPagesCount       number of pages not liked
-    * @param userSummary              old user summary
-    * @param itemSummaries            old items summaries
-    * @param itemsSummariesCollection collection for items summaries
-    * @param userSummariesCollection  collection for user summaries
+    * @param fbPosts            posts to handle
+    * @param fbPages            pages to handle
+    * @param friends            found friends
+    * @param notLikedPagesCount number of pages not liked
+    * @param userSummary        old user summary
+    * @param itemSummaries      old items summaries
     */
-  private def finalizeSummary(fbPosts: List[FBPost], fbPages: List[FBPage], notLikedPagesCount: Int, userSummary: UserSummary,
-                              itemSummaries: List[ItemSummary], itemsSummariesCollection: BSONCollection,
-                              userSummariesCollection: BSONCollection): Unit = {
+  private def finalizeSummaryWithIds(fbPosts: List[FBPost], fbPages: List[FBPage], friends: Set[Friend], notLikedPagesCount: Int,
+                                     userSummary: UserSummary, itemSummaries: List[ItemSummary]): Unit = {
     val newReactioners = accumulateReactions(fbPosts) ++ userSummary.reactioners
 
     val updatedPosts: List[ItemSummary] = updatePostsSummaries(fbPosts, newReactioners, itemSummaries)
@@ -351,13 +347,17 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
         ItemSummary(is.id, is.userId, is.itemId, is.itemType, is.dataTypes, is.dataCount)
     }
 
+    val itemsSummariesCollection = db[BSONCollection](MongoCollections.itemsSummaries)
+
     newItemsSummaries.foreach {
       itemSummary =>
         val selector = BSONDocument("userId" -> userId, "itemId" -> itemSummary.itemId)
         itemsSummariesCollection.update(selector, itemSummary, upsert = true)
     }
 
-    val newUserSummaries = userSummaryWithNewCounts(newReactioners, newItemsSummaries, userSummary)
+    val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
+
+    val newUserSummaries = userSummaryWithNewCounts(newReactioners, newItemsSummaries, friends, userSummary)
     val selector = BSONDocument("userId" -> userId)
     userSummariesCollection.update(selector, newUserSummaries, upsert = true)
   }
@@ -409,7 +409,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     }
   }
 
-  private def maybeReactionType(reactions: List[FBReaction], totalReactions: Int)( reactionType: ReactionType): Option[ReactionType] = {
+  private def maybeReactionType(reactions: List[FBReaction], totalReactions: Int)(reactionType: ReactionType): Option[ReactionType] = {
     val reactionCount = filterReaction(reactions, reactionType).size
     if (totalReactions - reactionCount >= 3 && reactionCount > 0) {
       Some(reactionType)

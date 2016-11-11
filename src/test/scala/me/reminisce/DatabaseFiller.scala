@@ -1,10 +1,10 @@
 package me.reminisce
 
 import com.github.nscala_time.time.Imports._
-import me.reminisce.analysis.DataTypes.{DataType, stringToType, strToItemType}
+import me.reminisce.analysis.DataTypes.{DataType, strToItemType, stringToType}
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoCollections
-import me.reminisce.database.MongoDBEntities.{FBPage, FBPageLike, FBPost, FBReaction}
+import me.reminisce.database.MongoDBEntities.{FBFriend, FBPage, FBPageLike, FBPost, FBReaction}
 import me.reminisce.gameboard.board.GameboardEntities.strToKind
 import me.reminisce.testutils.database.DatabaseTestHelper._
 import org.json4s.JsonAST._
@@ -50,8 +50,9 @@ object DatabaseFiller {
           }
 
           val reactioners = (summary \ "reactioners").extract[List[FBReaction]]
+          val friends = (summary \ "friends").extract[List[FBFriend]]
 
-          UserSummary(id, userId, dataTypeCounts, questionCounts, reactioners.toSet)
+          UserSummary(id, userId, dataTypeCounts, questionCounts, reactioners.toSet, friends.toSet)
         case _ =>
           throw new IllegalArgumentException("Impossible match case.")
       }
