@@ -73,13 +73,13 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
   }
   
   /**
-   * Get the difficulty level for this user
+   * Get the difficulty level for this user (win rate?)
    * 
    * @param userId The user id
    * @return the difficulty 
    */
-  private def getDifficultyForQuestion(userId: String): String = {
-    return "EASY"
+  private def getDifficultyForQuestion(userId: String): Double = {
+    return 0.5
   }
   
   /**
@@ -90,7 +90,7 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
    * @param maybePost The post on which the question will be based
    * @return A multiple choice question
    */
-  private def generateQuestionWithDifficulty(difficulty: String, maybeUserSummary: Option[UserSummary], maybePost: Option[FBPost]): Option[MultipleChoiceQuestion] = {
+  private def generateQuestionWithDifficulty(difficulty: Double, maybeUserSummary: Option[UserSummary], maybePost: Option[FBPost]): Option[MultipleChoiceQuestion] = {
     for{
       userSummary <- maybeUserSummary
       post <- maybePost
@@ -113,65 +113,36 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
    * @param difficulty The difficulty of the question
    * @return List of Possibility
    */
-  private def getChoices(reactions: List[FBReaction], userSummary: UserSummary, difficulty: String): Option[List[Possibility]]= {
-    val answer = getOftenReactioners(1, reactions.toSet, userSummary.reactionersReactionsCount).toSet
-    val choices = funcSelector(difficulty)(3, userSummary.reactioners, userSummary.reactionersReactionsCount, answer++reactions)
-    Option((answer.head::Random.shuffle(choices)).map(choice => Possibility(choice.userName, None, "Person", Some(choice.userId))))
-  }
-  
-  /**
-   * Selects the function to get the choices according to the difficulty level of the question
-   * 
-   * @param difficulty The difficulty of the question
-   * @return The function that will generate the choices
-   */
-  private def funcSelector(difficulty: String) = {
-    difficulty match {
-      case "Easy" => getLeastOftenReactioners _
-      case "Medium" => getMediumOftenReactioners _
-      case "Hard" => getOftenReactioners _
-    }                  
+  private def getChoices(reactions: List[FBReaction], userSummary: UserSummary, difficulty: Double): Option[List[Possibility]]= {
+    val answer = getOftenReactioner(reactions.toSet, userSummary.reactionersReactionsCount)
+    val choices = getReactionersAccordingDifficulty(userSummary.reactioners, userSummary.reactionersReactionsCount, (answer::reactions).toSet, difficulty)
+    Option((answer::Random.shuffle(choices)).map(choice => Possibility(choice.userName, None, "Person", Some(choice.userId))))
   }
   
   /**
    * Gets the {@code count} number of most often reactioners that reacted to the fbpost 
    * 
-   * @param count The number of reactioner to return
    * @param reactioners Set of all reactioners for the user
    * @param reactionersReactionsCount Map from reactioner to the number of total reactions
    * @param excluded The set of reactioner to exclude (the answer of the question and the reactioner of the post)
    */
-  private def getOftenReactioners(count: Int, reactioners: Set[FBReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[FBReaction] = Set()): List[FBReaction] = {
+  private def getOftenReactioner(reactioners: Set[FBReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[FBReaction] = Set()): FBReaction = {
     val filterTheExcluded =  reactioners -- excluded
     val sortByReactionCount = filterTheExcluded.map { react => react -> reactionersReactionsCount(react.userId) }.toList.sortBy(-_._2)
-    sortByReactionCount.take(count).map(x => x._1)
+    sortByReactionCount(Random.nextInt(10))._1
   } 
   
   /**
-   * Gets the {@code count} number of least often reactioners that reacted to the fbpost 
+   * Gets reactioners that reacted to the fbpost according to the difficulty level 
    * 
-   * @param count The number of reactioner to return
    * @param reactioners Set of all reactioners for the user
    * @param reactionersReactionsCount Map from reactioner to the number of total reactions
    * @param excluded The set of reactioner to exclude (the answer of the question and the reactioner of the post)
    */
-  private def getLeastOftenReactioners(count: Int, reactioners: Set[FBReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[FBReaction] = Set()) : List[FBReaction] = {
-    getOftenReactioners(count, reactioners, reactionersReactionsCount.mapValues(-_), excluded)
-  }
-  
-  /**
-   * Gets the {@code count} reactioners that reacted to the fb post. Those reactioners are picked randomly from the pool of
-   * the first sixth of most often reactioners
-   * 
-   * @param count The number of reactioner to return
-   * @param reactioners Set of all reactioners for the user
-   * @param reactionersReactionsCount Map from reactioner to the number of total reactions
-   * @param excluded The set of reactioner to exclude (the answer of the question and the reactioner of the post)
-   */
-  private def getMediumOftenReactioners(count: Int, reactioners: Set[FBReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[FBReaction] = Set()) : List[FBReaction] = {
+  private def getReactionersAccordingDifficulty(reactioners: Set[FBReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[FBReaction] = Set(), winRate: Double) : List[FBReaction] = {
     val filterTheExcluded =  reactioners -- excluded
     val sortByReactionCount = filterTheExcluded.map { x => x -> reactionersReactionsCount(x.userId) }.toList.sortBy(-_._2)
-    val sixthOfAll = sortByReactionCount.take(Math.max(count, sortByReactionCount.size/6))
-    Random.shuffle(sixthOfAll).take(count).map(_._1)
+    val subset = sortByReactionCount.take(Math.max(3, sortByReactionCount.size/(winRate*10).toInt))
+    Random.shuffle(subset).take(3).map(_._1)
   }
 }
