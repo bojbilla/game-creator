@@ -1,4 +1,4 @@
-package me.reminisce.gameboard.questions
+package me.reminisce.gameboard.questions.difficulty
 
 import akka.actor.Props
 import me.reminisce.database.AnalysisEntities.UserSummary
@@ -9,16 +9,18 @@ import me.reminisce.gameboard.questions.QuestionGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
 import me.reminisce.database.MongoDBEntities.FBReaction
+import akka.actor.actorRef2Scala
+import me.reminisce.gameboard.questions.QuestionGenerator
+import reactivemongo.bson.Producer.nameValue2Producer
+import me.reminisce.gameboard.questions._
 
 /**
-  * Factory for [[me.reminisce.gameboard.questions.WhoReactedToYourPost]]
+  * Factory for [[me.reminisce.gameboard.questions.WhoReactedToYourPostWithDifficulty]]
   */
 object WhoReactedToYourPostWithDifficulty {
-
   /**
     * Creates a WhoReactedToYourPost question generator
     *
