@@ -74,6 +74,15 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
     case any => log.error(s"WhoReactedToYourPost received a unexpected message $any")
   }
   
+  /**
+   * Get the difficulty level for this user (win rate?)
+   * 
+   * @param userId The user id
+   * @return the difficulty 
+   */
+  private def getDifficultyForQuestion(userId: String): Double = {
+    return 0.5
+  }
   
   /**
    * Generates a question with associated difficulty level
