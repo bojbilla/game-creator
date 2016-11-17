@@ -91,7 +91,6 @@ class WhoMadeThisCommentOnYourPost(db: DefaultDB) extends QuestionGenerator {
         shuffledList.find(comm => comm.from == elm)
     }.toList
   }
-  
   /**
     * Generates a multiple choice question
     *
