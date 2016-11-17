@@ -16,6 +16,7 @@ import akka.actor.actorRef2Scala
 import me.reminisce.gameboard.questions.QuestionGenerator
 import reactivemongo.bson.Producer.nameValue2Producer
 import me.reminisce.gameboard.questions._
+import me.reminisce.database.MongoDBEntities.AbstractReaction
 
 /**
   * Factory for [[me.reminisce.gameboard.questions.WhoReactedToYourPostWithDifficulty]]
@@ -98,7 +99,7 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
       post <- maybePost
       reactions <- post.reactions
       if !((userSummary.reactioners -- reactions.toSet).size < 3)
-      choices <- getChoices(reactions, userSummary, difficulty)
+      choices <- getChoices(reactions.toList, userSummary, difficulty)
       answer <- choices.headOption
       shuffled = Random.shuffle(choices)
       postSubject = subjectFromPost(post)  
@@ -115,10 +116,10 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
    * @param difficulty The difficulty of the question
    * @return List of Possibility
    */
-  private def getChoices(reactions: List[FBReaction], userSummary: UserSummary, difficulty: Double): Option[List[Possibility]]= {
+  private def getChoices(reactions: List[AbstractReaction], userSummary: UserSummary, difficulty: Double): Option[List[Possibility]]= {
     val answer = getOftenReactioner(reactions.toSet, userSummary.reactionersReactionsCount)
-    val choices = getReactionersAccordingDifficulty(userSummary.reactioners, userSummary.reactionersReactionsCount, (answer::reactions).toSet, difficulty)
-    Option((answer::Random.shuffle(choices)).map(choice => Possibility(choice.userName, None, "Person", Some(choice.userId))))
+    val choices = getReactionersAccordingDifficulty(userSummary.reactioners, userSummary.reactionersReactionsCount, reactions.toSet + answer, difficulty)
+    Option((answer::Random.shuffle(choices)).map(choice => Possibility(choice.from.userName, None, "Person", Some(choice.from.userId))))
   }
   
   /**
@@ -128,9 +129,9 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
    * @param reactionersReactionsCount Map from reactioner to the number of total reactions
    * @param excluded The set of reactioner to exclude (the answer of the question and the reactioner of the post)
    */
-  private def getOftenReactioner(reactioners: Set[FBReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[FBReaction] = Set()): FBReaction = {
+  private def getOftenReactioner(reactioners: Set[AbstractReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[AbstractReaction] = Set[AbstractReaction]()): AbstractReaction = {
     val filterTheExcluded =  reactioners -- excluded
-    val sortByReactionCount = filterTheExcluded.map { react => react -> reactionersReactionsCount(react.userId) }.toList.sortBy(-_._2)
+    val sortByReactionCount = filterTheExcluded.map { react => react -> reactionersReactionsCount(react.from.userId) }.toList.sortBy(-_._2)
     sortByReactionCount(Random.nextInt(10))._1
   } 
   
@@ -141,9 +142,9 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
    * @param reactionersReactionsCount Map from reactioner to the number of total reactions
    * @param excluded The set of reactioner to exclude (the answer of the question and the reactioner of the post)
    */
-  private def getReactionersAccordingDifficulty(reactioners: Set[FBReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[FBReaction] = Set(), winRate: Double) : List[FBReaction] = {
+  private def getReactionersAccordingDifficulty(reactioners: Set[AbstractReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[AbstractReaction] = Set(), winRate: Double) : List[AbstractReaction] = {
     val filterTheExcluded =  reactioners -- excluded
-    val sortByReactionCount = filterTheExcluded.map { x => x -> reactionersReactionsCount(x.userId) }.toList.sortBy(-_._2)
+    val sortByReactionCount = filterTheExcluded.map { x => x -> reactionersReactionsCount(x.from.userId) }.toList.sortBy(-_._2)
     val subset = sortByReactionCount.take(Math.max(3, sortByReactionCount.size/(winRate*10).toInt))
     Random.shuffle(subset).take(3).map(_._1)
   }
