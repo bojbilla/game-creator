@@ -3,6 +3,7 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
+import me.reminisce.analysis.DataTypes.PostWhoLiked
 import me.reminisce.database.AnalysisEntities.UserSummary
 import me.reminisce.database.MongoCollections
 import me.reminisce.database.MongoDBEntities._
@@ -87,7 +88,7 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
 
           val likerId = "LikerId"
           val likerName = "LikerName"
-          val like = FBReaction(likerId, likerName, "")
+          val like = FBReaction(FBFrom(likerId, likerName), PostWhoLiked)
           val fbPost = FBPost(postId = itemId, userId = userId, reactions = Some(List(like)))
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
@@ -109,7 +110,7 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
             i =>
               val likerId = s"LikerId$i"
               val likerName = s"LikerName$i"
-              FBReaction(likerId, likerName, "")
+              FBReaction(FBFrom(likerId, likerName), PostWhoLiked)
           }.toList
 
           val freshUser = userId + "Fresh"
@@ -135,7 +136,7 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
                   assert(subject.text == fbPost.message.getOrElse(""))
                   likers.headOption match {
                     case Some(liker) =>
-                      assert(choices(answer).name == liker.userName)
+                      assert(choices(answer).name == liker.from.userName)
                     case None =>
                       fail("No liker.")
                   }

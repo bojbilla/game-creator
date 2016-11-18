@@ -105,8 +105,11 @@ class DataAnalyserSpec extends DatabaseTester("DataAnalyserSpec") {
             Map(PostWhoLiked -> 1, PostWhoWowed -> 1, PageLikeNumber-> 10, PostReactionNumber -> 12, PostWhoReacted -> 1,
               PostWhoCommented -> 2, PostGeolocation -> 2, Time -> 22, PostCommentsNumber -> 2),
             Map(Order -> 42, MultipleChoice -> 5, Geolocation -> 2, Timeline -> 22),
-            Set(FBReaction("1", "me", "LIKE"), FBReaction("2", "me2", "LIKE"), FBReaction("3", "me3", "LIKE"),
-              FBReaction("4", "me4", "LIKE"), FBReaction("5", "me5", "WOW"), FBReaction("6", "me6", "WOW")), Set())
+            Set(FBReaction(FBFrom("1", "me1"), PostWhoLiked), FBReaction(FBFrom("2", "me2"), PostWhoLiked),
+              FBReaction(FBFrom("3", "me3"), PostWhoLiked), FBReaction(FBFrom("4", "me4"), PostWhoLiked),
+              FBReaction(FBFrom("5", "me5"), PostWhoWowed), FBReaction(FBFrom("6", "me6"), PostWhoWowed),
+              FBReaction(FBFrom("4", "me4"), PostWhoCommented), FBReaction(FBFrom("2", "me2"), PostWhoCommented),
+              FBReaction(FBFrom("3", "me3"), PostWhoCommented), FBReaction(FBFrom("5", "me5"), PostWhoCommented)), Set())
           assert(userSummary.contains(expectedUserSummary))
       }
     }
@@ -117,19 +120,19 @@ object AnalysisTestData {
 
   val userId = "TestDataAnalyserSpec"
 
-  val reaction1 = Reaction("1", "me", "LIKE")
+  val reaction1 = Reaction("1", "me1", "LIKE")
   val reaction2 = Reaction("6", "me6", "WOW")
   val reactions1 = Root[List[Reaction]](data = Some(List(reaction1, reaction2)), paging = None, summary = None)
   val pLikes = Post("id1", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = Some(reactions1),
     `type` = None, link = None, created_time = None, attachments = None, comments = None)
 
-  val from2 = From(id = "2", name = "a")
+  val from2 = From(id = "2", name = "me2")
   val comment2 = Comment(id = "", from = from2, like_count = 0, message = "", attachments = None)
-  val from3 = From(id = "3", name = "s")
+  val from3 = From(id = "3", name = "me3")
   val comment3 = Comment(id = "3", from = from3, like_count = 0, message = "", attachments = None)
-  val from4 = From(id = "4", name = "d")
+  val from4 = From(id = "4", name = "me4")
   val comment4 = Comment(id = "4", from = from4, like_count = 0, message = "", attachments = None)
-  val from5 = From(id = "5", name = "f")
+  val from5 = From(id = "5", name = "me5")
   val comment5 = Comment(id = "5", from = from5, like_count = 0, message = "", attachments = None)
   val com3 = Root[List[Comment]](data = Option(List(comment2, comment3, comment4, comment5)), paging = None, summary = None)
   val pComments = Post("id2", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
@@ -151,7 +154,7 @@ object AnalysisTestData {
 
   val referenceResult =
     List(ItemSummary(None, "TestDataAnalyserSpec", "id1", PostType, Set(PostReactionNumber), 1),
-      ItemSummary(None, "TestDataAnalyserSpec", "id2", PostType, Set(PostWhoCommented, PostCommentsNumber), 2),
+      ItemSummary(None, "TestDataAnalyserSpec", "id2", PostType, Set(PostCommentsNumber), 1),
       ItemSummary(None, "TestDataAnalyserSpec", "id3", PostType, Set(PostGeolocation), 1),
       ItemSummary(None, "TestDataAnalyserSpec", "id4", PostType, Set(Time), 1))
 
@@ -168,7 +171,6 @@ object AnalysisTestData {
   val sampleUserSummary = UserSummary(None, userId,
     Map(PostReactionNumber -> 11, PostWhoCommented -> 1, PostGeolocation -> 1, Time -> 11, PostCommentsNumber -> 1),
     Map(Order -> 18, MultipleChoice -> 1, Geolocation -> 1, Timeline -> 11),
-    Set(FBReaction("2", "me2", "LIKE"), FBReaction("3", "me3", "LIKE"), FBReaction("4", "me4", "LIKE"),
-      FBReaction("5", "me5", "WOW")), Set())
-
+    Set(FBReaction(FBFrom("2", "me2"), PostWhoLiked), FBReaction(FBFrom("3", "me3"), PostWhoLiked),
+      FBReaction(FBFrom("4", "me4"), PostWhoLiked), FBReaction(FBFrom("5", "me5"), PostWhoWowed)), Set())
 }

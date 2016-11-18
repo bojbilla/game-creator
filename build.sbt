@@ -17,7 +17,7 @@ libraryDependencies ++= {
   val reactiveMongoV = "0.11.14"
   val scalaTestV = "2.2.6"
   val sprayJsonV = "1.3.2"
-  val nscalaTimeV = "2.10.0"
+  val nscalaTimeV = "2.14.0"
   val logbackV = "1.1.7"
   val slf4jV = "1.7.21"
 

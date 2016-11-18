@@ -2,6 +2,7 @@ package me.reminisce.database
 
 import akka.actor.{Actor, ActorLogging, Props}
 import com.github.nscala_time.time.Imports._
+import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.MongoDatabaseService._
 import me.reminisce.fetching.config.GraphResponses.{Page, Post}
@@ -69,7 +70,7 @@ object MongoDatabaseService {
     * @return FBPost resulting from the conversion
     */
   def postToFBPost(post: Post, userId: String): FBPost = {
-    val reactions = post.reactions.flatMap(root => root.data.map(reactions => reactions.map(r => FBReaction(r.id, r.name, r.`type`))))
+    val reactions = post.reactions.flatMap(root => root.data.map(reactions => reactions.map(r => FBReaction(FBFrom(r.id, r.name), stringTypeToReactionType(r.`type`)))))
     val reactionCount = reactions.map(reactionsList => reactionsList.length)
     val fbFrom = post.from.map(f => FBFrom(f.id, f.name))
     val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
@@ -96,6 +97,15 @@ object MongoDatabaseService {
   case class SaveFBPost(posts: List[Post])
 
   case class SaveLastFetchedTime()
+
+  val stringTypeToReactionType = Map[String, ReactionType](
+    "LIKE" -> PostWhoLiked,
+    "WOW" -> PostWhoWowed,
+    "HAHA" -> PostWhoLaughed,
+    "LOVE" -> PostWhoLoved,
+    "SAD" -> PostWhoGotSad,
+    "ANGRY" -> PostWhoGotAngry
+  )
 
 }
 

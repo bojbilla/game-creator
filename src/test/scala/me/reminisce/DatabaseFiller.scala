@@ -1,10 +1,10 @@
 package me.reminisce
 
 import com.github.nscala_time.time.Imports._
-import me.reminisce.analysis.DataTypes.{DataType, strToItemType, stringToType}
+import me.reminisce.analysis.DataTypes.{DataType, ReactionType, strToItemType, stringToType}
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
 import me.reminisce.database.MongoCollections
-import me.reminisce.database.MongoDBEntities.{FBFriend, FBPage, FBPageLike, FBPost, FBReaction}
+import me.reminisce.database.MongoDBEntities.{FBAttachment, FBComment, FBFriend, FBFrom, FBPage, FBPageLike, FBPlace, FBPost, FBReaction}
 import me.reminisce.gameboard.board.GameboardEntities.strToKind
 import me.reminisce.testutils.database.DatabaseTestHelper._
 import org.json4s.JsonAST._
@@ -49,7 +49,12 @@ object DatabaseFiller {
             case (key, value) => strToKind(key) -> value
           }
 
-          val reactioners = (summary \ "reactioners").extract[List[FBReaction]]
+          val reactioners = (summary \ "reactioners").extract[List[JObject]].map {
+            jObject =>
+              val from = (jObject \ "from").extract[FBFrom]
+              val reactionType = stringToType((jObject \ "reactionType").extract[String])
+              FBReaction(from, reactionType.asInstanceOf[ReactionType])
+          }
           val friends = (summary \ "friends").extract[List[FBFriend]]
 
           UserSummary(id, userId, dataTypeCounts, questionCounts, reactioners.toSet, friends.toSet)
@@ -105,6 +110,42 @@ object DatabaseFiller {
     }
   }
 
+  def parsePosts(lines: Iterator[String]): Iterator[FBPost] = lines.map {
+    l =>
+      val json = parse(l)
+
+      json match {
+        case post: JObject =>
+          val id = None
+          val userId = (post \ "userId").extract[String]
+          val postId = (post \ "postId").extract[String]
+          val message = (post \ "message").extractOpt[String]
+          val story = (post \ "story").extractOpt[String]
+          val place = (post \ "place").extractOpt[FBPlace]
+          val createdTime = (post \ "createdTime").extractOpt[String]
+          val from = (post \ "from").extractOpt[FBFrom]
+          val reactions = Some((post \ "reactions").extract[List[JObject]].map {
+            jObject =>
+              val from = (jObject \ "from").extract[FBFrom]
+              val reactionType = stringToType((jObject \ "reactionType").extract[String])
+              FBReaction(from, reactionType.asInstanceOf[ReactionType])
+          })
+          val reactionCount = (post \ "reactionCount").extractOpt[Int]
+          val tpe = (post \ "tpe").extractOpt[String]
+          val link = (post \ "link").extractOpt[String]
+          val picture = (post \ "picture").extractOpt[String]
+          val attachments = (post \ "attachments").extractOpt[List[FBAttachment]]
+          val comments = (post \ "comments").extractOpt[List[FBComment]]
+          val commentsCount = (post \ "commentsCount").extractOpt[Int]
+
+          FBPost(id, userId, postId, message, story, place, createdTime,
+            from, reactions, reactionCount, tpe, link,
+            picture, attachments, comments, commentsCount)
+        case _ =>
+          throw new IllegalArgumentException("Impossible match case.")
+      }
+  }
+
   def populateWithTestData(db: DefaultDB, folder: String): Unit = {
 
     implicit val formats = DefaultFormats + new DataTypeSerializer + new ListDTypeSerializer
@@ -116,7 +157,9 @@ object DatabaseFiller {
     val pageLikes = parsePageLikes(pageLikesLines)
     storeObjects(db, MongoCollections.fbPageLikes, pageLikes)
 
-    val posts = simpleExtract[FBPost](folder + "/fbPosts.json")
+
+    val postLines = Source.fromURL(getClass.getResource(folder + "/fbPosts.json")).getLines()
+    val posts = parsePosts(postLines)
     storeObjects(db, MongoCollections.fbPosts, posts)
 
     val userSummariesLines = Source.fromURL(getClass.getResource(folder + "/userSummaries.json")).getLines()

@@ -66,7 +66,7 @@ class WhoReactedToYourPostWithReactionType(db: DefaultDB, reactionType: Reaction
               reactionerWithType <- Random.shuffle(filterReaction(reactions, reactionType)).headOption
               if !((userSummary.reactioners -- reactions.toSet).size < 3)
               choices = (reactionerWithType :: Random.shuffle((userSummary.reactioners -- reactions.toSet).toList).take(3)) map {
-                choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
+                choice => Possibility(choice.from.userName, None, "Person", Some(choice.from.userId))
               }
               answer <- choices.headOption
               shuffled = Random.shuffle(choices)

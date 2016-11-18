@@ -79,8 +79,7 @@ object DataAnalyser {
     * @return a list of data types
     */
   def availableDataTypes(post: Post): Set[DataType] = {
-    Set(hasTimeData(post), hasGeolocationData(post), hasWhoCommentedData(post),
-      hasCommentNumber(post), hasReactionsNumber(post)).flatten
+    Set(hasTimeData(post), hasGeolocationData(post), hasCommentNumber(post), hasReactionsNumber(post)).flatten
   }
 
   /**
@@ -108,27 +107,6 @@ object DataAnalyser {
         long => PostGeolocation
       ))
     ))
-  }
-
-  /**
-    * Checks if post has enough comments for a "who commented" question
-    *
-    * @param post post to handle
-    * @return a data type option
-    */
-  private def hasWhoCommentedData(post: Post): Option[DataType] = {
-    val fbComments = post.comments.flatMap(root => root.data.map(comments => comments.map { c =>
-      FBComment(c.id, FBFrom(c.from.id, c.from.name), c.like_count, c.message)
-    }))
-    if (post.message.exists(!_.isEmpty) || post.story.exists(!_.isEmpty)) {
-      for {
-        comments <- fbComments
-        fromSet = comments.map(comm => comm.from).toSet
-        if fromSet.size > 3
-      } yield PostWhoCommented
-    } else {
-      None
-    }
   }
 
   /**
@@ -191,7 +169,7 @@ object DataAnalyser {
     * @param friends           found friends
     * @return new user summary
     */
-  def userSummaryWithNewCounts(newReactioners: Set[FBReaction], newItemsSummaries: List[ItemSummary], friends: Set[Friend],
+  def userSummaryWithNewCounts(newReactioners: Set[AbstractReaction], newItemsSummaries: List[ItemSummary], friends: Set[Friend],
                                userSummary: UserSummary): UserSummary = {
     val newDataTypes = newItemsSummaries.foldLeft(userSummary.dataTypeCounts) {
       case (acc, itemSummary) => addTypesToMap[DataType](itemSummary.dataTypes.map(dType => (dType, 1)), acc)
@@ -368,13 +346,10 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     * @param fbPosts posts to handle
     * @return set of reactions
     */
-  private def accumulateReactions(fbPosts: List[FBPost]): Set[FBReaction] = {
-    fbPosts.foldLeft(Set[FBReaction]()) {
-      (acc: Set[FBReaction], post: FBPost) => {
-        post.reactions match {
-          case Some(reactions) => acc ++ reactions.toSet
-          case None => acc
-        }
+  private def accumulateReactions(fbPosts: List[FBPost]): Set[AbstractReaction] = {
+    fbPosts.foldLeft(Set[AbstractReaction]()) {
+      (acc: Set[AbstractReaction], post: FBPost) => {
+        acc ++ post.reactions.getOrElse(List()).toSet ++ post.commentsAsReactions.toSet
       }
     }
   }
@@ -387,13 +362,13 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     * @param itemSummaries items summaries to update
     * @return list of updated items summaries
     */
-  private def updatePostsSummaries(fbPosts: List[FBPost], reactioners: Set[FBReaction],
+  private def updatePostsSummaries(fbPosts: List[FBPost], reactioners: Set[AbstractReaction],
                                    itemSummaries: List[ItemSummary]): List[ItemSummary] = {
     fbPosts.flatMap {
       fbPost =>
         val oldItemSummary = getItemSummary(userId, fbPost.postId, PostType, itemSummaries)
-        val reactions = fbPost.reactions.getOrElse(List())
-        val addedTypes = stringTypeToReactionType.values.flatMap(maybeReactionType(reactions, reactioners.size)(_)).toSet
+        val reactions = fbPost.reactions.getOrElse(List()) ++ fbPost.commentsAsReactions
+        val addedTypes = possibleReactions.flatMap(maybeReactionType(reactions, reactioners.size)(_))
         val reactionsNumber = fbPost.reactionCount.getOrElse(0)
         if (reactioners.size - reactionsNumber >= 3 && reactionsNumber > 0) {
           val finalListing = (oldItemSummary.dataTypes ++ addedTypes) + PostWhoReacted
@@ -409,7 +384,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     }
   }
 
-  private def maybeReactionType(reactions: List[FBReaction], totalReactions: Int)(reactionType: ReactionType): Option[ReactionType] = {
+  private def maybeReactionType(reactions: List[AbstractReaction], totalReactions: Int)(reactionType: ReactionType): Option[ReactionType] = {
     val reactionCount = filterReaction(reactions, reactionType).size
     if (totalReactions - reactionCount >= 3 && reactionCount > 0) {
       Some(reactionType)

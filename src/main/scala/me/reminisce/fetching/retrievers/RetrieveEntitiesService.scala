@@ -98,7 +98,7 @@ class RetrieveEntitiesService[T](filter: (Vector[T]) => Vector[T])(implicit mf: 
     * @param path         request path
     */
   private def handleGetEntities(client: ActorRef, originalPath: String, path: String): Unit = {
-    log.error(s"Retriever path: $path")
+    log.debug(s"Retriever path: $path")
     val responseF = pipelineRawJson(Get(path))
     responseF.onComplete {
       case Success(r) =>

@@ -64,7 +64,7 @@ class WhoReactedToYourPost(db: DefaultDB) extends QuestionGenerator {
               liker <- Random.shuffle(likes).headOption
               if !((userSummary.reactioners -- likes.toSet).size < 3)
               choices = (liker :: Random.shuffle((userSummary.reactioners -- likes.toSet).toList).take(3)) map {
-                choice => Possibility(choice.userName, None, "Person", Some(choice.userId))
+                choice => Possibility(choice.from.userName, None, "Person", Some(choice.from.userId))
               }
               answer <- choices.headOption
               shuffled = Random.shuffle(choices)

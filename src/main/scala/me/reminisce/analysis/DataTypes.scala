@@ -1,7 +1,7 @@
 package me.reminisce.analysis
 
-import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.collections.MapExtension._
+import me.reminisce.gameboard.board.GameboardEntities._
 
 /**
   * Defines the data types necessary to generate the user summaries.
@@ -14,22 +14,33 @@ object DataTypes {
 
   // Post only
   case object PostGeolocation extends DataType("PostGeolocation")
-  case object PostWhoCommented extends DataType("PostWhoCommented")
+
   case object PostCommentsNumber extends DataType("PostCommentsNumber")
+
   case object PostReactionNumber extends DataType("PostReactionNumber")
 
   // Reactions
   abstract class ReactionType(id: String) extends DataType(id)
+
   case object PostWhoReacted extends ReactionType("PostWhoReacted")
+
+  case object PostWhoCommented extends ReactionType("PostWhoCommented")
+
   case object PostWhoLiked extends ReactionType("PostWhoLiked")
+
   case object PostWhoWowed extends ReactionType("PostWhoWowed")
+
   case object PostWhoLaughed extends ReactionType("PostWhoLaughed")
+
   case object PostWhoLoved extends ReactionType("PostWhoLoved")
+
   case object PostWhoGotSad extends ReactionType("PostWhoGotSad")
+
   case object PostWhoGotAngry extends ReactionType("PostWhoGotAngry")
 
   // Page Only
   case object PageWhichLiked extends DataType("PageWhichLiked")
+
   case object PageLikeNumber extends DataType("PageLikeNumber")
 
   // Both
@@ -38,7 +49,9 @@ object DataTypes {
   sealed abstract class ItemType(id: String) {
     val name: String = id
   }
+
   case object PostType extends ItemType("Post")
+
   case object PageType extends ItemType("Page")
 
   def strToItemType(typeName: String): ItemType = typeName match {
@@ -46,19 +59,10 @@ object DataTypes {
     case PageType.name => PageType
   }
 
-  val stringTypeToReactionType = Map[String, ReactionType] (
-    "LIKE" -> PostWhoLiked,
-    "WOW" -> PostWhoWowed,
-    "HAHA" -> PostWhoLaughed,
-    "LOVE" -> PostWhoLoved,
-    "SAD" -> PostWhoGotSad,
-    "ANGRY" -> PostWhoGotAngry
-  )
-
   val kindToTypes = Map[QuestionKind, List[DataType]](
     MultipleChoice ->
       List(PostWhoReacted, PostWhoCommented, PageWhichLiked, PostWhoLiked, PostWhoWowed, PostWhoLaughed, PostWhoLoved,
-      PostWhoGotSad, PostWhoGotAngry),
+        PostWhoGotSad, PostWhoGotAngry),
     Timeline ->
       List(Time),
     Geolocation ->
@@ -68,6 +72,7 @@ object DataTypes {
   )
 
   val typeToKinds = kindToTypes.reverse
+
   /**
     * Converts a string naming a data type to a DataType object
     *
@@ -91,4 +96,7 @@ object DataTypes {
     case Time.name => Time
   }
 
+  def possibleReactions = Set[ReactionType](
+    PostWhoReacted, PostWhoCommented, PostWhoLiked, PostWhoWowed, PostWhoLaughed, PostWhoLoved, PostWhoGotSad, PostWhoGotAngry
+  )
 }

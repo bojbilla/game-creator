@@ -2,7 +2,7 @@ package me.reminisce.database
 
 import com.github.nscala_time.time.Imports._
 import me.reminisce.analysis.DataTypes._
-import me.reminisce.database.MongoDBEntities.{FBFriend, FBReaction}
+import me.reminisce.database.MongoDBEntities.{AbstractReaction, FBFriend}
 import me.reminisce.fetching.config.GraphResponses.Friend
 import me.reminisce.gameboard.board.GameboardEntities.{QuestionKind, strToKind}
 import reactivemongo.bson._
@@ -61,10 +61,27 @@ object MongoDBEntities {
     implicit val fbFromFormat = Macros.handler[FBFrom]
   }
 
-  case class FBReaction(userId: String, userName: String, reactionType: String)
+  sealed abstract class AbstractReaction(val from: FBFrom, val reactionType: ReactionType)
 
-  object FBReaction {
+  case class FBReaction(override val from: FBFrom, override val reactionType: ReactionType) extends AbstractReaction(from, reactionType)
+
+
+  object AbstractReaction {
+    implicit val reactionTypeWriter = new BSONWriter[ReactionType, BSONString] {
+      def write(reactionType: ReactionType): BSONString = BSONString(reactionType.name)
+    }
+
+    implicit val reactionTypeReader = new BSONReader[BSONString, ReactionType] {
+      def read(value: BSONString): ReactionType = stringToType(value.as[String]).asInstanceOf[ReactionType]
+    }
     implicit val fbReactionFormat = Macros.handler[FBReaction]
+
+    implicit val abstractReactionWriter = new BSONDocumentWriter[AbstractReaction] {
+      override def write(reaction: AbstractReaction): BSONDocument = fbReactionFormat.write(reaction.asInstanceOf[FBReaction])
+    }
+    implicit val abstractReactionReader = new BSONDocumentReader[AbstractReaction] {
+      override def read(bson: BSONDocument) = fbReactionFormat.read(bson)
+    }
   }
 
   case class FBMedia(height: Int, width: Int, src: String)
@@ -80,7 +97,7 @@ object MongoDBEntities {
 
   }
 
-  case class FBComment(id: String, from: FBFrom, likeCount: Int, message: String)
+  case class FBComment(id: String, override val from: FBFrom, likeCount: Int, message: String) extends AbstractReaction(from, PostWhoCommented)
 
   object FBComment {
     implicit val fbCommentFormat = Macros.handler[FBComment]
@@ -111,6 +128,7 @@ object MongoDBEntities {
   }
 
 
+  // Note that here reactions and reactionCount are reactions in the way facebook sees it so posts are not included
   case class FBPost(id: Option[BSONObjectID] = None,
                     userId: String,
                     postId: String,
@@ -126,16 +144,23 @@ object MongoDBEntities {
                     picture: Option[String] = None,
                     attachments: Option[List[FBAttachment]] = None,
                     comments: Option[List[FBComment]] = None,
-                    commentsCount: Option[Int] = None)
+                    commentsCount: Option[Int] = None) {
+    def commentsAsReactions: List[FBReaction] = {
+      comments.fold(List[FBReaction]()) {
+        comments =>
+          comments.map(comm => FBReaction(comm.from, comm.reactionType))
+      }
+    }
+  }
 
 
   object FBPost {
     implicit val fbPostFormat = Macros.handler[FBPost]
   }
 
-  def filterReaction(fbReactions: Iterable[FBReaction], reactionType: ReactionType): Iterable[FBReaction] = fbReactions.filter {
-    react => stringTypeToReactionType(react.reactionType) == reactionType
-  }
+  def filterReaction(fbReactions: Iterable[AbstractReaction], reactionType: ReactionType): Iterable[AbstractReaction] = fbReactions.filter(
+    react => react.reactionType == reactionType
+  )
 
   // Id is impossible to get for people not playing the game
   case class FBFriend(name: String) {
@@ -165,7 +190,7 @@ object AnalysisEntities {
                          userId: String,
                          dataTypeCounts: Map[DataType, Int] = Map(),
                          questionCounts: Map[QuestionKind, Int] = Map(),
-                         reactioners: Set[FBReaction] = Set(),
+                         reactioners: Set[AbstractReaction] = Set(),
                          friends: Set[FBFriend] = Set())
 
   object UserSummary {
@@ -222,7 +247,7 @@ object AnalysisEntities {
 
     implicit val mapDataTypeIntWriter = getMapDataTypeIntWriter
 
-    implicit val fbReactionFormat = MongoDBEntities.FBReaction.fbReactionFormat
+    implicit val fbReactionFormat = MongoDBEntities.AbstractReaction.fbReactionFormat
 
     implicit val userSummaryFormat = Macros.handler[UserSummary]
   }

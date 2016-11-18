@@ -112,11 +112,11 @@ class MongoDatabaseServiceSuite extends FunSuite {
 
     fbPost.reactions match {
       case Some(like1 :: like2 :: Nil) =>
-        assert(like1.userId == PostTestsData.likeId1)
-        assert(like1.userName == PostTestsData.likeName1)
+        assert(like1.from.userId == PostTestsData.likeId1)
+        assert(like1.from.userName == PostTestsData.likeName1)
 
-        assert(like2.userId == PostTestsData.likeId2)
-        assert(like2.userName == PostTestsData.likeName2)
+        assert(like2.from.userId == PostTestsData.likeId2)
+        assert(like2.from.userName == PostTestsData.likeName2)
       case Some(likes) =>
         fail(s"Wrong number of likes extracted : ${likes.length}")
       case None =>
@@ -249,8 +249,8 @@ object PostTestsData {
   val likeName1 = "Like name 1"
   val likeId2 = "Like Id2"
   val likeName2 = "Like name 2"
-  val postLike1 = Reaction(likeId1, likeName1, "")
-  val postLike2 = Reaction(likeId2, likeName2, "")
+  val postLike1 = Reaction(likeId1, likeName1, "LIKE")
+  val postLike2 = Reaction(likeId2, likeName2, "LIKE")
   val likesSumTotalCount = 123
   val likesSummary = Summary(total_count = likesSumTotalCount)
   val rootLikes = Root[List[Reaction]](data = Some(List(postLike1, postLike2)), paging = None, summary = Some(likesSummary))

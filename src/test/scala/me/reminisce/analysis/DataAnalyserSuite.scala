@@ -3,7 +3,7 @@ package me.reminisce.analysis
 import com.github.nscala_time.time.Imports._
 import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.{ItemSummary, UserSummary}
-import me.reminisce.database.MongoDBEntities.FBReaction
+import me.reminisce.database.MongoDBEntities.{AbstractReaction, FBFrom, FBReaction}
 import me.reminisce.fetching.config.GraphResponses._
 import me.reminisce.gameboard.board.GameboardEntities.{Geolocation, MultipleChoice, Order, QuestionKind}
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
@@ -107,7 +107,7 @@ class DataAnalyserSuite extends FunSuite {
     assert(dataTypes.contains(PostGeolocation))
   }
 
-  test("WhoCommented and CommentsNumber data types.") {
+  test("CommentsNumber data types.") {
     val p1 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = None)
     assert(!DataAnalyser.availableDataTypes(p1).contains(DataTypes.PostWhoCommented))
@@ -130,7 +130,6 @@ class DataAnalyserSuite extends FunSuite {
     val com3 = Root[List[Comment]](data = Option(List(comment2, comment3, comment4, comment5)), paging = None, summary = None)
     val p3 = Post("id", from = None, message = Some("Message"), story = Some("Story"), place = None, reactions = None,
       `type` = None, link = None, created_time = None, attachments = None, comments = Some(com3))
-    assert(DataAnalyser.availableDataTypes(p3).contains(DataTypes.PostWhoCommented))
     assert(DataAnalyser.availableDataTypes(p3).contains(DataTypes.PostCommentsNumber))
   }
 
@@ -189,8 +188,8 @@ class DataAnalyserSuite extends FunSuite {
 
   test("Add new counts to user summary.") {
     val userId = "UserId"
-    val oldReactioners = (1 to 10).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
-    val newReactioners = (11 to 20).map(nb => FBReaction(s"user$nb", s"name$nb", "")).toSet
+    val oldReactioners: Set[AbstractReaction] = (1 to 10).map(nb => FBReaction(FBFrom(s"user$nb", s"name$nb"), PostWhoLiked)).toSet
+    val newReactioners: Set[AbstractReaction] = (11 to 20).map(nb => FBReaction(FBFrom(s"user$nb", s"name$nb"), PostWhoLiked)).toSet
     assert(oldReactioners != newReactioners)
 
     val oldDataTypes = Map[DataType, Int](PostGeolocation -> 2, PostWhoCommented -> 4, PostWhoReacted -> 13) // linked with below counts
