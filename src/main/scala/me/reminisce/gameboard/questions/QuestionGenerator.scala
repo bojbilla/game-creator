@@ -274,4 +274,14 @@ abstract class QuestionGenerator extends Actor with ActorLogging {
         client ! MongoDBError(s"Unknown error : $any.")
     }
   }
+  
+  /**
+   * Get the difficulty level for this user (win rate?)
+   * 
+   * @param userId The user id
+   * @return the difficulty 
+   */
+  protected def getDifficultyForQuestion(userId: String): Double = {
+    return 0.5
+  }
 }
