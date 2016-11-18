@@ -81,18 +81,6 @@ class WhoMadeThisCommentOnYourPostWithDifficulty(db: DefaultDB) extends Question
       log.error(s"Unexpected message received : $any")
   }
 
-  
-   /**
-   * Get the difficulty level for this user (win rate?)
-   * 
-   * @param userId The user id
-   * @return the difficulty 
-   */
-  private def getDifficultyForQuestion(userId: String): Double = {
-    return 0.5
-  }
-  
-
   /**
     * Generates a multiple choice question
     *
