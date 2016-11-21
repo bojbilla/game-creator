@@ -1,10 +1,11 @@
 package me.reminisce.gameboard.questions
 
 import akka.actor.Props
+import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.UserSummary
 import me.reminisce.database.MongoCollections
-import me.reminisce.database.MongoDBEntities.FBPost
-import me.reminisce.gameboard.board.GameboardEntities.{MCWhoReactedToYourPost, MultipleChoice, MultipleChoiceQuestion, Possibility}
+import me.reminisce.database.MongoDBEntities.{AbstractReaction, FBPost, filterReaction}
+import me.reminisce.gameboard.board.GameboardEntities._
 import me.reminisce.gameboard.questions.QuestionGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
@@ -13,19 +14,20 @@ import reactivemongo.bson.BSONDocument
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
 
+
 /**
   * Factory for [[me.reminisce.gameboard.questions.WhoReactedToYourPost]]
   */
 object WhoReactedToYourPost {
 
   /**
-    * Creates a WhoReactedToYourPost question generator
+    * Creates a WhoReactedToYourPostWithReactionType question generator
     *
     * @param database database from which to take the data
     * @return props for the created actor
     */
-  def props(database: DefaultDB): Props =
-  Props(new WhoReactedToYourPost(database))
+  def props(database: DefaultDB, reactionType: ReactionType): Props =
+  Props(new WhoReactedToYourPost(database, reactionType))
 
 }
 
@@ -34,7 +36,7 @@ object WhoReactedToYourPost {
   *
   * @param db database from which to take the data
   */
-class WhoReactedToYourPost(db: DefaultDB) extends QuestionGenerator {
+class WhoReactedToYourPost(db: DefaultDB, reactionType: ReactionType) extends QuestionGenerator {
 
   /**
     * Entry point for this actor, handles the CreateQuestionWithMultipleItems(userId, itemIds) message by getting the
@@ -60,32 +62,68 @@ class WhoReactedToYourPost(db: DefaultDB) extends QuestionGenerator {
             for {
               userSummary <- maybeUserSummary
               post <- maybePost
-              likes <- post.reactions
-              liker <- Random.shuffle(likes).headOption
-              if !((userSummary.reactioners -- likes.toSet).size < 3)
-              choices = (liker :: Random.shuffle((userSummary.reactioners -- likes.toSet).toList).take(3)) map {
+              reactions = post.reactions.getOrElse(List())
+              selectedReaction <- randomReaction(reactions ++ post.commentsAsReactions)
+              if !((userSummary.reactioners -- reactions.toSet).size < 3)
+              choices = (selectedReaction :: Random.shuffle((userSummary.reactioners -- reactions.toSet).toList).take(3)) map {
                 choice => Possibility(choice.from.userName, None, "Person", Some(choice.from.userId))
               }
               answer <- choices.headOption
               shuffled = Random.shuffle(choices)
-              postSubject = subjectFromPost(post)
+              postSubject <- generateSubject(post, selectedReaction)
             }
               yield {
-                MultipleChoiceQuestion(userId, MultipleChoice, MCWhoReactedToYourPost, Some(postSubject), shuffled, shuffled.indexOf(answer))
+                MultipleChoiceQuestion(userId, MultipleChoice, reactionDataToQuestion(reactionType), Some(postSubject), shuffled, shuffled.indexOf(answer))
               }
           maybeQuestion match {
             case Some(question) =>
               client ! FinishedQuestionCreation(question)
             case None =>
-              client ! NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough likers or non-likers.")
+              client ! NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough reactioners or non-reactioners.")
           }
         }) onFailure {
         case e =>
           client ! MongoDBError(s"${e.getMessage}")
       }
 
-    case any => log.error(s"WhoReactedToYourPost received a unexpected message $any")
+    case any => log.error(s"WhoReactedToYourPostWithReactionType received a unexpected message $any")
   }
 
+
+  private val reactionDataToQuestion = Map[DataType, SpecificQuestionType](
+    PostWhoReacted -> MCWhoReactedToYourPost,
+    PostWhoLiked -> MCWhoReactedToYourPostWithLIKE,
+    PostWhoWowed -> MCWhoReactedToYourPostWithWOW,
+    PostWhoLaughed -> MCWhoReactedToYourPostWithHAHA,
+    PostWhoLoved -> MCWhoReactedToYourPostWithLOVE,
+    PostWhoGotSad -> MCWhoReactedToYourPostWithSAD,
+    PostWhoGotAngry -> MCWhoReactedToYourPostWithANGRY,
+    PostWhoCommented -> MCWhoMadeThisCommentOnYourPost
+  )
+
+  private def randomReaction(reactions: List[AbstractReaction]): Option[AbstractReaction] = {
+    val possibleReactions = reactionType match {
+      case PostWhoReacted => reactions
+      case _ => filterReaction(reactions, reactionType)
+    }
+    Random.shuffle(possibleReactions).headOption
+  }
+
+  private def generateSubject(post: FBPost, selectedReaction: AbstractReaction): Option[Subject] = {
+    val postSubject = subjectFromPost(post)
+    reactionType match {
+      case PostWhoCommented =>
+        post.comments.flatMap {
+          comments =>
+            val maybeComment = Random.shuffle(comments.filter(_.from == selectedReaction.from)).headOption
+            maybeComment.map {
+              comment =>
+                CommentSubject(comment.message, postSubject)
+            }
+        }
+      case _ =>
+        Some(postSubject)
+    }
+  }
 
 }

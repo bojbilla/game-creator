@@ -96,14 +96,10 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
           }
         case MultipleChoice =>
           tpe match {
-            case PostWhoReacted =>
-              Some(context.actorOf(WhoReactedToYourPost.props(db)))
-            case PostWhoCommented =>
-              Some(context.actorOf(WhoMadeThisCommentOnYourPost.props(db)))
             case PageWhichLiked =>
               Some(context.actorOf(WhichPageDidYouLike.props(db)))
             case reaction: ReactionType =>
-              Some(context.actorOf(WhoReactedToYourPostWithReactionType.props(db, reaction)))
+              Some(context.actorOf(WhoReactedToYourPost.props(db, reaction)))
             case _ =>
               None
           }

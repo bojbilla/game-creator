@@ -2,6 +2,7 @@ package me.reminisce.database
 
 import com.github.nscala_time.time.Imports._
 import me.reminisce.analysis.DataTypes._
+import me.reminisce.database.MongoDBEntities.FBComment.simpleReactionFromComment
 import me.reminisce.database.MongoDBEntities.{AbstractReaction, FBFriend}
 import me.reminisce.fetching.config.GraphResponses.Friend
 import me.reminisce.gameboard.board.GameboardEntities.{QuestionKind, strToKind}
@@ -101,6 +102,10 @@ object MongoDBEntities {
 
   object FBComment {
     implicit val fbCommentFormat = Macros.handler[FBComment]
+
+    def simpleReactionFromComment(fBComment: FBComment): FBReaction = {
+      FBReaction(fBComment.from, fBComment.reactionType)
+    }
   }
 
   case class LastFetched(id: Option[BSONObjectID], userId: String, date: DateTime)
@@ -148,8 +153,8 @@ object MongoDBEntities {
     def commentsAsReactions: List[FBReaction] = {
       comments.fold(List[FBReaction]()) {
         comments =>
-          comments.map(comm => FBReaction(comm.from, comm.reactionType))
-      }
+          comments.map(simpleReactionFromComment)
+      }.distinct
     }
   }
 

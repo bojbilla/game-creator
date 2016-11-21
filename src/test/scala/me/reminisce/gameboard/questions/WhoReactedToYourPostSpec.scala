@@ -3,11 +3,12 @@ package me.reminisce.gameboard.questions
 import java.util.concurrent.TimeUnit
 
 import akka.testkit.{TestActorRef, TestProbe}
-import me.reminisce.analysis.DataTypes.PostWhoLiked
+import me.reminisce.analysis.DataTypes.{PostWhoCommented, PostWhoLiked, PostWhoReacted}
 import me.reminisce.database.AnalysisEntities.UserSummary
 import me.reminisce.database.MongoCollections
+import me.reminisce.database.MongoDBEntities.FBComment.simpleReactionFromComment
 import me.reminisce.database.MongoDBEntities._
-import me.reminisce.gameboard.board.GameboardEntities.{MultipleChoiceQuestion, TextPostSubject}
+import me.reminisce.gameboard.board.GameboardEntities.{CommentSubject, MultipleChoiceQuestion}
 import me.reminisce.gameboard.questions.QuestionGenerator.{CreateQuestion, NotEnoughData}
 import org.scalatest.DoNotDiscover
 import reactivemongo.api.collections.bson.BSONCollection
@@ -18,7 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 @DoNotDiscover
-class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec") {
+class WhoReactedToYourPostSpec extends QuestionTester("WhoReactedToYourPostSpec") {
 
   val userId = "TestUserWhoReactedToYourPost"
 
@@ -28,10 +29,10 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
         db =>
           val itemId = "This post does not exist"
 
-          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db, PostWhoReacted))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
-          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough likers or non-likers."))
+          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough reactioners or non-reactioners."))
       }
     }
 
@@ -45,14 +46,14 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
           val userSummary = UserSummary(userId = userId)
           Await.result(userSummariesCollection.update(userSummary, userSummary, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db, PostWhoReacted))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
-          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough likers or non-likers."))
+          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough reactioners or non-reactioners."))
       }
     }
 
-    "not create question when there is no likes for post." in {
+    "not create question when there is no reaction for post." in {
       testWithDb {
         db =>
           val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
@@ -67,14 +68,14 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
           val fbPost = FBPost(postId = itemId, userId = userId)
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db, PostWhoReacted))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
-          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough likers or non-likers."))
+          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough reactioners or non-reactioners."))
       }
     }
 
-    "not create question when there is not enough non-likers for post." in {
+    "not create question when there is not enough non-reactioners for post." in {
       testWithDb {
         db =>
           val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
@@ -86,16 +87,16 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
 
           val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
-          val likerId = "LikerId"
-          val likerName = "LikerName"
-          val like = FBReaction(FBFrom(likerId, likerName), PostWhoLiked)
+          val reactionerId = "LikerId"
+          val reactionerName = "LikerName"
+          val like = FBReaction(FBFrom(reactionerId, reactionerName), PostWhoLiked)
           val fbPost = FBPost(postId = itemId, userId = userId, reactions = Some(List(like)))
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db, PostWhoReacted))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(userId, itemId))
-          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough likers or non-likers."))
+          testProbe.expectMsg(NotEnoughData(s"No user summary, $itemId does not exist or $itemId has not enough reactioners or non-reactioners."))
       }
     }
 
@@ -106,39 +107,41 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhichPageDidYouLikeSpec")
 
           val itemId = "Fresh post for this test"
 
-          val likers = (0 until 6).map {
+          val commenters = (0 until 6).map {
             i =>
-              val likerId = s"LikerId$i"
-              val likerName = s"LikerName$i"
-              FBReaction(FBFrom(likerId, likerName), PostWhoLiked)
+              val commenterId = s"CommenterId$i"
+              val commenterName = s"CommenterName$i"
+              FBComment(s"id$i", FBFrom(commenterId, commenterName), i, s"Message$i")
           }.toList
 
           val freshUser = userId + "Fresh"
-          val userSummary = UserSummary(userId = freshUser, reactioners = likers.toSet)
+          val userSummary = UserSummary(userId = freshUser, reactioners = commenters.map(simpleReactionFromComment).toSet)
           Await.result(userSummariesCollection.update(userSummary, userSummary, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
           val postsCollection = db[BSONCollection](MongoCollections.fbPosts)
 
-          val message = "Who liked this ?"
-          val fbPost = FBPost(postId = itemId, userId = freshUser, reactions = Some(List(likers.head)), message = Some(message))
+          val message = "Who commented here?"
+          val fbPost = FBPost(postId = itemId, userId = freshUser, comments = Some(List(commenters.head)), message = Some(message))
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
-          val actorRef = TestActorRef(WhoReactedToYourPost.props(db))
+          // Using comments here as it tests the most code
+          val actorRef = TestActorRef(WhoReactedToYourPost.props(db, PostWhoCommented))
           val testProbe = TestProbe()
           testProbe.send(actorRef, CreateQuestion(freshUser, itemId))
 
           checkFinished[MultipleChoiceQuestion](testProbe) {
             question =>
-              checkSubject[TextPostSubject](question.subject) {
+              checkSubject[CommentSubject](question.subject) {
                 subject =>
                   val answer = question.answer
                   val choices = question.choices
-                  assert(subject.text == fbPost.message.getOrElse(""))
-                  likers.headOption match {
-                    case Some(liker) =>
-                      assert(choices(answer).name == liker.from.userName)
+                  commenters.headOption match {
+                    case Some(commenter) =>
+                      assert(subject.comment == commenter.message)
+                      assert(choices(answer).name == commenter.from.userName)
+                      assert(subject.post == QuestionGenerator.subjectFromPost(fbPost))
                     case None =>
-                      fail("No liker.")
+                      fail("No reactioner.")
                   }
               }
           }

@@ -13,7 +13,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suites}
 class DatabaseTests extends Suites(new OrderByPageLikesSpec, new OrderByPageLikeTimeSpec, new OrderByPostCommentsNumberSpec,
   new OrderByPostLikesNumberSpec, new OrderByPostTimeSpec, new WhenDidYouLikeThisPageSpec,
   new WhenDidYouShareThisPostSpec, new WhichCoordinatesWereYouAtSpec, new WhichPageDidYouLikeSpec, new WhoReactedToYourPostSpec,
-  new WhoMadeThisCommentOnYourPostSpec, new FetcherServiceSpec, new MongoDatabaseServiceSpec, new DeletionServiceSpec,
+  new FetcherServiceSpec, new MongoDatabaseServiceSpec, new DeletionServiceSpec,
   new DataAnalyserSpec, new GameboardGeneratorSpec, new ServerServiceActorSpec)
   with BeforeAndAfterAll with BeforeAndAfterEach {
 
