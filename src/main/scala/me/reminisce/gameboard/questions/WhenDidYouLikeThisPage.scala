@@ -61,7 +61,6 @@ class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
           val maybeTimelineQuestion =
             for {
               pageLike <- mayBePageLike
-              page <- maybePage
             }
               yield {
                 val actualDate = pageLike.likeTime
