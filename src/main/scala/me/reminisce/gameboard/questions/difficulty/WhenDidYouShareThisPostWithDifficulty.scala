@@ -13,8 +13,7 @@ import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure, Success}
-import scala.util.Random
+import scala.util.{Failure, Success, Random}
 
 /**
   * Factory for [[me.reminisce.gameboard.questions.WhenDidYouShareThisPostWithDifficulty]]
