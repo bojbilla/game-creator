@@ -13,7 +13,6 @@ import reactivemongo.bson.BSONDocument
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success, Random}
 
-
 /**
   * Factory for [[me.reminisce.gameboard.questions.WhenDidYouLikeThisPageWithDifficulty]]
   */
