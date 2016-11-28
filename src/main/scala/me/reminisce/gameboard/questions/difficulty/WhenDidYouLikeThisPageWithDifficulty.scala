@@ -10,11 +10,9 @@ import me.reminisce.gameboard.questions.TimeQuestionGenerator._
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
-
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Random
+import scala.util.{Failure, Success, Random}
+
 
 /**
   * Factory for [[me.reminisce.gameboard.questions.WhenDidYouLikeThisPageWithDifficulty]]
@@ -94,7 +92,7 @@ class WhenDidYouLikeThisPageWithDifficulty(db: DefaultDB) extends TimeQuestionGe
    * 
    * @return A pageLike
    */
-  def selectPage(difficulty: Double, pageLikeList: List[FBPageLike]): Option[FBPageLike] = {
+  private def selectPage(difficulty: Double, pageLikeList: List[FBPageLike]): Option[FBPageLike] = {
     val sorted = pageLikeList.sortBy { _.likeTime }
     Option(Random.shuffle(sorted.take(Math.max(1,(-15*difficulty + 20).toInt))).head)
   }
