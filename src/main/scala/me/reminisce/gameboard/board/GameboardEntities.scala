@@ -180,8 +180,7 @@ object GameboardEntities {
                           ) extends GameQuestion(userId, kind, `type`, subject)
 
   case class SubjectWithId(subject: Subject, uId: Int)
-
-
+  
   case class Possibility(name: String, imageUrl: Option[String], `type`: String, fbId: Option[String] = None)
 
   case class GeolocationQuestion(userId: String,
