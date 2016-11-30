@@ -2,8 +2,12 @@ package me.reminisce.server
 
 
 import akka.actor._
-import me.reminisce.database.DeletionService
+import me.reminisce.analysis.DataAnalyser
+import me.reminisce.analysis.DataAnalyser.NewBlackList
 import me.reminisce.database.DeletionService.{ClearDatabase, RemoveUser}
+import me.reminisce.database.MongoDBEntities.FBFrom
+import me.reminisce.database.MongoDatabaseService.GetBlackList
+import me.reminisce.database.{DeletionService, MongoDatabaseService}
 import me.reminisce.fetching.FetcherService
 import me.reminisce.fetching.FetcherService.FetchData
 import me.reminisce.gameboard.board.GameGenerator
@@ -72,6 +76,23 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
             complete(BuildInfo.toMap + ("appMode" -> ApplicationConfiguration.appMode))
         }
       }
+    } ~ path("blacklist") {
+      get {
+        parameters('user_id.as[String]) {
+          (userId: String) =>
+            getBlackList(userId)
+        }
+      } ~
+        post {
+          parameters('user_id.as[String]) {
+            (userId: String) =>
+              extract(_.request.headers)
+              entity(as[List[FBFrom]]) {
+                blacklist =>
+                  setBlackList(blacklist, userId)
+              }
+          }
+        }
     } ~ path("removeUser") {
       delete {
         parameters("user_id") {
@@ -158,6 +179,24 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
       (db, ctx) =>
         val deletionService = context.actorOf(DeletionService.props(db))
         perRequest(ctx, deletionService, message)
+    }
+  }
+
+  private def setBlackList(blacklist: List[FBFrom], userId: String): Route = {
+    handleWithDb {
+      (db, ctx) =>
+        val dataAnalyser = context.actorOf(DataAnalyser.props(userId, db))
+        val blackListMessage = NewBlackList(blacklist.toSet)
+        perRequest(ctx, dataAnalyser, blackListMessage)
+    }
+  }
+
+  private def getBlackList(userId: String): Route = {
+    handleWithDb {
+      (db, ctx) =>
+        log.info(s"Getting blacklist for $userId")
+        val mongoDatabaseService = context.actorOf(MongoDatabaseService.props(userId, db))
+        perRequest(ctx, mongoDatabaseService, GetBlackList)
     }
   }
 

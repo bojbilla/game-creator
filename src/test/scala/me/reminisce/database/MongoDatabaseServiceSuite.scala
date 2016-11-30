@@ -1,6 +1,7 @@
 package me.reminisce.database
 
 import com.github.nscala_time.time.Imports._
+import me.reminisce.database.MongoDBEntities.FBFrom
 import me.reminisce.fetching.config.GraphResponses._
 import org.scalatest.FunSuite
 
@@ -111,14 +112,20 @@ class MongoDatabaseServiceSuite extends FunSuite {
     }
 
     fbPost.reactions match {
-      case Some(like1 :: like2 :: Nil) =>
-        assert(like1.from.userId == PostTestsData.likeId1)
-        assert(like1.from.userName == PostTestsData.likeName1)
+      case Some(set) =>
+        assert(set.size == 2)
+        assert(set.exists {
+          like =>
+            like.from.userId == PostTestsData.likeId1 && like.from.userName == PostTestsData.likeName1
+        })
 
-        assert(like2.from.userId == PostTestsData.likeId2)
-        assert(like2.from.userName == PostTestsData.likeName2)
+        assert(set.exists {
+          like =>
+            like.from.userId == PostTestsData.likeId2 && like.from.userName == PostTestsData.likeName2
+        })
+
       case Some(likes) =>
-        fail(s"Wrong number of likes extracted : ${likes.length}")
+        fail(s"Wrong number of likes extracted : ${likes.size}")
       case None =>
         fail("Likes not extracted.")
     }

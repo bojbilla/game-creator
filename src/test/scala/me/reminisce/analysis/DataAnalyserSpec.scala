@@ -102,9 +102,9 @@ class DataAnalyserSpec extends DatabaseTester("DataAnalyserSpec") {
           }
 
           val expectedUserSummary = UserSummary(None, "TestDataAnalyserSpec",
-            Map(PostWhoLiked -> 1, PostWhoWowed -> 1, PageLikeNumber-> 10, PostReactionNumber -> 12, PostWhoReacted -> 1,
+            Map(PostWhoLiked -> 1, PostWhoWowed -> 1, PageLikeNumber-> 10, PostReactionNumber -> 12, PostWhoReacted -> 2,
               PostWhoCommented -> 2, PostGeolocation -> 2, Time -> 22, PostCommentsNumber -> 2),
-            Map(Order -> 42, MultipleChoice -> 5, Geolocation -> 2, Timeline -> 22),
+            Map(Order -> 42, MultipleChoice -> 6, Geolocation -> 2, Timeline -> 22),
             Set(FBReaction(FBFrom("1", "me1"), PostWhoLiked), FBReaction(FBFrom("2", "me2"), PostWhoLiked),
               FBReaction(FBFrom("3", "me3"), PostWhoLiked), FBReaction(FBFrom("4", "me4"), PostWhoLiked),
               FBReaction(FBFrom("5", "me5"), PostWhoWowed), FBReaction(FBFrom("6", "me6"), PostWhoWowed),

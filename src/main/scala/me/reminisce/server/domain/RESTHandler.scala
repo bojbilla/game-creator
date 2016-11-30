@@ -4,7 +4,7 @@ import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{OneForOneStrategy, _}
 import me.reminisce.fetching.FetcherService.AckFetching
 import me.reminisce.gameboard.questions.QuestionGenerator.FinishedQuestionCreation
-import me.reminisce.server.domain.Domain.{ActionForbidden, Error}
+import me.reminisce.server.domain.Domain.{ActionForbidden, Error, FailedBlacklist}
 import me.reminisce.server.domain.RESTHandler.{Confirmation, WithActorRef, WithProps}
 import me.reminisce.server.jsonserializer.GameCreatorFormatter
 import spray.http.StatusCode
@@ -39,7 +39,8 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
     */
   def receive = {
     case FinishedQuestionCreation(q) => complete(OK, q)
-    case error: Error => complete(NotFound, error)
+    case error: Error => complete(InternalServerError, error)
+    case notFound: Domain.NotFound => complete(NotFound, notFound)
     case tooMany: Domain.TooManyRequests => complete(TooManyRequests, tooMany)
     case v: Domain.Validation => complete(BadRequest, v)
     case ReceiveTimeout => complete(GatewayTimeout, Domain.Error("Request timeout"))
@@ -47,7 +48,9 @@ trait RESTHandler extends Actor with Json4sSupport with ActorLogging with GameCr
     case graphInvalidToken: Domain.GraphAPIInvalidToken => complete(Unauthorized, graphInvalidToken)
     case internalError: Domain.InternalError => complete(InternalServerError, internalError)
     case forbidden: ActionForbidden => complete(Forbidden, forbidden)
-    case res: RestMessage => complete(OK, res)
+    case blacklistFail: FailedBlacklist => complete(InternalServerError, blacklistFail)
+    case res: RestMessage =>
+      complete(OK, res)
     case res@AckFetching(message) =>
       delayedComplete(OK, res)
     case x =>

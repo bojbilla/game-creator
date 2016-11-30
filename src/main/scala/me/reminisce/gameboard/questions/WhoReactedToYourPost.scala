@@ -1,6 +1,7 @@
 package me.reminisce.gameboard.questions
 
 import akka.actor.Props
+import me.reminisce.analysis.DataAnalyser
 import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.AnalysisEntities.UserSummary
 import me.reminisce.database.MongoCollections
@@ -62,10 +63,15 @@ class WhoReactedToYourPost(db: DefaultDB, reactionType: ReactionType) extends Qu
             for {
               userSummary <- maybeUserSummary
               post <- maybePost
-              reactions = post.reactions.getOrElse(List())
-              selectedReaction <- randomReaction(reactions ++ post.commentsAsReactions)
-              if !((userSummary.reactioners -- reactions.toSet).size < 3)
-              choices = (selectedReaction :: Random.shuffle((userSummary.reactioners -- reactions.toSet).toList).take(3)) map {
+              postReactions = post.reactions.getOrElse(Set())
+              reactionsWithComments = postReactions ++ post.commentsAsReactions
+              blacklist = userSummary.blacklist.getOrElse(Set())
+              filteredPostReactions = DataAnalyser.applyBlacklist(reactionsWithComments, blacklist)
+              filteredReactioners = DataAnalyser.applyBlacklist(userSummary.reactioners, blacklist)
+              selectedReaction <- randomReaction(filteredPostReactions)
+              remainingReactions = filteredReactioners -- filteredPostReactions
+              if remainingReactions.size >= 3
+              choices = (selectedReaction :: Random.shuffle(remainingReactions.toList).take(3)) map {
                 choice => Possibility(choice.from.userName, None, "Person", Some(choice.from.userId))
               }
               answer <- choices.headOption
@@ -101,7 +107,7 @@ class WhoReactedToYourPost(db: DefaultDB, reactionType: ReactionType) extends Qu
     PostWhoCommented -> MCWhoMadeThisCommentOnYourPost
   )
 
-  private def randomReaction(reactions: List[AbstractReaction]): Option[AbstractReaction] = {
+  private def randomReaction[React <: AbstractReaction](reactions: Set[React]): Option[React] = {
     val possibleReactions = reactionType match {
       case PostWhoReacted => reactions
       case _ => filterReaction(reactions, reactionType)

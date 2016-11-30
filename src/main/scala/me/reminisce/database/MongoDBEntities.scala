@@ -3,7 +3,7 @@ package me.reminisce.database
 import com.github.nscala_time.time.Imports._
 import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.MongoDBEntities.FBComment.simpleReactionFromComment
-import me.reminisce.database.MongoDBEntities.{AbstractReaction, FBFriend}
+import me.reminisce.database.MongoDBEntities.{AbstractReaction, FBFriend, FBFrom}
 import me.reminisce.fetching.config.GraphResponses.Friend
 import me.reminisce.gameboard.board.GameboardEntities.{QuestionKind, strToKind}
 import reactivemongo.bson._
@@ -142,7 +142,7 @@ object MongoDBEntities {
                     place: Option[FBPlace] = None,
                     createdTime: Option[String] = None,
                     from: Option[FBFrom] = None,
-                    reactions: Option[List[FBReaction]] = None,
+                    reactions: Option[Set[FBReaction]] = None,
                     reactionCount: Option[Int] = None,
                     tpe: Option[String] = None,
                     link: Option[String] = None,
@@ -150,11 +150,12 @@ object MongoDBEntities {
                     attachments: Option[List[FBAttachment]] = None,
                     comments: Option[List[FBComment]] = None,
                     commentsCount: Option[Int] = None) {
-    def commentsAsReactions: List[FBReaction] = {
+
+    def commentsAsReactions: Set[FBReaction] = {
       comments.fold(List[FBReaction]()) {
         comments =>
           comments.map(simpleReactionFromComment)
-      }.distinct
+      }.toSet
     }
   }
 
@@ -163,7 +164,7 @@ object MongoDBEntities {
     implicit val fbPostFormat = Macros.handler[FBPost]
   }
 
-  def filterReaction(fbReactions: Iterable[AbstractReaction], reactionType: ReactionType): Iterable[AbstractReaction] = fbReactions.filter(
+  def filterReaction[React <: AbstractReaction](fbReactions: Iterable[React], reactionType: ReactionType): Iterable[React] = fbReactions.filter(
     react => react.reactionType == reactionType
   )
 
@@ -196,7 +197,8 @@ object AnalysisEntities {
                          dataTypeCounts: Map[DataType, Int] = Map(),
                          questionCounts: Map[QuestionKind, Int] = Map(),
                          reactioners: Set[AbstractReaction] = Set(),
-                         friends: Set[FBFriend] = Set())
+                         friends: Set[FBFriend] = Set(),
+                         blacklist: Option[Set[FBFrom]] = None)
 
   object UserSummary {
 

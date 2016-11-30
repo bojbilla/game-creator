@@ -129,7 +129,7 @@ object DatabaseFiller {
               val from = (jObject \ "from").extract[FBFrom]
               val reactionType = stringToType((jObject \ "reactionType").extract[String])
               FBReaction(from, reactionType.asInstanceOf[ReactionType])
-          })
+          }.toSet)
           val reactionCount = (post \ "reactionCount").extractOpt[Int]
           val tpe = (post \ "tpe").extractOpt[String]
           val link = (post \ "link").extractOpt[String]

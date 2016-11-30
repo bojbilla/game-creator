@@ -90,7 +90,7 @@ class WhoReactedToYourPostSpec extends QuestionTester("WhoReactedToYourPostSpec"
           val reactionerId = "LikerId"
           val reactionerName = "LikerName"
           val like = FBReaction(FBFrom(reactionerId, reactionerName), PostWhoLiked)
-          val fbPost = FBPost(postId = itemId, userId = userId, reactions = Some(List(like)))
+          val fbPost = FBPost(postId = itemId, userId = userId, reactions = Some(Set(like)))
           Await.result(postsCollection.update(fbPost, fbPost, WriteConcern.Acknowledged, upsert = true), Duration(10, TimeUnit.SECONDS))
 
           val actorRef = TestActorRef(WhoReactedToYourPost.props(db, PostWhoReacted))

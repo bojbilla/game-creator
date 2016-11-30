@@ -1,5 +1,7 @@
 package me.reminisce.server.domain
 
+import me.reminisce.database.MongoDBEntities.FBFrom
+
 trait RestMessage
 
 /**
@@ -15,6 +17,8 @@ object Domain {
 
   case class Error(message: String)
 
+  case class NotFound(message: String) extends RestMessage
+
   case class InternalError(message: String) extends RestMessage
 
   case class TooManyRequests(message: String) extends RestMessage
@@ -26,6 +30,12 @@ object Domain {
   case class NoContentFound(message: String) extends RestMessage
 
   case class ActionForbidden(message: String) extends RestMessage
+
+  case class AckBlackList(message: String) extends RestMessage
+
+  case class FailedBlacklist(message: String) extends RestMessage
+
+  case class ReturnBlackList(blackList: Set[FBFrom]) extends RestMessage
 
   // Exceptions
 

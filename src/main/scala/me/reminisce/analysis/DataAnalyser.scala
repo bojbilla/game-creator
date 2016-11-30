@@ -1,6 +1,8 @@
 package me.reminisce.analysis
 
-import akka.actor.{Actor, ActorLogging, Props}
+import java.util.concurrent.ConcurrentHashMap
+
+import akka.actor.{Actor, ActorLogging, PoisonPill, Props}
 import akka.event.{Logging, LoggingAdapter}
 import me.reminisce.analysis.DataAnalyser._
 import me.reminisce.analysis.DataTypes._
@@ -10,12 +12,15 @@ import me.reminisce.database.MongoDBEntities._
 import me.reminisce.fetching.config.GraphResponses.{Friend, Post}
 import me.reminisce.gameboard.board.GameboardEntities.{Order, QuestionKind}
 import me.reminisce.gameboard.questions.QuestionGenerationConfig
+import me.reminisce.server.domain.Domain.{AckBlackList, FailedBlacklist}
+import me.reminisce.server.domain.RestMessage
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.bson.BSONDocument
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 /**
@@ -23,9 +28,11 @@ import scala.util.{Failure, Success}
   */
 object DataAnalyser {
 
-  case class FinalAnalysis(fbPosts: Set[String], fbPages: Set[String], fbFriends: Set[Friend])
+  case class FinalAnalysis(fbPosts: Set[String], fbPages: Set[String], fbFriends: Set[Friend], retries: Int = 0)
 
   case class TransientPostsAnalysis(fbPosts: List[Post])
+
+  case class NewBlackList(blacklist: Set[FBFrom], retries: Int = 0) extends RestMessage
 
   /**
     * Creates a data analyser generator
@@ -36,6 +43,10 @@ object DataAnalyser {
     */
   def props(userId: String, db: DefaultDB): Props =
   Props(new DataAnalyser(userId, db))
+
+  private val transientDataTypes = Set[DataType](Time, PostGeolocation, PostCommentsNumber, PostReactionNumber)
+
+  private val analysingFor = new ConcurrentHashMap[String, Boolean]()
 
   /**
     * Add a new count to a map of items => count
@@ -196,7 +207,12 @@ object DataAnalyser {
 
     val newFbFriends = friends.map(FBFriend(_))
 
-    UserSummary(userSummary.id, userSummary.userId, newDataTypes, newQuestionCounts, newReactioners, newFbFriends)
+    userSummary.copy(dataTypeCounts = newDataTypes, questionCounts = newQuestionCounts, reactioners = newReactioners,
+      friends = newFbFriends)
+  }
+
+  def applyBlacklist[React <: AbstractReaction](reactions: Set[React], blacklist: Set[FBFrom]): Set[React] = {
+    reactions.filterNot(react => blacklist.contains(react.from))
   }
 
 }
@@ -220,22 +236,97 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     * @return Nothing
     */
   def receive = {
-    case FinalAnalysis(fbPosts, fbPages, fbFriends) =>
-      val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
-      val selector = BSONDocument("userId" -> userId)
-      userSummariesCollection.find(selector).one[UserSummary].onComplete {
-        case Success(maybeUserSummary) =>
-          lazy val emptyUserSummary = UserSummary(None, userId, Map(), Map(), Set(), Set())
-          finalizeSummary(fbPosts.toList, fbPages.toList, fbFriends, maybeUserSummary.getOrElse(emptyUserSummary))
-        case Failure(e) =>
-          log.error(s"Database could not be reached : $e.")
-        case any =>
-          log.error(s"Unknown database error: $any.")
+    case FinalAnalysis(fbPosts, fbPages, fbFriends, retries) =>
+      if (!analysingFor.putIfAbsent(userId, true)) {
+        handleWithUserSummary {
+          userSummary =>
+            finalizeSummary(fbPosts.toList, fbPages.toList, fbFriends, userSummary)
+        }
+      } else {
+        if (retries < 100) {
+          context.system.scheduler.scheduleOnce(200.milliseconds, self, FinalAnalysis(fbPosts, fbPages, fbFriends, retries + 1))
+        } else {
+          log.error(s"Could not perform final analysis for $userId: too many retries ($retries).")
+        }
       }
     case TransientPostsAnalysis(fbPosts) =>
       saveTransientPostsSummary(fbPosts, db[BSONCollection](MongoCollections.itemsSummaries))
+    case NewBlackList(blacklist, retries) =>
+      val client = sender()
+      if (!analysingFor.putIfAbsent(userId, true)) {
+        client ! AckBlackList(s"Updating blacklist for user $userId.")
+        handleWithUserSummary {
+          userSummary =>
+            val newSummary = userSummary.copy(dataTypeCounts = Map(), questionCounts = Map(), blacklist = Some(blacklist))
+            updateBlackList(newSummary)
+        }
+      } else {
+        if (retries < 100) {
+          context.system.scheduler.scheduleOnce(200.milliseconds, self, NewBlackList(blacklist, retries + 1))
+        } else {
+          client ! FailedBlacklist(s"Updating blacklist for user $userId.")
+          log.error(s"Could not update blacklist for $userId: too many retries ($retries).")
+        }
+      }
     case any =>
       log.error("DataAnalyser received unhandled message : " + any)
+  }
+
+  private def handleWithUserSummary(handle: UserSummary => Unit): Unit = {
+    val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
+    val selector = BSONDocument("userId" -> userId)
+    userSummariesCollection.find(selector).one[UserSummary].onComplete {
+      case Success(maybeUserSummary) =>
+        lazy val emptyUserSummary = UserSummary(None, userId, Map(), Map(), Set(), Set(), None)
+        handle(maybeUserSummary.getOrElse(emptyUserSummary))
+      case Failure(e) =>
+        log.error(s"Database could not be reached : $e.")
+        analysingFor.remove(userId)
+      case any =>
+        log.error(s"Unknown database error: $any.")
+        analysingFor.remove(userId)
+    }
+  }
+
+
+  private def updateBlackList(userSummary: UserSummary): Unit = {
+    val postCollection = db[BSONCollection](MongoCollections.fbPosts)
+    val pagesCollection = db[BSONCollection](MongoCollections.fbPages)
+    val itemsSummariesCollection = db[BSONCollection](MongoCollections.itemsSummaries)
+    val pageLikesCollection = db[BSONCollection](MongoCollections.fbPageLikes)
+    val selector = BSONDocument("userId" -> userId)
+    val postsCursor = postCollection.find(selector).cursor[FBPost]()
+    (for {
+      fbPosts <- postsCursor.collect[List](stopOnError = true)
+
+      likedPagesCursor = pageLikesCollection.find(selector).cursor[FBPageLike]()
+      likedPages <- likedPagesCursor.collect[List](stopOnError = true)
+      likedPagesIds = likedPages.map(pageLike => pageLike.pageId)
+
+      pageSelector = BSONDocument("pageId" -> BSONDocument("$in" -> likedPagesIds))
+      pagesCursor = pagesCollection.find(pageSelector).cursor[FBPage]()
+      fbPages <- pagesCursor.collect[List](likedPagesIds.length, stopOnError = true)
+
+      itemSummarySelector = BSONDocument("userId" -> userId, "itemType" -> "Post")
+      itemsSummariesCursor = itemsSummariesCollection.find(itemSummarySelector).cursor[ItemSummary]()
+      itemSummaries <- itemsSummariesCursor.collect[List](stopOnError = true)
+
+      queryNotLiked = BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$nin" -> likedPages))
+      notLikedPagesCount <- pageLikesCollection.count(Some(queryNotLiked))
+    } yield {
+      val friends = userSummary.friends.map(friend => Friend(friend.name, friend.name))
+      val cleanedSummaries = itemSummaries.map {
+        summary =>
+          val cleanedDataTypes = summary.dataTypes.intersect(transientDataTypes)
+          summary.copy(dataTypes = cleanedDataTypes, dataCount = cleanedDataTypes.size)
+      }
+      finalizeSummaryWithIds(fbPosts, fbPages, friends, notLikedPagesCount, userSummary, cleanedSummaries)
+    }
+      ) onFailure {
+      case e =>
+        log.error(s"Could not reach database : $e")
+        analysingFor.remove(userId)
+    }
   }
 
 
@@ -292,9 +383,11 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
         ) onFailure {
         case e =>
           log.error(s"Could not reach database : $e")
+          analysingFor.remove(userId)
       }
     } else {
       log.info(s"There was no final stats to generate (empty lists).")
+      analysingFor.remove(userId)
     }
   }
 
@@ -311,19 +404,17 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   private def finalizeSummaryWithIds(fbPosts: List[FBPost], fbPages: List[FBPage], friends: Set[Friend], notLikedPagesCount: Int,
                                      userSummary: UserSummary, itemSummaries: List[ItemSummary]): Unit = {
     val newReactioners = accumulateReactions(fbPosts) ++ userSummary.reactioners
+    val blacklist: Set[FBFrom] = userSummary.blacklist.getOrElse(Set())
 
-    val updatedPosts: List[ItemSummary] = updatePostsSummaries(fbPosts, newReactioners, itemSummaries)
+    val updatedPosts: List[ItemSummary] = updatedPostsSummaries(fbPosts, newReactioners, itemSummaries, blacklist)
 
-    val updatedPages: List[ItemSummary] = updatePagesSummaries(fbPages, notLikedPagesCount)
+    val updatedPages: List[ItemSummary] = updatedPagesSummaries(fbPages, notLikedPagesCount)
 
     val untouchedPosts = itemSummaries.filterNot(
       is => updatedPosts.exists(ui => ui.userId == is.userId && ui.itemId == is.itemId)
     )
 
-    val newItemsSummaries = (updatedPosts ++ untouchedPosts ++ updatedPages).map {
-      is =>
-        ItemSummary(is.id, is.userId, is.itemId, is.itemType, is.dataTypes, is.dataCount)
-    }
+    val newItemsSummaries = updatedPosts ++ untouchedPosts ++ updatedPages
 
     val itemsSummariesCollection = db[BSONCollection](MongoCollections.itemsSummaries)
 
@@ -338,6 +429,8 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     val newUserSummaries = userSummaryWithNewCounts(newReactioners, newItemsSummaries, friends, userSummary)
     val selector = BSONDocument("userId" -> userId)
     userSummariesCollection.update(selector, newUserSummaries, upsert = true)
+    analysingFor.remove(userId)
+    self ! PoisonPill
   }
 
   /**
@@ -349,7 +442,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   private def accumulateReactions(fbPosts: List[FBPost]): Set[AbstractReaction] = {
     fbPosts.foldLeft(Set[AbstractReaction]()) {
       (acc: Set[AbstractReaction], post: FBPost) => {
-        acc ++ post.reactions.getOrElse(List()).toSet ++ post.commentsAsReactions.toSet
+        acc ++ post.reactions.getOrElse(List()).toSet ++ post.commentsAsReactions
       }
     }
   }
@@ -362,15 +455,19 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     * @param itemSummaries items summaries to update
     * @return list of updated items summaries
     */
-  private def updatePostsSummaries(fbPosts: List[FBPost], reactioners: Set[AbstractReaction],
-                                   itemSummaries: List[ItemSummary]): List[ItemSummary] = {
+  private def updatedPostsSummaries(fbPosts: List[FBPost],
+                                   reactioners: Set[AbstractReaction],
+                                   itemSummaries: List[ItemSummary],
+                                   blacklist: Set[FBFrom] = Set()): List[ItemSummary] = {
     fbPosts.flatMap {
       fbPost =>
         val oldItemSummary = getItemSummary(userId, fbPost.postId, PostType, itemSummaries)
-        val reactions = fbPost.reactions.getOrElse(List()) ++ fbPost.commentsAsReactions
-        val addedTypes = possibleReactions.flatMap(maybeReactionType(reactions, reactioners.size)(_))
-        val reactionsNumber = fbPost.reactionCount.getOrElse(0)
-        if (reactioners.size - reactionsNumber >= 3 && reactionsNumber > 0) {
+        val reactions = fbPost.reactions.getOrElse(Set()) ++ fbPost.commentsAsReactions
+        val filteredPostReactions = applyBlacklist(reactions, blacklist)
+        val filteredReactioners = applyBlacklist(reactioners, blacklist)
+        val addedTypes = possibleReactions.flatMap(maybeReactionType(filteredPostReactions, filteredReactioners.size)(_))
+        val reactionsNumber = filteredPostReactions.size
+        if (filteredReactioners.size - reactionsNumber >= 3 && reactionsNumber > 0) {
           val finalListing = (oldItemSummary.dataTypes ++ addedTypes) + PostWhoReacted
           Some(ItemSummary(None, userId, oldItemSummary.itemId, PostType, finalListing, finalListing.size))
         } else {
@@ -384,7 +481,8 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     }
   }
 
-  private def maybeReactionType(reactions: List[AbstractReaction], totalReactions: Int)(reactionType: ReactionType): Option[ReactionType] = {
+  private def maybeReactionType[React <: AbstractReaction](reactions: Set[React], totalReactions: Int)
+                                                          (reactionType: ReactionType): Option[ReactionType] = {
     val reactionCount = filterReaction(reactions, reactionType).size
     if (totalReactions - reactionCount >= 3 && reactionCount > 0) {
       Some(reactionType)
@@ -400,7 +498,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     * @param notLikedPagesCount number of not liked pages
     * @return list of items summaries
     */
-  private def updatePagesSummaries(fbPages: List[FBPage], notLikedPagesCount: Int): List[ItemSummary] = {
+  private def updatedPagesSummaries(fbPages: List[FBPage], notLikedPagesCount: Int): List[ItemSummary] = {
     val newDataListing =
       if (notLikedPagesCount >= 3) {
         Set[DataType](Time, PageLikeNumber, PageWhichLiked)
