@@ -123,9 +123,6 @@ class MongoDatabaseServiceSuite extends FunSuite {
           like =>
             like.from.userId == PostTestsData.likeId2 && like.from.userName == PostTestsData.likeName2
         })
-
-      case Some(likes) =>
-        fail(s"Wrong number of likes extracted : ${likes.size}")
       case None =>
         fail("Likes not extracted.")
     }

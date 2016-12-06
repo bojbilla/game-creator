@@ -51,9 +51,6 @@ object GameboardEntities {
     case MCWhoReactedToYourPostWithSAD.name => MCWhoReactedToYourPostWithSAD
     case MCWhoReactedToYourPostWithANGRY.name => MCWhoReactedToYourPostWithANGRY
     case ORDPageLikes.name => ORDPageLikes
-    case ORDPostCommentsNumber.name => ORDPostCommentsNumber
-    case ORDPostLikesNumber.name => ORDPostLikesNumber
-    case ORDPostTime.name => ORDPostTime
     case ORDPageLikeTime.name => ORDPageLikeTime
   }
 
@@ -67,7 +64,6 @@ object GameboardEntities {
   case object Order extends QuestionKind("Order")
   case object Misc extends QuestionKind("Misc")
 
-
   def strToKind(string: String): QuestionKind = string match {
     case MultipleChoice.name => MultipleChoice
     case Timeline.name => Timeline
@@ -75,7 +71,6 @@ object GameboardEntities {
     case Order.name => Order
     case Misc.name => Misc
   }
-
 
   /**
     * Time units used in Timeline questions

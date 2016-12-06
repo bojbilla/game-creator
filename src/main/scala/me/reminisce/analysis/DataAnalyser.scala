@@ -190,7 +190,7 @@ object DataAnalyser {
     // Ordering have to be a multiple of the number of items to order
     val newQuestionCounts: Map[QuestionKind, Int] = newDataTypes.foldLeft(Map[QuestionKind, Int]()) {
       case (acc, (tpe, cnt)) =>
-        val kinds = typeToKinds(tpe)
+        val kinds = typeToKinds.getOrElse(tpe, List())
         val newCounts = kinds.map {
           kind =>
             val count = kind match {

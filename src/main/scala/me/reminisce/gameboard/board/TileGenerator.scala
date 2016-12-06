@@ -78,19 +78,8 @@ class TileGenerator(db: DefaultDB) extends QuestionGenerator {
       kind match {
         case Order =>
           tpe match {
-            case PostReactionNumber =>
-              Some(context.actorOf(OrderByPostReactionsNumber.props(db)))
             case PageLikeNumber =>
               Some(context.actorOf(OrderByPageLikes.props(db)))
-            case PostCommentsNumber =>
-              Some(context.actorOf(OrderByPostCommentsNumber.props(db)))
-            case Time =>
-              item.headOption match {
-                case Some((_, PostType)) =>
-                  Some(context.actorOf(OrderByPostTime.props(db)))
-                case _ =>
-                  Some(context.actorOf(OrderByPageLikeTime.props(db)))
-              }
             case _ =>
               None
           }

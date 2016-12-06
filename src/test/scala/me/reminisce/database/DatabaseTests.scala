@@ -10,8 +10,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suites}
 
 // This class will run all the database related tests so that the db can be closed after all are ran
 // CAUTION : if you run tests individually the db will not be closed properly and the port won't be released
-class DatabaseTests extends Suites(new OrderByPageLikesSpec, new OrderByPageLikeTimeSpec, new OrderByPostCommentsNumberSpec,
-  new OrderByPostLikesNumberSpec, new OrderByPostTimeSpec, new WhenDidYouLikeThisPageSpec,
+class DatabaseTests extends Suites(new OrderByPageLikesSpec, new OrderByPageLikeTimeSpec, new WhenDidYouLikeThisPageSpec,
   new WhenDidYouShareThisPostSpec, new WhichCoordinatesWereYouAtSpec, new WhichPageDidYouLikeSpec, new WhoReactedToYourPostSpec,
   new FetcherServiceSpec, new MongoDatabaseServiceSpec, new DeletionServiceSpec,
   new DataAnalyserSpec, new GameboardGeneratorSpec, new ServerServiceActorSpec)

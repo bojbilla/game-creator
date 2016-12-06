@@ -193,7 +193,7 @@ class DataAnalyserSuite extends FunSuite {
     assert(oldReactioners != newReactioners)
 
     val oldDataTypes = Map[DataType, Int](PostGeolocation -> 2, PostWhoCommented -> 4, PostWhoReacted -> 13) // linked with below counts
-    val newDataTypes = List[(DataType, Int)]((PostWhoReacted, 7), (PostCommentsNumber, 17)) // prime number is important to test the rounding
+    val newDataTypes = List[(DataType, Int)]((PostWhoReacted, 7), (PageLikeNumber -> 17)) // prime number is important to test the rounding
     val newItemsSummaries = newDataTypes.flatMap {
       case (tpe, count) => (1 to count).map {
         any => ItemSummary(userId = userId, itemId = s"item$userId", itemType = PostType, dataTypes = Set(tpe), dataCount = 1)
@@ -216,7 +216,6 @@ class DataAnalyserSuite extends FunSuite {
     assert(newUserSummary.dataTypeCounts.getOrElse(PostGeolocation, 0) == 2)
     assert(newUserSummary.dataTypeCounts.getOrElse(PostWhoCommented, 0) == 4)
     assert(newUserSummary.dataTypeCounts.getOrElse(PostWhoReacted, 0) == 20)
-    assert(newUserSummary.dataTypeCounts.getOrElse(PostCommentsNumber, 0) == 17)
 
     assert(newUserSummary.questionCounts.size == userSummary.questionCounts.size + 1)
     assert(newUserSummary.questionCounts.getOrElse(Geolocation, 0) == 2)

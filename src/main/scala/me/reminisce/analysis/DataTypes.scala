@@ -68,7 +68,7 @@ object DataTypes {
     Geolocation ->
       List(PostGeolocation),
     Order ->
-      List(PostReactionNumber, PageLikeNumber, PostCommentsNumber, Time)
+      List(PageLikeNumber)
   )
 
   val typeToKinds = kindToTypes.reverse
