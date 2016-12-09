@@ -62,7 +62,12 @@ class WhoMadeThisCommentOnYourPostWithDifficulty(db: DefaultDB) extends Question
                 for{
                   userSummary <- maybeUserSummary
                 } yield{
-                  FinishedQuestionCreation(generateQuestionWithDifficulty(userId, comments, post, getDifficultyForQuestion(userId), userSummary)) 
+                  val bl = userSummary.blacklist.getOrElse(Set[FBFrom]())
+                  val filteredComments = comments.filterNot { x => bl.contains(x.from) }
+                  if (filteredComments.size < 4) 
+                    NotEnoughData(s"Post has not enough comments : $itemId")
+                  else
+                    FinishedQuestionCreation(generateQuestionWithDifficulty(userId, filteredComments, post, None, userSummary)) 
                 } 
               }
             }
@@ -91,7 +96,7 @@ class WhoMadeThisCommentOnYourPostWithDifficulty(db: DefaultDB) extends Question
     * @return a multiple choice question
     */
   private def generateQuestionWithDifficulty(userId: String, comments: List[FBComment],
-                               post: FBPost, difficulty: Double, userSummary: UserSummary): MultipleChoiceQuestion = {
+                               post: FBPost, difficulty: Option[Double], userSummary: UserSummary): MultipleChoiceQuestion = {
     
     val commenters = comments.groupBy { c => c.from.userId }
     val ks = commenters.keySet
@@ -101,7 +106,8 @@ class WhoMadeThisCommentOnYourPostWithDifficulty(db: DefaultDB) extends Question
     // Take the answer from one of the fifth most commenters that have commented on the post
     val rightOne = commenters(Random.shuffle(commentersCount.toList.sortBy(-_._2).take(5)).head._1).head
     // The harder the question the more often commenters are picked
-    val choices = notPostCommenters.toList.sortBy(-_._2).take(Math.max(3, notPostCommenters.size/(difficulty*10).toInt))
+    val choices = notPostCommenters.toList.sortBy(-_._2).take(
+        Math.max(3, ((4-notPostCommenters.size)*(difficulty.getOrElse(0.0)) + notPostCommenters.size).toInt))
     val choicesAsComments = choices.map(x => commenters(x._1).head)
     val shuffled = Random.shuffle(rightOne::choicesAsComments)
     val answer = shuffled.indexOf(rightOne)

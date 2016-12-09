@@ -434,44 +434,6 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     analysingFor.remove(userId)
     self ! PoisonPill
   }
-  
-  /**
-   * Update commentsSummaries and reactionsSummaries in userSummaries
-   * 
-   * @param posts 											posts to handle
-   * @param userSummariesCollection			userSummaries to update
-   */
-  private def updateCommmentsAndReactionsSummaries(posts : List[FBPost], userSummariesCollection: BSONCollection) = {
-    userSummariesCollection.find(BSONDocument("userId" -> userId)).one[UserSummary].onComplete{ 
-        case Success(ustats) => ustats match {
-          case Some(stats) => 
-            update(stats)
-          case None => log.error("No user stats");
-        }
-        case Failure(t) => log.error(t, "Did not complete when getting user stats")
-    }
-    
-    // update the DB
-    def update(stats: UserSummary) = {
-      //count comments
-      val allUserIds = posts.flatMap { post =>  post.comments.map { coms => coms.map { x => x.from.userId }}}.flatten
-      val commentsCounter = allUserIds.groupBy(x => x).mapValues(_.size)
-      
-      //count reactions
-      val reacts = (for {
-          p <- posts
-          reactions <- p.reactions 
-        } yield reactions.map(_.from.userId)).flatten   
-        
-      // Map reactioners -> reactionsCount
-      val reactsCounter = reacts.groupBy(x => x).mapValues(_.size)
-      
-      //update userSummaryCollections
-      val newUserSummary = stats.copy(commentersCommentsCount = commentsCounter , reactionersReactionsCount = reactsCounter)
-      val selector = BSONDocument("userId" -> userId)
-      userSummariesCollection.update(selector, newUserSummary, upsert = true)
-    }
-  }
 
   /**
     * Update commentsSummaries and reactionsSummaries in userSummaries

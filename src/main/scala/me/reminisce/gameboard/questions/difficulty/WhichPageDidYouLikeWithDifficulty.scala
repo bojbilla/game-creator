@@ -59,7 +59,7 @@ class WhichPageDidYouLikeWithDifficulty(db: DefaultDB) extends QuestionGenerator
                   if (listPages.length < 3) {
                     client ! NotEnoughData(s"Unable to create question : not enough not liked pages.")
                   } else {
-                    val choices = getChoices(getDifficultyForQuestion(userId), listPages)
+                    val choices = getChoices(None, listPages)
                     val possibilities = (page :: choices).map {
                       pge =>
                         val url = pge.photos match {
@@ -98,9 +98,9 @@ class WhichPageDidYouLikeWithDifficulty(db: DefaultDB) extends QuestionGenerator
    * @param listPages List of potential FBpage as choices
    * @return 3 FBpages as a List
    */
-  private def getChoices(difficulty: Double, listPages: List[FBPage]): List[FBPage] = {
+  private def getChoices(difficulty: Option[Double], listPages: List[FBPage]): List[FBPage] = {
     val sortedList = listPages.sortBy(-_.likesNumber)
-    val pool = Random.shuffle(sortedList.take((-30*difficulty+40).toInt))
+    val pool = Random.shuffle(sortedList.take((-30*difficulty.getOrElse(0.0)+40).toInt))
     pool.take(3)
   }
 }
