@@ -17,6 +17,9 @@ import me.reminisce.gameboard.questions.QuestionGenerator
 import reactivemongo.bson.Producer.nameValue2Producer
 import me.reminisce.gameboard.questions._
 
+import me.reminisce.database.MongoDBEntities.AbstractReaction
+import me.reminisce.database.MongoDBEntities.FBFrom
+
 /**
   * Factory for [[me.reminisce.gameboard.questions.WhoReactedToYourPostWithDifficulty]]
   */
@@ -59,7 +62,7 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
         maybePost <- postCollection.find(BSONDocument("userId" -> userId, "postId" -> itemId)).one[FBPost]
       }
         yield {
-          val maybeQuestion = generateQuestionWithDifficulty(difficulty, maybeUserSummary, maybePost)
+          val maybeQuestion = generateQuestionWithDifficulty(None, maybeUserSummary, maybePost)
           maybeQuestion match {
             case Some(question) =>
               client ! FinishedQuestionCreation(question)
@@ -92,13 +95,13 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
    * @param maybePost The post on which the question will be based
    * @return A multiple choice question
    */
-  private def generateQuestionWithDifficulty(difficulty: Double, maybeUserSummary: Option[UserSummary], maybePost: Option[FBPost]): Option[MultipleChoiceQuestion] = {
+  private def generateQuestionWithDifficulty(difficulty: Option[Double], maybeUserSummary: Option[UserSummary], maybePost: Option[FBPost]): Option[MultipleChoiceQuestion] = {
     for{
       userSummary <- maybeUserSummary
       post <- maybePost
       reactions <- post.reactions
       if !((userSummary.reactioners -- reactions.toSet).size < 3)
-      choices <- getChoices(reactions, userSummary, difficulty)
+      choices <- getChoices(reactions.toList, userSummary, difficulty)
       answer <- choices.headOption
       shuffled = Random.shuffle(choices)
       postSubject = subjectFromPost(post)  
@@ -115,10 +118,11 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
    * @param difficulty The difficulty of the question
    * @return List of Possibility
    */
-  private def getChoices(reactions: List[FBReaction], userSummary: UserSummary, difficulty: Double): Option[List[Possibility]]= {
-    val answer = getOftenReactioner(reactions.toSet, userSummary.reactionersReactionsCount)
-    val choices = getReactionersAccordingDifficulty(userSummary.reactioners, userSummary.reactionersReactionsCount, (answer::reactions).toSet, difficulty)
-    Option((answer::Random.shuffle(choices)).map(choice => Possibility(choice.userName, None, "Person", Some(choice.userId))))
+  private def getChoices(reactions: List[AbstractReaction], userSummary: UserSummary, difficulty: Option[Double]): Option[List[Possibility]]= {
+    val bl = userSummary.blacklist.getOrElse(Set[FBFrom]())
+    val answer = getOftenReactioner(reactions.toSet, userSummary.reactionersReactionsCount, blacklist = bl)
+    val choices = getReactionersAccordingDifficulty(userSummary.reactioners, userSummary.reactionersReactionsCount, reactions.toSet + answer, bl, difficulty)
+    Option((answer::Random.shuffle(choices)).map(choice => Possibility(choice.from.userName, None, "Person", Some(choice.from.userId))))
   }
   
   /**
@@ -128,9 +132,11 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
    * @param reactionersReactionsCount Map from reactioner to the number of total reactions
    * @param excluded The set of reactioner to exclude (the answer of the question and the reactioner of the post)
    */
-  private def getOftenReactioner(reactioners: Set[FBReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[FBReaction] = Set()): FBReaction = {
-    val filterTheExcluded =  reactioners -- excluded
-    val sortByReactionCount = filterTheExcluded.map { react => react -> reactionersReactionsCount(react.userId) }.toList.sortBy(-_._2)
+
+  private def getOftenReactioner(reactioners: Set[AbstractReaction], reactionersReactionsCount: Map[String, Int], 
+      excluded: Set[AbstractReaction] = Set[AbstractReaction](), blacklist: Set[FBFrom] = Set[FBFrom]()): AbstractReaction = {
+    val filterTheExcluded =  (reactioners -- excluded).filterNot { x => blacklist.contains(x.from) }
+    val sortByReactionCount = filterTheExcluded.map { react => react -> reactionersReactionsCount(react.from.userId) }.toList.sortBy(-_._2)
     sortByReactionCount(Random.nextInt(10))._1
   } 
   
@@ -141,10 +147,11 @@ class WhoReactedToYourPostWithDifficulty(db: DefaultDB) extends QuestionGenerato
    * @param reactionersReactionsCount Map from reactioner to the number of total reactions
    * @param excluded The set of reactioner to exclude (the answer of the question and the reactioner of the post)
    */
-  private def getReactionersAccordingDifficulty(reactioners: Set[FBReaction], reactionersReactionsCount: Map[String, Int], excluded: Set[FBReaction] = Set(), winRate: Double) : List[FBReaction] = {
-    val filterTheExcluded =  reactioners -- excluded
-    val sortByReactionCount = filterTheExcluded.map { x => x -> reactionersReactionsCount(x.userId) }.toList.sortBy(-_._2)
-    val subset = sortByReactionCount.take(Math.max(3, sortByReactionCount.size/(winRate*10).toInt))
+  private def getReactionersAccordingDifficulty(reactioners: Set[AbstractReaction], reactionersReactionsCount: Map[String, Int],
+      excluded: Set[AbstractReaction] = Set(), blacklist: Set[FBFrom] = Set[FBFrom](), difficulty: Option[Double]) : List[AbstractReaction] = {
+    val filterTheExcluded =  (reactioners -- excluded).filterNot { x => blacklist.contains(x.from) }
+    val sortByReactionCount = filterTheExcluded.map { x => x -> reactionersReactionsCount(x.from.userId) }.toList.sortBy(-_._2)
+    val subset = sortByReactionCount.take(Math.max(3, ((4-sortByReactionCount.size)*(difficulty.getOrElse(0.0)) + sortByReactionCount.size).toInt))
     Random.shuffle(subset).take(3).map(_._1)
   }
 }

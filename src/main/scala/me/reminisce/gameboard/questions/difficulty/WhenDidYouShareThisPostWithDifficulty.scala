@@ -49,13 +49,12 @@ class WhenDidYouShareThisPostWithDifficulty(db: DefaultDB) extends TimeQuestionG
       val client = sender()
       val query = BSONDocument( 
         "userId" -> userId 
-  //      "postId" -> itemId
       )
       
       val postCollection = db[BSONCollection](MongoCollections.fbPosts)
       getDocuments[FBPost](db, postCollection, query, 20).onComplete {
         case Success(postsList) =>
-          val maybePost = selectPost(getDifficultyForQuestion(userId), postsList)
+          val maybePost = selectPost(None, postsList)
           maybePost match {
             case Some(post) =>
               val dateString = post.createdTime.getOrElse("1970-01-01'T'00:00:00+0000")
@@ -88,7 +87,7 @@ class WhenDidYouShareThisPostWithDifficulty(db: DefaultDB) extends TimeQuestionG
    * 
    * @return A post
    */
-  private def selectPost(difficulty: Double, postsList: List[FBPost]): Option[FBPost] = {
+  private def selectPost(difficulty: Option[Double], postsList: List[FBPost]): Option[FBPost] = {
     postsList.filter { _.createdTime.nonEmpty} match {
       case Nil => None
       case x::Nil => Some(x)
@@ -98,7 +97,7 @@ class WhenDidYouShareThisPostWithDifficulty(db: DefaultDB) extends TimeQuestionG
             (x, formatter.parseDateTime(x.createdTime.get))
           }
         }.sortBy(_._2)
-        Option(Random.shuffle(sorted.take(Math.max(1,(-15*difficulty + 20).toInt))).head._1)
+        Option(Random.shuffle(sorted.take(Math.max(1,(-15*difficulty.getOrElse(0.0) + 20).toInt))).head._1)
       }
     }
   }

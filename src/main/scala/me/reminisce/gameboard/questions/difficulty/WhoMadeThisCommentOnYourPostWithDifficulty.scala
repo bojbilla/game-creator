@@ -11,6 +11,7 @@ import reactivemongo.bson.BSONDocument
 import me.reminisce.gameboard.questions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Random, Success}
+import me.reminisce.database.AnalysisEntities.UserSummary
 
 /**
   * Factory for [[me.reminisce.gameboard.questions.WhoMadeThisCommentOnYourPostWithDifficulty]]
@@ -56,7 +57,21 @@ class WhoMadeThisCommentOnYourPostWithDifficulty(db: DefaultDB) extends Question
             if (comments.size < 4) {
               NotEnoughData(s"Post has not enough comments : $itemId")
             } else {
-              FinishedQuestionCreation(generateQuestion(userId, selectedComments, rightOne, post))
+              val userCollection = db[BSONCollection](MongoCollections.userSummaries)
+              for {
+               maybeUserSummary <- userCollection.find(BSONDocument("userId" -> userId)).one[UserSummary]
+              } yield {
+                for{
+                  userSummary <- maybeUserSummary
+                } yield{
+                  val bl = userSummary.blacklist.getOrElse(Set[FBFrom]())
+                  val filteredComments = comments.filterNot { x => bl.contains(x.from) }
+                  if (filteredComments.size < 4) 
+                    NotEnoughData(s"Post has not enough comments : $itemId")
+                  else
+                    FinishedQuestionCreation(generateQuestionWithDifficulty(userId, filteredComments, post, None, userSummary)) 
+                } 
+              }
             }
           }) match {
             case Some(message) =>
@@ -101,9 +116,21 @@ class WhoMadeThisCommentOnYourPostWithDifficulty(db: DefaultDB) extends Question
     * @param post             post about which the question is
     * @return a multiple choice question
     */
-  private def generateQuestion(userId: String, selectedComments: List[FBComment],
-                               rightOne: FBComment, post: FBPost): MultipleChoiceQuestion = {
-    val shuffled = Random.shuffle(selectedComments)
+  private def generateQuestionWithDifficulty(userId: String, comments: List[FBComment],
+                               post: FBPost, difficulty: Option[Double], userSummary: UserSummary): MultipleChoiceQuestion = {
+    
+    val commenters = comments.groupBy { c => c.from.userId }
+    val ks = commenters.keySet
+    val commentersCount = userSummary.commentersCommentsCount.filterKeys { ks.contains(_) }
+    val notPostCommenters = userSummary.commentersCommentsCount -- commentersCount.keys
+    
+    // Take the answer from one of the fifth most commenters that have commented on the post
+    val rightOne = commenters(Random.shuffle(commentersCount.toList.sortBy(-_._2).take(5)).head._1).head
+    // The harder the question the more often commenters are picked
+    val choices = notPostCommenters.toList.sortBy(-_._2).take(
+        Math.max(3, ((4-notPostCommenters.size)*(difficulty.getOrElse(0.0)) + notPostCommenters.size).toInt))
+    val choicesAsComments = choices.map(x => commenters(x._1).head)
+    val shuffled = Random.shuffle(rightOne::choicesAsComments)
     val answer = shuffled.indexOf(rightOne)
     val shuffledPossibilities = shuffled.map {
       comm => Possibility(comm.from.userName, None, "Person", Some(comm.from.userId))

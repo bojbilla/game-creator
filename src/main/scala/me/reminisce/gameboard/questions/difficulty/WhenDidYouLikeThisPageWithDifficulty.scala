@@ -48,13 +48,12 @@ class WhenDidYouLikeThisPageWithDifficulty(db: DefaultDB) extends TimeQuestionGe
       val client = sender()
       val query = BSONDocument(
         "userId" -> userId
-//        "pageId" -> itemId
       )
       val pageLikesCollection = db[BSONCollection](MongoCollections.fbPageLikes)      
       
       for {
         pageLikeList <- getDocuments[FBPageLike](db, pageLikesCollection, query, 20)//pageLikesCollection.find(query).one[FBPageLike]
-        maybePageLike = selectPage(getDifficultyForQuestion(userId), pageLikeList)
+        maybePageLike = selectPage(None, pageLikeList)
       } yield {
         maybePageLike match {
           case Some(pageLike) => {
@@ -92,9 +91,9 @@ class WhenDidYouLikeThisPageWithDifficulty(db: DefaultDB) extends TimeQuestionGe
    * 
    * @return A pageLike
    */
-  private def selectPage(difficulty: Double, pageLikeList: List[FBPageLike]): Option[FBPageLike] = {
+  private def selectPage(difficulty: Option[Double], pageLikeList: List[FBPageLike]): Option[FBPageLike] = {
     val sorted = pageLikeList.sortBy { _.likeTime }
-    Option(Random.shuffle(sorted.take(Math.max(1,(-15*difficulty + 20).toInt))).head)
+    Option(Random.shuffle(sorted.take(Math.max(1,(-15*difficulty.getOrElse(0.0) + 20).toInt))).head)
   }
   
 }
