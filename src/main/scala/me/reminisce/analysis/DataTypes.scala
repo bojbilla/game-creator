@@ -73,6 +73,8 @@ object DataTypes {
 
   val typeToKinds = kindToTypes.reverse
 
+  val unusedTypes = List(PostCommentsNumber, PostReactionNumber)
+
   /**
     * Converts a string naming a data type to a DataType object
     *

@@ -50,7 +50,7 @@ class FullRandomBoardGenerator(database: DefaultDB, userId: String) extends Rand
     // (because we cannot have a guarantee of the number of available items as we do not have user summary)
     // PostWhoReacted is also excluded as it cannot be generated without UserSummary (even though this type should not be
     // marked as available on an item if no UserSummary was generated)
-    val excluded = PostWhoReacted :: kindToTypes(Order).filter(t => typeToKinds(t).size == 1)
+    val excluded = (unusedTypes ::: (PostWhoReacted :: kindToTypes(Order).filter(t => typeToKinds(t).size == 1))).distinct
     val selector = BSONDocument("userId" -> userId,
       "$or" -> BSONArray(
         BSONDocument("dataCount" -> BSONDocument("$gt" -> excluded.size)),
