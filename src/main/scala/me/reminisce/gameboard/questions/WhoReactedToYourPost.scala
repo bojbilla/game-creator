@@ -69,7 +69,7 @@ class WhoReactedToYourPost(db: DefaultDB, reactionType: ReactionType) extends Qu
               filteredPostReactions = DataAnalyser.applyBlacklist(reactionsWithComments, blacklist)
               filteredReactioners = DataAnalyser.applyBlacklist(userSummary.reactioners, blacklist)
               selectedReaction <- randomReaction(filteredPostReactions)
-              remainingReactions = filteredReactioners -- filteredPostReactions
+              remainingReactions = reactionsDiff(filteredReactioners, filteredPostReactions)
               if remainingReactions.size >= 3
               choices = (selectedReaction :: Random.shuffle(remainingReactions.toList).take(3)) map {
                 choice => Possibility(choice.from.userName, None, "Person", Some(choice.from.userId))
@@ -129,6 +129,13 @@ class WhoReactedToYourPost(db: DefaultDB, reactionType: ReactionType) extends Qu
         }
       case _ =>
         Some(postSubject)
+    }
+  }
+
+  private def reactionsDiff[React <: AbstractReaction](totalReactions: Set[AbstractReaction], toRemove: Set[React]): Set[AbstractReaction] = {
+    totalReactions.filterNot {
+      elm =>
+        toRemove.exists(_.from == elm.from)
     }
   }
 
