@@ -59,8 +59,23 @@ object TimeQuestionGenerator {
       1.day
   }
 
+  /**
+   * Change the step size according to the difficulty
+   * 
+   * @param difficulty The difficulty
+   * @param step The step size
+	 */
+  def stepWithDifficulty(difficulty: Option[Double], step: Int): Int = {
+    difficulty match {
+      case None => step
+      case Some(d) => {
+        Math.max(1, Math.rint(step * d)).toInt
+      }
+    }
+  }
 }
 
+  
 /**
   * Abstract time question generator
   */
