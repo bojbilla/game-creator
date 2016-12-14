@@ -4,22 +4,25 @@ package me.reminisce.server
 import akka.actor._
 import me.reminisce.analysis.DataAnalyser
 import me.reminisce.analysis.DataAnalyser.NewBlackList
+import me.reminisce.database.AnalysisEntities.UserSummary
 import me.reminisce.database.DeletionService.{ClearDatabase, RemoveUser}
 import me.reminisce.database.MongoDBEntities.FBFrom
-import me.reminisce.database.MongoDatabaseService.GetBlackList
-import me.reminisce.database.{DeletionService, MongoDatabaseService}
+import me.reminisce.database.{DeletionService, MongoCollections}
 import me.reminisce.fetching.FetcherService
 import me.reminisce.fetching.FetcherService.FetchData
 import me.reminisce.gameboard.board.GameGenerator
 import me.reminisce.gameboard.board.GameGenerator.CreateBoard
-import me.reminisce.server.domain.{RESTHandlerCreator, RestMessage}
+import me.reminisce.server.domain.{Domain, RESTHandlerCreator, RestMessage}
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, MongoConnection}
+import reactivemongo.bson.{BSONDocument, BSONDocumentReader}
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Accept
 import spray.http.MediaTypes._
-import spray.http.StatusCodes.InternalServerError
+import spray.http.StatusCodes.{InternalServerError, NotFound}
 import spray.http._
 import spray.httpx.Json4sSupport
+import spray.httpx.marshalling.ToResponseMarshaller
 import spray.routing._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -93,6 +96,13 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
               }
           }
         }
+    } ~ path("reactions") {
+      get {
+        parameters('user_id.as[String]) {
+          (userId: String) =>
+            getReactions(userId)
+        }
+      }
     } ~ path("removeUser") {
       delete {
         parameters("user_id") {
@@ -192,11 +202,42 @@ trait GameCreatorService extends HttpService with RESTHandlerCreator with Actor 
   }
 
   private def getBlackList(userId: String): Route = {
+    val selector = BSONDocument("userId" -> userId)
+    doGetData[UserSummary, Set[FBFrom]](userId, selector, MongoCollections.userSummaries, "blacklist") {
+      summary =>
+        summary.blacklist.getOrElse(Set())
+    }
+  }
+
+  private def getReactions(userId: String): Route = {
+    val selector = BSONDocument("userId" -> userId)
+    doGetData[UserSummary, Set[FBFrom]](userId, selector, MongoCollections.userSummaries, "reactioners") {
+      summary =>
+        summary.reactioners.map(_.from)
+    }
+  }
+
+  private def doGetData[DBData, ReturnData](userId: String, selector: BSONDocument, collectionName: String, dataPrettyName: String = "data")
+                                           (extractor: DBData => ReturnData)
+                                           (implicit reader: BSONDocumentReader[DBData],
+                                            marshaller: ToResponseMarshaller[ReturnData]): Route = {
     handleWithDb {
       (db, ctx) =>
-        log.info(s"Getting blacklist for $userId")
-        val mongoDatabaseService = context.actorOf(MongoDatabaseService.props(userId, db))
-        perRequest(ctx, mongoDatabaseService, GetBlackList)
+        log.info(s"Getting $dataPrettyName for $userId.")
+        val collection = db[BSONCollection](collectionName)
+        collection.find(selector).one[DBData].onComplete {
+          case Success(maybeDBData) =>
+            maybeDBData.fold {
+              ctx.complete(NotFound, Domain.NotFound(s"Could not find $dataPrettyName for $userId."))
+            } {
+              dbData =>
+                val retData = extractor(dbData)
+                ctx.complete(retData)
+            }
+          case Failure(e) =>
+            log.error(s"Could not get $dataPrettyName : $e.")
+            ctx.complete(InternalServerError)
+        }
     }
   }
 

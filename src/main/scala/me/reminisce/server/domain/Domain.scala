@@ -35,8 +35,6 @@ object Domain {
 
   case class FailedBlacklist(message: String) extends RestMessage
 
-  case class ReturnBlackList(blackList: Set[FBFrom]) extends RestMessage
-
   // Exceptions
 
   case object ExampleException extends Exception("Fetcher encountered exception: need more power")

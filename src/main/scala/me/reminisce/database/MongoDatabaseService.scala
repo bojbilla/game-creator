@@ -1,21 +1,17 @@
 package me.reminisce.database
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, Props}
 import com.github.nscala_time.time.Imports._
 import me.reminisce.analysis.DataTypes._
-import me.reminisce.database.AnalysisEntities.UserSummary
 import me.reminisce.database.MongoDBEntities._
 import me.reminisce.database.MongoDatabaseService._
 import me.reminisce.fetching.config.GraphResponses.{Page, Post}
-import me.reminisce.server.domain.Domain.{NotFound, ReturnBlackList}
-import me.reminisce.server.domain.{Domain, RestMessage}
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteConcern
 import reactivemongo.bson.BSONDocument
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure, Success}
 
 /**
   * Factory for [[me.reminisce.database.MongoDatabaseService]], collection names definition, case class for message
@@ -109,8 +105,6 @@ object MongoDatabaseService {
 
   case object SaveLastFetchedTime
 
-  case object GetBlackList extends RestMessage
-
   val stringTypeToReactionType = Map[String, ReactionType](
     "LIKE" -> PostWhoLiked,
     "WOW" -> PostWhoWowed,
@@ -139,9 +133,6 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends Actor with Act
       saveFBPostToDB(posts, db[BSONCollection](MongoCollections.fbPosts))
     case SaveLastFetchedTime =>
       saveLastFetchTime(db[BSONCollection](MongoCollections.lastFetched))
-    case GetBlackList =>
-      val client = sender()
-      getBlackList(client)
     case any => log.error(s"MongoDB Service received unexpected message : $any")
   }
 
@@ -194,22 +185,6 @@ class MongoDatabaseService(userId: String, db: DefaultDB) extends Actor with Act
 
     collection.update(selector, update, WriteConcern.Acknowledged, upsert = true).onFailure {
       case e => log.error(s"TEST DEBUG PRINT : finished with error : $e")
-    }
-  }
-
-  private def getBlackList(client: ActorRef): Unit = {
-    val selector = BSONDocument("userId" -> userId)
-    val collection = db[BSONCollection](MongoCollections.userSummaries)
-    collection.find(selector).one[UserSummary].onComplete {
-      case Success(maybeUserSummary) =>
-        maybeUserSummary match {
-          case Some(userSummary) =>
-            client ! ReturnBlackList(userSummary.blacklist.getOrElse(Set()))
-          case None =>
-            client ! NotFound(s"$userId has no user stats.")
-        }
-      case Failure(e) =>
-        client ! Domain.InternalError(s"Mongo error: $e")
     }
   }
 
