@@ -257,7 +257,8 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
         client ! AckBlackList(s"Updating blacklist for user $userId.")
         handleWithUserSummary {
           userSummary =>
-            val newSummary = userSummary.copy(dataTypeCounts = Map(), questionCounts = Map(), blacklist = Some(blacklist))
+            val newSummary = userSummary.copy(dataTypeCounts = Map(), questionCounts = Map(), commentersCommentsCount = Map(),
+              reactionersReactionsCount = Map(), blacklist = Some(blacklist))
             updateBlackList(newSummary)
         }
       } else {
@@ -426,11 +427,42 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
 
     val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
 
-    val newUserSummaries = userSummaryWithNewCounts(newReactioners, newItemsSummaries, friends, userSummary)
+    val summaryWithNewCounts = userSummaryWithNewCounts(newReactioners, newItemsSummaries, friends, userSummary)
+    val finalSummary = updateCommmentsAndReactionsSummaries(fbPosts, summaryWithNewCounts, userSummariesCollection, blacklist)
     val selector = BSONDocument("userId" -> userId)
-    userSummariesCollection.update(selector, newUserSummaries, upsert = true)
+    userSummariesCollection.update(selector, finalSummary, upsert = true)
     analysingFor.remove(userId)
     self ! PoisonPill
+  }
+
+  /**
+    * Update commentsSummaries and reactionsSummaries in userSummaries
+    *
+    * @param posts                   posts to handle
+    * @param userSummariesCollection userSummaries to update
+    */
+  private def updateCommmentsAndReactionsSummaries(posts: List[FBPost], stats: UserSummary, userSummariesCollection: BSONCollection, blacklist: Set[FBFrom]) = {
+    //count comments
+    val postsFiltered = posts.filterNot {
+      _.from match {
+        case Some(from) => blacklist.contains(from)
+        case None => true
+      }
+    }
+
+    val allUserIds = postsFiltered.flatMap { post => post.comments.map { coms => coms.map { x => x.from.userId } } }.flatten
+    val commentsCounter = allUserIds.groupBy(x => x).mapValues(_.size)
+
+    //count reactions
+    val reacts = (for {
+      p <- postsFiltered
+      reactions <- p.reactions
+    } yield reactions.filterNot(reac => blacklist.contains(reac.from)).map(_.from.userId)).flatten
+
+    // Map reactioners -> reactionsCount
+    val reactsCounter = reacts.groupBy(x => x).mapValues(_.size)
+
+    stats.copy(commentersCommentsCount = commentsCounter, reactionersReactionsCount = reactsCounter)
   }
 
   /**
@@ -456,9 +488,9 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     * @return list of updated items summaries
     */
   private def updatedPostsSummaries(fbPosts: List[FBPost],
-                                   reactioners: Set[AbstractReaction],
-                                   itemSummaries: List[ItemSummary],
-                                   blacklist: Set[FBFrom] = Set()): List[ItemSummary] = {
+                                    reactioners: Set[AbstractReaction],
+                                    itemSummaries: List[ItemSummary],
+                                    blacklist: Set[FBFrom] = Set()): List[ItemSummary] = {
     fbPosts.flatMap {
       fbPost =>
         val oldItemSummary = getItemSummary(userId, fbPost.postId, PostType, itemSummaries)
