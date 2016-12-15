@@ -312,8 +312,8 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
       itemsSummariesCursor = itemsSummariesCollection.find(itemSummarySelector).cursor[ItemSummary]()
       itemSummaries <- itemsSummariesCursor.collect[List](stopOnError = true)
 
-      queryNotLiked = BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$nin" -> likedPages))
-      notLikedPagesCount <- pageLikesCollection.count(Some(queryNotLiked))
+      queryNotLiked = BSONDocument("pageId" -> BSONDocument("$nin" -> likedPagesIds))
+      notLikedPagesCount <- pagesCollection.count(Some(queryNotLiked))
     } yield {
       val friends = userSummary.friends.map(friend => Friend(friend.name, friend.name))
       val cleanedSummaries = itemSummaries.map {
@@ -377,9 +377,8 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
         itemsSummariesCursor = itemsSummariesCollection.find(itemSummarySelector).cursor[ItemSummary]()
         itemSummaries <- itemsSummariesCursor.collect[List](fbPostsIds.length, stopOnError = true)
 
-        queryNotLiked = BSONDocument("userId" -> userId, "pageId" -> BSONDocument("$nin" -> fbPagesIds))
-        collection = db[BSONCollection](MongoCollections.fbPageLikes)
-        notLikedPagesCount <- collection.count(Some(queryNotLiked))
+        queryNotLiked = BSONDocument("pageId" -> BSONDocument("$nin" -> fbPagesIds))
+        notLikedPagesCount <- pagesCollection.count(Some(queryNotLiked))
       } yield finalizeSummaryWithIds(fbPosts, fbPages, friends, notLikedPagesCount, userSummary, itemSummaries)
         ) onFailure {
         case e =>
