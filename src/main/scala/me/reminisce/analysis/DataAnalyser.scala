@@ -460,8 +460,9 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
 
     // Map reactioners -> reactionsCount
     val reactsCounter = reacts.groupBy(x => x).mapValues(_.size)
-
-    stats.copy(commentersCommentsCount = commentsCounter, reactionersReactionsCount = reactsCounter)
+    
+    //update userSummaryCollections
+    stats.copy(commentersCommentsCount = commentsCounter , reactionersReactionsCount = reactsCounter)
   }
 
   /**

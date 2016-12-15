@@ -54,7 +54,7 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
               val queryNotLiked = BSONDocument(
                 "pageId" -> BSONDocument("$nin" -> ids)
               )
-              getDocuments[FBPage](db, pagesCollection, queryNotLiked, 3).onComplete {
+              getDocuments[FBPage](db, pagesCollection, queryNotLiked, 40).onComplete {
                 case Success(listPages) =>
                   if (listPages.length < 3) {
                     client ! NotEnoughData(s"Unable to create question : not enough not liked pages.")
@@ -103,5 +103,4 @@ class WhichPageDidYouLike(db: DefaultDB) extends QuestionGenerator {
     val pool = Random.shuffle(sortedList.take((-30*difficulty.getOrElse(0.0)+40).toInt))
     pool.take(3)
   }
-
 }

@@ -82,7 +82,7 @@ class WhenDidYouLikeThisPage(db: DefaultDB) extends TimeQuestionGenerator {
           }
         }) onFailure {
         case e =>
-          client ! MongoDBError(s"${e.getMessage}")
+          client ! NotEnoughData(s"Page or pagelike not found : user $userId, page $itemId")
       }
 
     case any =>
