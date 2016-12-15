@@ -5,8 +5,10 @@ import me.reminisce.analysis.DataTypes._
 import me.reminisce.database.MongoDBEntities.FBComment.simpleReactionFromComment
 import me.reminisce.database.MongoDBEntities.{AbstractReaction, FBFriend, FBFrom}
 import me.reminisce.fetching.config.GraphResponses.Friend
+import me.reminisce.database.MongoDBEntities.{FBReaction, FBFrom}
 import me.reminisce.gameboard.board.GameboardEntities.{QuestionKind, strToKind}
 import reactivemongo.bson._
+
 
 /**
   * Collections used by this project
@@ -198,10 +200,34 @@ object AnalysisEntities {
                          questionCounts: Map[QuestionKind, Int] = Map(),
                          reactioners: Set[AbstractReaction] = Set(),
                          friends: Set[FBFriend] = Set(),
-                         blacklist: Option[Set[FBFrom]] = None)
+                         blacklist: Option[Set[FBFrom]] = None,
+                         commentersCommentsCount: Map[String, Int] = Map(),
+                         reactionersReactionsCount: Map[String, Int] = Map())
 
   object UserSummary {
-
+        
+    def getMapStringIntWriter(implicit intWriter: BSONWriter[Int, BSONInteger]): BSONDocumentWriter[Map[String, Int]] = {
+      new BSONDocumentWriter[Map[String, Int]] {
+        def write(mapIntString: Map[String, Int]): BSONDocument = {
+          val elements = mapIntString.toStream.map {
+            case (key, value) => key -> intWriter.write(value)
+          }
+          BSONDocument(elements)
+        }
+      }
+    }
+         
+    def getMapStringIntReader(implicit intReader: BSONReader[BSONInteger, Int]): BSONDocumentReader[Map[String, Int]] = {
+      new BSONDocumentReader[Map[String, Int]] {
+        def read(doc: BSONDocument): Map[String, Int] = {
+          val elements = doc.elements.map {
+            case (key, value) => key -> intReader.read(value.seeAsOpt[BSONInteger].get)
+          }
+          elements.toMap
+        }
+      }
+    }
+    
     def getMapKindIntWriter(implicit intWriter: BSONWriter[Int, BSONInteger]): BSONDocumentWriter[Map[QuestionKind, Int]] = {
       new BSONDocumentWriter[Map[QuestionKind, Int]] {
         def write(mapIntString: Map[QuestionKind, Int]): BSONDocument = {
@@ -246,8 +272,12 @@ object AnalysisEntities {
       }
     }
 
-    implicit val mapKindIntWriter = getMapKindIntWriter
+    implicit val mapStringIntWriter = getMapStringIntWriter
 
+    implicit val mapStringIntReader = getMapStringIntReader
+    
+    implicit val mapKindIntWriter = getMapKindIntWriter
+    
     implicit val mapKindIntReader = getMapKindIntReader
 
     implicit val mapDataTypeIntReader = getMapDataTypeIntReader
