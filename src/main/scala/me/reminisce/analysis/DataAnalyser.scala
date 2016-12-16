@@ -425,11 +425,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     }
 
     val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
-
     val summaryWithNewCounts = userSummaryWithNewCounts(newReactioners, newItemsSummaries, friends, userSummary)
-    //
-    val summaryForQuestion =  summaryWithNewCounts.copy()
-    //
     val finalSummary = updateCommmentsAndReactionsSummaries(fbPosts, summaryWithNewCounts, blacklist)
     val selector = BSONDocument("userId" -> userId)
     userSummariesCollection.update(selector, finalSummary, upsert = true)
@@ -445,7 +441,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
    */
   private def updateCommmentsAndReactionsSummaries(posts : List[FBPost], stats: UserSummary, blacklist: Set[FBFrom]): UserSummary = {
     //count comments
-    val postsFiltered = posts.filterNot {
+    val postsFiltered = posts.filterNot { 
       _.from match {
         case Some(from) => blacklist.contains(from)
         case None => true
@@ -456,11 +452,13 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     val commentsCounter = allUserIds.groupBy(x => x).mapValues(_.size)
 
     //count reactions
-    val reacts = (for {
-      p <- postsFiltered
-      reactions <- p.reactions
-    } yield reactions.filterNot(reac => blacklist.contains(reac.from)).map(_.from.userId)).flatten
-
+    val reacts = (
+        for {
+          p <- postsFiltered
+          reactions <- p.reactions 
+        } yield reactions.filterNot(reac => blacklist.contains(reac.from)).map(_.from.userId)
+      ).flatten   
+      
     // Map reactioners -> reactionsCount
     val reactsCounter = reacts.groupBy(x => x).mapValues(_.size)
     
