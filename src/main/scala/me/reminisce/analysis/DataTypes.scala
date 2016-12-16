@@ -61,8 +61,7 @@ object DataTypes {
 
   val kindToTypes = Map[QuestionKind, List[DataType]](
     MultipleChoice ->
-      List(PostWhoReacted, PostWhoCommented, PageWhichLiked, PostWhoLiked, PostWhoWowed, PostWhoLaughed, PostWhoLoved,
-        PostWhoGotSad, PostWhoGotAngry),
+      List(PostWhoReacted, PostWhoCommented, PageWhichLiked, PostWhoLiked, PostWhoWowed, PostWhoLaughed, PostWhoLoved, PostWhoGotSad, PostWhoGotAngry),
     Timeline ->
       List(Time),
     Geolocation ->

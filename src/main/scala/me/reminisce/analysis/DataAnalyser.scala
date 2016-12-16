@@ -427,7 +427,10 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     val userSummariesCollection = db[BSONCollection](MongoCollections.userSummaries)
 
     val summaryWithNewCounts = userSummaryWithNewCounts(newReactioners, newItemsSummaries, friends, userSummary)
-    val finalSummary = updateCommmentsAndReactionsSummaries(fbPosts, summaryWithNewCounts, userSummariesCollection, blacklist)
+    //
+    val summaryForQuestion =  summaryWithNewCounts.copy()
+    //
+    val finalSummary = updateCommmentsAndReactionsSummaries(fbPosts, summaryWithNewCounts, blacklist)
     val selector = BSONDocument("userId" -> userId)
     userSummariesCollection.update(selector, finalSummary, upsert = true)
     analysingFor.remove(userId)
@@ -435,12 +438,12 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
   }
 
   /**
-    * Update commentsSummaries and reactionsSummaries in userSummaries
-    *
-    * @param posts                   posts to handle
-    * @param userSummariesCollection userSummaries to update
-    */
-  private def updateCommmentsAndReactionsSummaries(posts: List[FBPost], stats: UserSummary, userSummariesCollection: BSONCollection, blacklist: Set[FBFrom]) = {
+   * Update commentsSummaries and reactionsSummaries in userSummaries
+   * 
+   * @param posts 											posts to handle
+   * @param userSummariesCollection			userSummaries to update
+   */
+  private def updateCommmentsAndReactionsSummaries(posts : List[FBPost], stats: UserSummary, blacklist: Set[FBFrom]): UserSummary = {
     //count comments
     val postsFiltered = posts.filterNot {
       _.from match {

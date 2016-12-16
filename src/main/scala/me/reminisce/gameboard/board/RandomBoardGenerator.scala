@@ -98,7 +98,6 @@ abstract class RandomBoardGenerator(database: DefaultDB, userId: String, strateg
             }
           kindList.zip(selectedTypes)
       }
-
       generateWithKindTypePairs(List(), pairsKindType, client)
 
     } else {
