@@ -462,10 +462,24 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
     // Map reactioners -> reactionsCount
     val reactsCounter = reacts.groupBy(x => x).mapValues(_.size)
     
-    //update userSummaryCollections
-    stats.copy(commentersCommentsCount = commentsCounter , reactionersReactionsCount = reactsCounter)
+    // Map reactioners -> allReactionCount
+    val allReactionsCounter = mapWihtValuesSummed[String](reactsCounter, commentsCounter)
+   
+    // Update userSummaryCollections
+    stats.copy(commentersCommentsCount = commentsCounter , reactionersReactionsCount = reactsCounter, allReactionsCount = allReactionsCounter)
   }
 
+  /**
+   * Merge two Maps and sum the values of the shared keys
+   * 
+   * @param m1 First Map
+   * @param m2 Second Map
+   * @return the merged Maps
+   */
+  private def mapWihtValuesSummed[K](m1: Map[K, Int], m2: Map[K, Int]): Map[K, Int] = {
+    m1 ++ m2.map{ case (k,v) => k -> (v + m1.getOrElse(k,0)) }
+  } 
+  
   /**
     * Gets reactions from a list of posts
     *
@@ -479,7 +493,7 @@ class DataAnalyser(userId: String, db: DefaultDB) extends Actor with ActorLoggin
       }
     }
   }
-
+  
   /**
     * Update post items summaries based on the number of reactioners
     *

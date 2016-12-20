@@ -72,7 +72,8 @@ class WhoReactedToYourPost(db: DefaultDB, reactionType: ReactionType) extends Qu
               selectedReaction <- randomReaction(filteredPostReactions)
               remainingReactions = reactionsDiff(filteredReactioners, filteredPostReactions)
               if remainingReactions.size >= 3
-              choices = (selectedReaction :: Random.shuffle(remainingReactions.toList).take(3)) map {
+              choicesForDifficulty = getChoices(remainingReactions, userSummary.allReactionsCount, None)
+              choices = (selectedReaction :: choicesForDifficulty) map {
                 choice => Possibility(choice.from.userName, None, "Person", Some(choice.from.userId))
               }
               answer <- choices.headOption
@@ -96,7 +97,25 @@ class WhoReactedToYourPost(db: DefaultDB, reactionType: ReactionType) extends Qu
     case any => log.error(s"WhoReactedToYourPostWithReactionType received a unexpected message $any")
   }
 
-
+  /**
+   * Get the choices for the question to be generated
+   * 
+   * @param reacts List of reactions
+   * @param allReactionsCount Counter of reactions per reactioner
+   * @param difficulty The difficulty of the question
+   * @return 3 choices
+   */
+  private def getChoices(reacts: Set[AbstractReaction], allReactionsCount: Map[String, Int], difficulty: Option[Double]): List[AbstractReaction] = {
+    difficulty match {
+      case None => Random.shuffle(reacts.toList).take(3)
+      case Some(d) => {
+        val sortByReactionCount = reacts.map(r => r -> allReactionsCount(r.from.userId)).toList.sortBy(-_._2)
+        val subset = sortByReactionCount.take(Math.max(3, ((4-sortByReactionCount.size)*d + sortByReactionCount.size).toInt))
+        Random.shuffle(subset).take(3).map(_._1)
+      }
+    }
+  }
+  
   private val reactionDataToQuestion = Map[DataType, SpecificQuestionType](
     PostWhoReacted -> MCWhoReactedToYourPost,
     PostWhoLiked -> MCWhoReactedToYourPostWithLIKE,

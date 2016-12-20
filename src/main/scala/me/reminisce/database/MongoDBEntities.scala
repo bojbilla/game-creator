@@ -202,7 +202,8 @@ object AnalysisEntities {
                          friends: Set[FBFriend] = Set(),
                          blacklist: Option[Set[FBFrom]] = None,
                          commentersCommentsCount: Map[String, Int] = Map(),
-                         reactionersReactionsCount: Map[String, Int] = Map())
+                         reactionersReactionsCount: Map[String, Int] = Map(),
+                         allReactionsCount: Map[String, Int] = Map())
                          
   object UserSummary {
 
